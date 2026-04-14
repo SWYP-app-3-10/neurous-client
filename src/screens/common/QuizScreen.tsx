@@ -446,40 +446,33 @@ const QuizScreen: React.FC = () => {
             // ──────────────────────────────────────────────
             if (analysis && analysis.shouldSuggest && analysis.suggestedLevel) {
               logEvent('Show_Level_Suggestion_Modal');
+              const suggestedLevel = analysis.suggestedLevel;
 
               // 기존 난이도 선택 모달 닫기
               hideModal();
 
-              // 난이도 한글 변환 맵
-              const LEVEL_TEXT_MAP: Record<LevelCategory, string> = {
-                [LevelCategory.BEGINNER]: '초급',
-                [LevelCategory.INTERMEDIATE]: '중급',
-                [LevelCategory.ADVANCED]: '고급',
-              };
-
               // 0.3초 후 제안 모달 표시 (모달 충돌 방지)
               setTimeout(() => {
-                const currentLevelText =
-                  LEVEL_TEXT_MAP[currentDifficulty || LevelCategory.BEGINNER];
+                const suggestionTitle =
+                  analysis.reason === 'easy'
+                    ? '조금 더 어려운 글도 읽어볼까요?'
+                    : '조금 더 편하게 읽어볼까요?';
 
                 showModal({
-                  title:
-                    analysis.reason === 'easy'
-                      ? `${currentLevelText} 글이 너무 쉬우셨나요?`
-                      : `${currentLevelText} 글이 너무 어려우셨나요?`,
+                  title: suggestionTitle,
                   titleStyle: {
                     ...Heading_18EB_Round,
                   },
                   titleDescriptionGapSize: scaleWidth(16),
                   closeOnBackdropPress: true,
                   children: React.createElement(LevelSuggestionModal, {
-                    suggestedLevel: analysis.suggestedLevel,
+                    suggestedLevel,
                     reason: analysis.reason as 'easy' | 'hard',
                     stats: analysis.stats,
 
                     onAccept: async () => {
                       logEvent('Accept_Level_Suggestion');
-                      await handleAcceptSuggestion(analysis.suggestedLevel!);
+                      await handleAcceptSuggestion(suggestedLevel);
                       hideModal();
                       navigation.dispatch(
                         createQuizCompleteNavigation(returnTo),

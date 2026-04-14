@@ -12,7 +12,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
-import { Body_16M, Body_16SB } from '../styles/typography';
+import {
+  Body_16SB,
+  Caption_12M,
+  Caption_14R,
+  Heading_24EB_Round,
+} from '../styles/typography';
 import { LevelCategory } from '../types/interests';
 import Button from './Button';
 import Spacer from './Spacer';
@@ -63,23 +68,32 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
   onAccept,
   onDecline,
 }) => {
-  /**
-   * 제안 사유별 메시지 생성
-   */
   const suggestionMessage = useMemo(() => {
     const suggestedLevelText = LEVEL_TEXT_MAP[suggestedLevel];
 
     if (reason === 'easy') {
       return {
         levelBadgeText: suggestedLevelText,
-        description:
-          '최근 난이도 기록을 보니,\n지금보다 조금 더 어려운 글도 읽어볼 수 있을 것 같아요.',
+        description: `최근 난이도 기록을 보니,
+지금보다 조금 더 어려운 글도 
+읽어볼 수 있을 것 같아요.`,
+      };
+    }
+
+    if (suggestedLevel === LevelCategory.INTERMEDIATE) {
+      return {
+        levelBadgeText: suggestedLevelText,
+        description: `최근 난이도 기록을 보니, 
+지금보다 쉬운 난이도로 차근차근
+소화해보는 게 좋을 것 같아요`,
       };
     }
 
     return {
       levelBadgeText: suggestedLevelText,
-      description: `최근 난이도 기록을 보니,\n지금보다 쉬운 난이도로 차근차근\n소화해보는 게 좋을 것 같아요.`,
+      description: `최근 난이도 기록을 보니, 
+지금보다 쉬운 난이도로 차근차근
+소화해보는 게 좋을 것 같아요`,
     };
   }, [suggestedLevel, reason]);
 
@@ -87,12 +101,13 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
     <View style={styles.container}>
       {/* 난이도 배지 */}
       <View style={styles.levelBadge}>
+        <Text style={styles.levelBadgeCaption}>추천 난이도</Text>
         <Text style={styles.levelBadgeText}>
           {suggestionMessage.levelBadgeText}
         </Text>
       </View>
 
-      <Spacer num={16} />
+      <Spacer num={8} />
 
       {/* 설명 */}
       <Text style={styles.description}>{suggestionMessage.description}</Text>
@@ -124,26 +139,29 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    paddingHorizontal: scaleWidth(24),
-    paddingTop: scaleWidth(24),
-    paddingBottom: scaleWidth(8),
+    width: '100%',
   },
   levelBadge: {
-    paddingHorizontal: scaleWidth(20),
-    paddingVertical: scaleWidth(10),
-    borderRadius: BORDER_RADIUS[30],
-    backgroundColor: COLORS.puple.main,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scaleWidth(2),
+    paddingVertical: scaleWidth(16),
+    borderRadius: BORDER_RADIUS[12],
+    backgroundColor: COLORS.puple[3],
+  },
+  levelBadgeCaption: {
+    ...Caption_12M,
+    color: COLORS.puple.main,
   },
   levelBadgeText: {
-    ...Body_16SB,
-    color: COLORS.white,
+    ...Heading_24EB_Round,
+    color: COLORS.puple.main,
   },
   description: {
-    ...Body_16M,
-    color: COLORS.gray700,
+    ...Caption_14R,
+    color: COLORS.gray600,
     textAlign: 'center',
-    lineHeight: scaleWidth(24),
   },
   buttonContainer: {
     width: '100%',
@@ -153,9 +171,12 @@ const styles = StyleSheet.create({
   },
   declineButton: {
     width: '100%',
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray300,
   },
   declineButtonText: {
+    ...Body_16SB,
     color: COLORS.gray600,
   },
 });
