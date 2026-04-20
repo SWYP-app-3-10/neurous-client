@@ -16,6 +16,7 @@ import {
   Body_16SB,
   Caption_12M,
   Caption_14R,
+  Heading_16B,
   Heading_24EB_Round,
 } from '../styles/typography';
 import { LevelCategory } from '../types/interests';
@@ -112,7 +113,7 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
       {/* 설명 */}
       <Text style={styles.description}>{suggestionMessage.description}</Text>
 
-      <Spacer num={32} />
+      <Spacer num={24} />
 
       {/* 버튼 */}
       <View style={styles.buttonContainer}>
@@ -121,6 +122,7 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
           title="좋아요"
           onPress={onAccept}
           style={styles.acceptButton}
+          textStyle={styles.acceptButtonText}
         />
 
         <Spacer num={12} />
@@ -139,13 +141,15 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
+    width: scaleWidth(248),
+    alignSelf: 'center',
+    alignItems: 'stretch',
+    paddingTop: scaleWidth(4),
   },
   levelBadge: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: scaleWidth(2),
     paddingVertical: scaleWidth(16),
     borderRadius: BORDER_RADIUS[12],
     backgroundColor: COLORS.puple[3],
@@ -153,13 +157,16 @@ const styles = StyleSheet.create({
   levelBadgeCaption: {
     ...Caption_12M,
     color: COLORS.puple.main,
+    textAlign: 'center',
   },
   levelBadgeText: {
     ...Heading_24EB_Round,
     color: COLORS.puple.main,
+    textAlign: 'center',
   },
   description: {
     ...Caption_14R,
+    width: '100%',
     color: COLORS.gray600,
     textAlign: 'center',
   },
@@ -168,16 +175,34 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     width: '100%',
+    height: scaleWidth(48),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  acceptButtonText: {
+    ...Heading_16B,
+    width: '100%',
+    color: COLORS.white,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   declineButton: {
     width: '100%',
+    height: scaleWidth(48),
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.gray300,
   },
   declineButtonText: {
     ...Body_16SB,
-    color: COLORS.gray600,
+    width: '100%',
+    color: COLORS.gray700,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });
 

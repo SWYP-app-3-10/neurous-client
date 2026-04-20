@@ -132,6 +132,7 @@ export const useArticleNavigation = ({
         if (currentPoints >= ARTICLE_READ_POINT_COST) {
           // ── 포인트 충분: 포인트 사용 확인 모달 ──────────────────
           await logScreenView('Popup_Reading', undefined, true);
+          isProcessingRef.current = false; // 모달 표시 시점에 클릭 처리 완료 → 버튼 클릭 허용
 
           showModal({
             title: '새로운 글을 읽으시겠어요?',
@@ -235,6 +236,7 @@ export const useArticleNavigation = ({
         } else {
           // ── 포인트 부족: 광고 시청 안내 모달 ────────────────────
           await logScreenView('Popup_Advertisement', undefined, true);
+          isProcessingRef.current = false; // 모달 표시 시점에 클릭 처리 완료 → 버튼 클릭 허용
 
           showModal({
             title: '광고를 보고 포인트 받으시겠어요?',
@@ -261,12 +263,8 @@ export const useArticleNavigation = ({
         }
       } catch (error: any) {
         console.error('[useArticleNavigation] 에러:', error);
+        isProcessingRef.current = false; // fetchContentAccess 에러 시 즉시 리셋 → 재시도 가능
         Alert.alert('오류', '글 접근 권한을 확인하는 중 오류가 발생했습니다.');
-      } finally {
-        // 성공/실패 모두 1초 뒤 플래그 리셋
-        setTimeout(() => {
-          isProcessingRef.current = false;
-        }, 1000);
       }
     },
     [showModal, hideModal, navigation, returnTo, storePoints],
