@@ -38,7 +38,6 @@ const toNotificationItem = (remoteMessage: any): NotificationItem => {
  * - 포그라운드: 메시지 수신 시 notificationStore에 추가
  * - 백그라운드: 알림 탭 시 notificationStore에 추가 후 읽음 처리
  * - 콜드스타트: 종료 상태에서 알림 탭으로 앱 진입 시 처리
- * - 앱 포그라운드 실시간 수신은 useNotificationSSE가 담당
  */
 export function usePushNotification() {
   const add = useNotificationStore(s => s.add);
@@ -59,13 +58,8 @@ export function usePushNotification() {
         const token = await messaging().getToken();
         if (__DEV__) console.log('[FCM Token]', token);
 
-        // 백엔드 미구현 시 실패해도 앱 동작에 영향 없도록 처리
-        try {
-          await registerFCMToken(token);
-        } catch {
-          if (__DEV__)
-            console.warn('[FCM] 토큰 서버 등록 실패 (백엔드 미연동)');
-        }
+        // 정상 호출 (에러는 registerFCMToken 내부에서 처리)
+        await registerFCMToken(token);
       } catch (e) {
         console.warn('[FCM] 초기화 실패:', e);
       }
@@ -73,15 +67,10 @@ export function usePushNotification() {
 
     init();
 
-    // 토큰 갱신 시 서버 재등록 (FCM 토큰은 주기적으로 갱신될 수 있음)
+    // 토큰 갱신 시 서버 재등록
     const unsubscribeTokenRefresh = messaging().onTokenRefresh(
       async newToken => {
-        try {
-          await registerFCMToken(newToken);
-        } catch {
-          if (__DEV__)
-            console.warn('[FCM] 토큰 갱신 등록 실패 (백엔드 미연동)');
-        }
+        await registerFCMToken(newToken);
       },
     );
 
