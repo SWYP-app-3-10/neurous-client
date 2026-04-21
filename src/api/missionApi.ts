@@ -25,7 +25,7 @@ import { getImageUrl } from '../utils/imageUtils';
  */
 export interface MissionContent {
   contentId: number;
-  contentTitle: string;
+  contentTile: string; // BE 오타 contentTitle → contentTile로 전달됨
   contentImg: string;
   contentCategory: string;
   contentDate: string;
@@ -795,7 +795,7 @@ export const convertMissionContentToArticle = (
 
   return {
     id: index, // 임시 ID
-    title: content.contentTitle,
+    title: content.contentTile, // BE 오타 대응 contentTitle → contentTile로 전달됨
     category: categoryMap[content.contentCategory] || content.contentCategory,
     readTime: 'n분', // 기본값 (실제 읽기 시간 있으면 사용)
     date: content.contentDate,
