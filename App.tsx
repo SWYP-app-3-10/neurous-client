@@ -5,7 +5,6 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/config/queryClient';
 import { useOnboardingStore } from './src/store/onboardingStore';
 import { Platform, StatusBar } from 'react-native';
-import { useNotificationSSE } from './src/hooks/useNotificationSSE';
 import { usePushNotification } from './src/hooks/usePushNotification';
 
 const App = () => {
@@ -14,8 +13,6 @@ const App = () => {
   );
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // SSE 실시간 알림 수신 (포그라운드)
-  useNotificationSSE();
   // FCM 푸시 알림 초기화 (토큰 발급 및 수신 핸들러 등록)
   usePushNotification();
 
