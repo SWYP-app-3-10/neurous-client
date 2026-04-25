@@ -55,15 +55,10 @@ const App = () => {
     initializeAppData();
   }, [loadOnboardingStatus]);
 
-  // 초기화가 완료될 때까지 렌더링 지연
-  if (!isInitialized) {
-    return null;
-  }
-
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <RootNavigator />
+        {isInitialized ? <RootNavigator /> : null}
       </QueryClientProvider>
     </SafeAreaProvider>
   );
