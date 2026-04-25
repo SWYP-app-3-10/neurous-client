@@ -1,65 +1,124 @@
 import React from 'react';
-import { View, Text, Pressable, FlatList, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Header from '../../components/Header';
 import { COLORS, scaleWidth } from '../../styles/global';
+import { Body_16M } from '../../styles/typography';
 
-import { useNotificationStore } from '../../store/notificationStore';
+import {
+  useNotifications,
+  useMarkNotificationAsRead,
+} from '../../hooks/useNotifications';
+import { formatRelativeDate } from '../../utils/dateUtils';
 
 /**
  * NotificationScreen
  *
- * - 알림 목록 화면
- * - 알림 클릭 시 해당 항목을 읽음 처리(isRead = true)
+ * - 백엔드 API에서 알림 목록 조회
+ * - 알림 클릭 시 읽음 처리 (PUT API 호출)
+ * - 날짜를 "n일 전" 형식으로 표시
  * - 읽지 않은 알림은 배경색으로 강조 표시
  */
 const NotificationScreen = () => {
-  /** 뒤로가기용 내비게이션 */
   const navigation = useNavigation<any>();
 
-  const list = useNotificationStore(s => s.list);
-  const markRead = useNotificationStore(s => s.markRead);
+  // 알림 목록 조회
+  const {
+    data: notifications = [],
+    isLoading,
+    error,
+    refetch,
+  } = useNotifications();
+
+  // 알림 읽음 처리
+  const { mutate: markAsRead } = useMarkNotificationAsRead();
 
   /**
    * 뒤로가기 처리
-   * - 일반적으로는 goBack()
-   * - 스택이 없을 수 있는 상황을 대비해 popToTop()을 fallback으로 사용
    */
   const onPressBack = () => {
-    if (navigation.canGoBack?.()) navigation.goBack();
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+    }
   };
 
   /**
    * 알림 클릭 시 읽음 처리
-   * - 클릭된 알림의 id와 일치하는 항목만 isRead를 true로 변경
    */
-  const onPressItem = (id: string) => {
-    markRead(id);
+  const onPressItem = (notificationId: number, isRead: boolean) => {
+    if (!isRead) {
+      markAsRead(notificationId);
+    }
   };
 
   /**
    * FlatList 아이템 렌더링
-   * - 읽지 않은 알림(!isRead)만 배경색으로 하이라이트
    */
   const renderItem = ({ item }: { item: any }) => {
     const isUnread = !item.isRead;
 
     return (
       <Pressable
-        onPress={() => onPressItem(item.id)}
+        onPress={() => onPressItem(item.notificationId, item.isRead)}
         style={[styles.row, isUnread && styles.rowUnread]}
       >
         <Text style={[styles.title, isUnread && styles.titleUnread]}>
           {item.title}
         </Text>
 
-        <Text style={styles.subtitle}>{item.subtitle}</Text>
-        <Text style={styles.date}>{item.createdAt}</Text>
+        <Text style={styles.subtitle}>{item.message}</Text>
+
+        {/* n일 전 형식으로 표시 */}
+        <Text style={styles.date}>{formatRelativeDate(item.createdAt)}</Text>
       </Pressable>
     );
   };
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <Header
+          title="알림"
+          goBackAction={onPressBack}
+          backEventName="Back_Alarm"
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.puple.main} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <Header
+          title="알림"
+          goBackAction={onPressBack}
+          backEventName="Back_Alarm"
+        />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            알림을 불러오는 중 오류가 발생했습니다.
+          </Text>
+          <Pressable onPress={() => refetch()} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>다시 시도</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -70,16 +129,23 @@ const NotificationScreen = () => {
       />
 
       <FlatList
-        data={list}
-        keyExtractor={item => item.id}
+        data={notifications}
+        keyExtractor={item => String(item.notificationId)}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListFooterComponent={
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              7일 전 알림까지 확인할 수 있어요
-            </Text>
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>아직 도착한 알림이 없어요</Text>
           </View>
+        }
+        ListFooterComponent={
+          notifications.length > 0 ? (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                7일 전 알림까지 확인할 수 있어요
+              </Text>
+            </View>
+          ) : null
         }
       />
     </SafeAreaView>
@@ -131,5 +197,42 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     color: COLORS.gray500,
+  },
+  // 로딩 상태
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // 에러 상태
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scaleWidth(20),
+  },
+  errorText: {
+    ...Body_16M,
+    color: COLORS.gray600,
+    marginBottom: scaleWidth(16),
+  },
+  retryButton: {
+    paddingHorizontal: scaleWidth(20),
+    paddingVertical: scaleWidth(10),
+    backgroundColor: COLORS.puple.main,
+    borderRadius: scaleWidth(8),
+  },
+  retryButtonText: {
+    ...Body_16M,
+    color: COLORS.white,
+  },
+  // 빈 목록
+  emptyContainer: {
+    paddingVertical: scaleWidth(60),
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...Body_16M,
+    color: COLORS.gray600,
   },
 });
