@@ -90,7 +90,6 @@ export const TimelineGroup: React.FC<TimelineGroupProps> = ({
             {displayedArticles.map((article, articleIndex) => (
               <React.Fragment key={article.contentId}>
                 <TouchableOpacity
-                  disabled={true}
                   style={[
                     styles.articleCard,
                     articleIndex === displayedArticles.length - 1 &&
@@ -143,8 +142,8 @@ export const TimelineGroup: React.FC<TimelineGroupProps> = ({
                       )}
                     </View>
                   </View>
-
-                  {false && <RightArrowIcon color={COLORS.gray700} />}
+                  {/* 오른쪽 화살표 아이콘 */}
+                  {<RightArrowIcon color={COLORS.gray700} />}
                 </TouchableOpacity>
                 {articleIndex !== displayedArticles.length - 1 && (
                   <Spacer num={16} />
