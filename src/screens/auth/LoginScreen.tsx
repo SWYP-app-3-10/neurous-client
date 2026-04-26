@@ -11,7 +11,7 @@
  *
  * 처리 흐름:
  *   [신규 사용자]
- *   약관 동의 → 소셜 로그인 → ATT 권한 → 알림 권한 → 관심분야 선택 → 난이도 선택 → 메인 화면
+ *   약관 동의 → 소셜 로그인 → ATT 권한 → 알림 권한 → 온보딩 인트로 3개 → 관심분야 선택 → 난이도 선택 → 메인 화면
  *
  *   [기존 사용자]
  *   약관 동의 → 소셜 로그인 → ATT 권한 → 알림 권한 → 메인 화면
@@ -51,10 +51,7 @@ import {
   RecentLoginInfo,
 } from '../../services/authStorageService';
 import { useShowModal } from '../../store/modalStore';
-import {
-  useOnboardingStore,
-  useCompleteOnboarding,
-} from '../../store/onboardingStore';
+import { useCompleteOnboarding } from '../../store/onboardingStore';
 import { useNotificationPermission } from '../../hooks/useNotificationPermission';
 import { useTrackingPermission } from '../../hooks/useTrackingPermission';
 
@@ -80,7 +77,7 @@ const LoginScreen = () => {
   /** 현재 로그인 중인 소셜 제공자 (로딩 스피너 표시용) */
   const [loading, setLoading] = useState<SocialLoginProvider | null>(null);
 
-  /** 최근 로그인 정보 (자동 로그인 여부 판단용) */
+  /** 최근 로그인 정보 (최근 사용한 로그인 방법 표시용) */
   const [recentLogin, setRecentLogin] = useState<RecentLoginInfo | null>(null);
 
   /**
@@ -111,9 +108,6 @@ const LoginScreen = () => {
   // ──────────────────────────────────────────────
 
   const showModal = useShowModal();
-  const setOnboardingStep = useOnboardingStore(
-    state => state.setOnboardingStep,
-  );
   const completeOnboarding = useCompleteOnboarding();
 
   /**
@@ -163,41 +157,37 @@ const LoginScreen = () => {
    *   6. 신규/기존 사용자에 따라 적절한 화면으로 이동
    *
    * 기존 사용자: completeOnboarding() 호출 → 메인 화면으로 이동
-   * 신규 사용자: 관심분야 선택 화면으로 이동
+   * 신규 사용자: 온보딩 인트로 첫 화면으로 이동
    */
   useEffect(() => {
     const subscription = AppState.addEventListener(
       'change',
       async nextAppState => {
-        // 앱이 포그라운드로 전환되고, 설정 화면 대기 중인 경우
         if (
           nextAppState === 'active' &&
           waitingForSettingsRef.current.isWaiting
         ) {
           const { isExistingUser } = waitingForSettingsRef.current;
-          waitingForSettingsRef.current = { isWaiting: false }; // 플래그 리셋
+          waitingForSettingsRef.current = { isWaiting: false };
 
           console.log(
             '[LoginScreen] 설정에서 돌아옴 - 기존 사용자 여부:',
             isExistingUser,
           );
 
-          // 기존 사용자: 온보딩 완료 → 메인 화면으로 이동
           if (isExistingUser) {
+            // 기존 사용자: 온보딩 완료 → 메인 화면으로 이동
             await completeOnboarding();
-            // RootNavigator가 isOnboardingCompleted 변경을 감지하여 자동으로 메인 화면으로 이동
           } else {
-            // 신규 사용자: 관심분야 화면으로 이동
-            await setOnboardingStep('interests');
-            navigation.navigate(RouteNames.INTERESTS, {});
+            // 신규 사용자: 온보딩 인트로 첫 화면으로 이동
+            navigation.navigate(RouteNames.INTRO_CARDLIST);
           }
         }
       },
     );
 
-    // cleanup: 컴포넌트 언마운트 시 이벤트 리스너 제거
     return () => subscription.remove();
-  }, [setOnboardingStep, navigation, completeOnboarding]);
+  }, [navigation, completeOnboarding]);
 
   // ──────────────────────────────────────────────
   // Effect 2: 소셜 로그인 SDK 초기화
@@ -211,7 +201,7 @@ const LoginScreen = () => {
    *
    * - Google: Firebase 연동 설정
    * - Naver: SDK 초기화
-   * - 최근 로그인 정보 불러오기 (자동 로그인 표시용)
+   * - 최근 로그인 정보 불러오기 (최근 사용한 로그인 방법 표시용)
    */
   useEffect(() => {
     const initSocialLogin = async () => {
@@ -228,7 +218,6 @@ const LoginScreen = () => {
       setRecentLogin(recent);
     };
 
-    // UI 렌더링 우선을 위해 지연 실행
     const timer = setTimeout(() => {
       initSocialLogin();
       loadRecentLogin();
@@ -258,7 +247,6 @@ const LoginScreen = () => {
   const handleTrackingModal = useCallback(async () => {
     if (Platform.OS !== 'ios') return;
 
-    // 중복 호출 방지: 이미 모달이 표시된 경우 스킵
     if (trackingModalShownRef.current) {
       console.log(
         '[handleTrackingModal] 이미 모달이 표시되었습니다. 중복 호출 방지',
@@ -274,16 +262,16 @@ const LoginScreen = () => {
         console.log(
           '[handleTrackingModal] 권한 요청 시도 - 네이티브 ATT 모달 표시',
         );
-        trackingModalShownRef.current = true; // 모달 표시 플래그 설정
+        trackingModalShownRef.current = true;
         await requestTrackingPermission();
         console.log('[handleTrackingModal] ATT 모달 닫힘');
       } else {
         console.log('[handleTrackingModal] 이미 권한이 허용되어 있습니다.');
-        trackingModalShownRef.current = true; // 이미 권한이 있으면 플래그 설정
+        trackingModalShownRef.current = true;
       }
     } catch (error) {
       console.warn('추적 권한 처리 중 오류 (무시하고 진행):', error);
-      trackingModalShownRef.current = false; // 에러 발생 시 플래그 리셋
+      trackingModalShownRef.current = false;
     }
   }, [checkTrackingPermission, requestTrackingPermission]);
 
@@ -300,48 +288,38 @@ const LoginScreen = () => {
    *
    *   2. 권한이 거부된 상태
    *      → 알림 권한 모달 표시
-   *      → "알림 받을래요" 클릭
-   *        → iOS: 시스템 권한 요청 다이얼로그 표시 → 허용/거부
-   *        → Android: requestNotiPermission()으로 권한 요청
-   *      → "괜찮아요" 클릭 → proceedNext() 호출 (권한 없이 진행)
+   *      → "알림 받을래요" 클릭: iOS/Android 시스템 권한 요청
+   *      → "괜찮아요" 클릭: 권한 없이 진행
    *
    *   3. iOS에서 권한이 "차단됨" 상태
    *      → Alert 표시: "설정으로 이동" / "취소"
-   *      → "설정으로 이동" 클릭
-   *        → onSettingsOpened 콜백 호출 → waitingForSettingsRef.isWaiting = true
-   *        → AppState 리스너가 설정 복귀 감지 → proceedNext() 호출
-   *      → "취소" 클릭
-   *        → onCancel 콜백 호출 → waitingForSettingsRef.isWaiting = false
-   *        → proceedNext() 호출 (권한 없이 진행)
+   *      → "설정으로 이동" 클릭: AppState 리스너가 복귀 감지 후 처리
+   *      → "취소" 클릭: 권한 없이 진행
    *
    * @param isExistingUser 기존 사용자 여부 (화면 전환 분기용)
    */
   const handleNotificationModal = useCallback(
     async (isExistingUser = false) => {
-      // 기존 사용자 여부를 ref에 저장 (설정 화면에서 돌아왔을 때 사용)
       waitingForSettingsRef.current.isExistingUser = isExistingUser;
 
       /**
        * 다음 화면으로 이동하는 헬퍼 함수
        *
        * - 기존 사용자: completeOnboarding() → 메인 화면
-       * - 신규 사용자: 관심분야 선택 화면으로 이동
+       * - 신규 사용자: 온보딩 인트로 첫 화면으로 이동
        */
       const proceedNext = async () => {
         if (isExistingUser) {
           await completeOnboarding();
         } else {
-          await setOnboardingStep('interests');
-          navigation.navigate(RouteNames.INTERESTS, {});
+          navigation.navigate(RouteNames.INTRO_CARDLIST);
         }
       };
 
       try {
-        // 알림 권한이 필요한지 확인 (이미 허용되어 있으면 false 반환)
         const shouldShowModal = await checkNotiPermission();
 
         if (shouldShowModal) {
-          // 알림 권한 요청 모달 표시
           logScreenView('Popup_App_Notification', undefined, true);
           showModal({
             title: '알림을 받으시겠어요?',
@@ -352,21 +330,15 @@ const LoginScreen = () => {
               title: '알림 받을래요',
               textStyle: { ...Heading_16B, color: COLORS.white },
               onPress: async () => {
-                // 설정 화면 이동 여부를 추적하기 위해 초기화
                 waitingForSettingsRef.current.isWaiting = false;
 
-                // 권한 요청 (iOS: 시스템 다이얼로그, Android: 권한 요청)
                 const granted = await requestNotiPermission();
 
-                // 설정 화면으로 이동한 경우
-                // (granted가 false이고 isWaiting이 true로 변경됨)
+                // 설정 화면으로 이동한 경우 AppState에서 처리
                 if (!granted && waitingForSettingsRef.current.isWaiting) {
-                  // 설정에서 돌아왔을 때 AppState에서 처리하므로
-                  // 여기서는 proceedNext 호출하지 않음
                   return;
                 }
 
-                // 권한이 허용된 경우 또는 Alert의 "취소" 버튼을 누른 경우
                 console.log(
                   '[LoginScreen] 권한 허용 또는 취소 - proceedNext 호출',
                 );
@@ -380,19 +352,16 @@ const LoginScreen = () => {
               textStyle: { color: COLORS.gray700, ...Heading_16B },
               style: { borderColor: COLORS.gray300, height: scaleWidth(48) },
               onPress: async () => {
-                // 알림 권한 없이 진행
                 await proceedNext();
                 logEvent('Dismiss_Popup_App_Notification');
               },
             },
           });
         } else {
-          // 알림 권한이 이미 허용되어 있으면 모달 없이 바로 진행
           await proceedNext();
         }
       } catch (error) {
         console.error('알림 권한 로직 오류:', error);
-        // 에러 발생해도 진행 (UX 보호)
         await proceedNext();
       }
     },
@@ -401,7 +370,6 @@ const LoginScreen = () => {
       requestNotiPermission,
       showModal,
       completeOnboarding,
-      setOnboardingStep,
       navigation,
     ],
   );
@@ -421,7 +389,7 @@ const LoginScreen = () => {
    *   5. 알림 권한 모달 표시 (handleNotificationModal)
    *
    * 신규 사용자 (result.newUser === true):
-   *   → 알림 권한 → 관심분야 선택 → 난이도 선택 → 메인 화면
+   *   → 알림 권한 → 온보딩 인트로 → 관심분야 → 난이도 → 메인
    *
    * 기존 사용자 (result.newUser === false):
    *   → 알림 권한 → 메인 화면
@@ -439,19 +407,16 @@ const LoginScreen = () => {
       // STEP 1: iOS 추적 권한 (로그인 창 띄우기 전)
       if (Platform.OS === 'ios') {
         await handleTrackingModal();
-        // [중요] ATT 시스템 모달이 완전히 닫힐 때까지 대기 (0.5초)
-        // 이 대기 없이 바로 로그인 창을 띄우면 iOS가 모달 충돌로 혼란스러워함
+        // ATT 시스템 모달이 완전히 닫힐 때까지 대기 (0.5초)
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // STEP 2: 소셜 로그인 시도
       try {
-        setLoading(provider); // 로딩 스피너 표시
+        setLoading(provider);
 
         const result = await signInWithSocial(provider);
 
-        // result가 undefined인 경우 방어 처리
-        // (socialLoginService의 catch 블록에서 반환값이 없을 때 발생)
         if (!result) {
           console.error('[LoginScreen] 로그인 결과가 undefined입니다.');
           return;
@@ -469,13 +434,12 @@ const LoginScreen = () => {
             // 기존 사용자: 알림 권한 → 메인 화면
             await handleNotificationModal(true);
           } else {
-            // 신규 사용자: 알림 권한 → 관심분야 선택
+            // 신규 사용자: 알림 권한 → 온보딩 인트로
             await handleNotificationModal(false);
           }
         } else {
           // STEP 4: 로그인 실패 또는 취소 처리
           if (result.error) {
-            // 사용자가 취소한 경우는 에러 알림 표시하지 않음
             if (!result.error.includes('취소')) {
               Alert.alert('로그인 실패', result.error);
             } else {
@@ -484,11 +448,10 @@ const LoginScreen = () => {
           }
         }
       } catch (error: any) {
-        // 예상치 못한 치명적 에러 (네트워크 오류 등)
         console.error('[LoginScreen] 로그인 치명적 에러:', error);
         Alert.alert('오류', '로그인 중 알 수 없는 오류가 발생했습니다.');
       } finally {
-        setLoading(null); // 로딩 스피너 해제
+        setLoading(null);
       }
     },
     [handleTrackingModal, handleNotificationModal],
@@ -514,7 +477,6 @@ const LoginScreen = () => {
 
     if (agreedProvider) {
       handleSocialLogin(agreedProvider);
-      // 파라미터 초기화 (재진입 시 중복 실행 방지)
       navigation.setParams({ agreedProvider: undefined });
     }
   }, [route.params?.agreedProvider, handleSocialLogin, navigation]);
