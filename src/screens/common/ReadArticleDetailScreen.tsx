@@ -73,10 +73,10 @@ const ReadArticleDetailScreen = () => {
   // ──────────────────────────────────────────────
 
   /** ScrollView 참조 (프로그래밍 방식 스크롤 제어용) */
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
 
   /** 퀴즈 섹션 View 참조 (퀴즈 위치 측정용) */
-  const quizSectionRef = useRef<View>(null);
+  const quizSectionRef = useRef<View | null>(null);
 
   // ──────────────────────────────────────────────
   // Route Params
@@ -183,6 +183,7 @@ const ReadArticleDetailScreen = () => {
         question: contentDetail.quiz.quizContent,
         options: contentDetail.quiz.choices.map(choice => ({
           id: choice.quizChoiceId,
+          choiceNo: choice.choiceNo,
           text: choice.choiceText,
         })),
         correctAnswerId: contentDetail.quiz.correctChoiceNo,
