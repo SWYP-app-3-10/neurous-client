@@ -38,27 +38,9 @@ import { SocialLoginProvider } from '../services/socialLoginService';
  * 온보딩 화면들의 파라미터 타입 정의
  *
  * 처리 흐름:
- *   소개 화면들 → 소셜 로그인 → 약관 동의 → 관심분야 선택 → 난이도 선택
+ *   소셜 로그인 → 약관 동의 → 온보딩 인트로 3개 → 관심분야 선택 → 난이도 선택
  */
 export type OnboardingStackParamList = {
-  /** 난이도 설정 화면 (온보딩 마지막 단계) */
-  [RouteNames.DIFFICULTY_SETTING]: undefined;
-
-  /**
-   * 관심분야 선택 화면
-   * @param editMode - 온보딩 중인지(false) 마이페이지에서 수정하는지(true) 구분
-   */
-  [RouteNames.INTERESTS]: { editMode?: boolean };
-
-  /** 소개 화면 1 - 카드 리스트 */
-  [RouteNames.INTRO_CARDLIST]: undefined;
-
-  /** 소개 화면 2 - 캐릭터 기능 소개 */
-  [RouteNames.INTRO_FUNCTION]: undefined;
-
-  /** 소개 화면 3 - 탐색 기능 소개 */
-  [RouteNames.INTRO_SEARCH]: undefined;
-
   /**
    * 소셜 로그인 화면
    * @param agreedProvider - 약관 동의 후 돌아올 때 어떤 소셜로 로그인할지 전달 (선택)
@@ -72,6 +54,24 @@ export type OnboardingStackParamList = {
    * @param provider - 어떤 소셜 로그인을 진행 중인지 (필수)
    */
   [RouteNames.TERMS_AGREEMENT]: { provider: SocialLoginProvider };
+
+  /** 온보딩 인트로 1 - 미션 소개 */
+  [RouteNames.INTRO_CARDLIST]: undefined;
+
+  /** 온보딩 인트로 2 - 캐릭터 성장 소개 */
+  [RouteNames.INTRO_FUNCTION]: undefined;
+
+  /** 온보딩 인트로 3 - 글 탐색 소개 */
+  [RouteNames.INTRO_SEARCH]: undefined;
+
+  /**
+   * 관심분야 선택 화면
+   * @param editMode - 온보딩 중인지(false) 마이페이지에서 수정하는지(true) 구분
+   */
+  [RouteNames.INTERESTS]: { editMode?: boolean };
+
+  /** 난이도 설정 화면 (온보딩 마지막 단계) */
+  [RouteNames.DIFFICULTY_SETTING]: undefined;
 
   /** 이용약관 상세 화면 */
   [RouteNames.TERMS_OF_SERVICE]: undefined;
@@ -313,7 +313,7 @@ export type FullScreenStackParamList = {
  * 앱 최상위 네비게이터의 파라미터 타입
  *
  * 네비게이션 계층 구조:
- *   1. ONBOARDING: 온보딩 화면들 (로그인, 관심분야, 난이도 선택)
+ *   1. ONBOARDING: 온보딩 화면들 (로그인 → 약관 → 인트로 → 관심분야 → 난이도)
  *   2. MAIN_TAB: 메인 탭 (미션, 캐릭터, 검색, 마이페이지)
  *   3. FULL_SCREEN_STACK: 전체 화면들 (글 읽기, 퀴즈, 설정 등)
  *
