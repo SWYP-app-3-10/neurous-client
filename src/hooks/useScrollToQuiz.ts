@@ -24,8 +24,8 @@ import { ScrollView, View } from 'react-native';
  * @property quizSectionRef 퀴즈 섹션 컨테이너 View ref (위치 측정에 사용)
  */
 interface UseScrollToQuizOptions {
-  scrollViewRef: React.RefObject<ScrollView>;
-  quizSectionRef: React.RefObject<View>;
+  scrollViewRef: React.RefObject<ScrollView | null>;
+  quizSectionRef: React.RefObject<View | null>;
 }
 
 /**
