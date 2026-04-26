@@ -52,8 +52,6 @@ const IntroCardList = () => {
         style={{
           height: scaleWidth(56),
           borderRadius: BORDER_RADIUS[16],
-          justifyContent: 'center',
-          alignItems: 'center',
           backgroundColor: COLORS.puple.main,
           marginHorizontal: scaleWidth(20),
         }}
