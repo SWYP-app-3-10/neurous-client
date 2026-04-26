@@ -6,6 +6,7 @@ import Spacer from './Spacer';
 import QuizOptionCard from './QuizOptionCard';
 import QuizQuestion from './QuizQuestion';
 interface QuizOption {
+  choiceNo: number;
   id: number;
   text: string;
 }
@@ -16,7 +17,7 @@ interface QuizFeedbackProps {
   correctAnswerId: number;
   selectedAnswerId: number | null;
   showFeedbackMessage?: boolean;
-  containerRef?: React.RefObject<View>;
+  containerRef?: React.RefObject<View | null>;
 }
 
 const QuizFeedback: React.FC<QuizFeedbackProps> = ({
@@ -63,7 +64,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
 
       {/* 선택지 */}
       {options.map((option: QuizOption, index) => {
-        const correct = option.id === correctAnswerId;
+        const correct = option.choiceNo === correctAnswerId;
 
         return (
           <View key={option.id}>
