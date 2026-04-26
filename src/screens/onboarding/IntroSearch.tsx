@@ -1,3 +1,18 @@
+/**
+ * 온보딩 인트로 3 - 탐색 소개 화면 (IntroSearch.tsx)
+ *
+ * 온보딩 인트로의 세 번째이자 마지막 화면으로,
+ * 다양한 주제의 글을 탐색하는 기능을 소개한다.
+ *
+ * 주요 기능:
+ *   - 글 탐색 기능 안내
+ *   - 진행 상태 표시 (3/3)
+ *   - 관심분야 선택 화면으로 이동
+ *
+ * 처리 흐름:
+ *   IntroCardList → IntroFunction → IntroSearch (현재) → Interests → Difficulty → Main
+ */
+
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,15 +31,23 @@ import {
 } from '../../styles/typography';
 import { Intro_Search } from '../../icons/commonIcons/simpleImages';
 import { logEvent } from '../../services/analyticsService';
+import { useOnboardingStore } from '../../store/onboardingStore';
+
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
 
 const IntroSearch = () => {
   const navigation = useNavigation<NavigationProp>();
+  const setOnboardingStep = useOnboardingStore(
+    state => state.setOnboardingStep,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* 뒤로가기 버튼 */}
       <Header />
+
       <View style={{ flex: 1 }}>
+        {/* 제목 및 설명 */}
         <View style={{ paddingHorizontal: scaleWidth(20) }}>
           <Text style={[Heading_24EB_Round, { color: COLORS.black }]}>
             다양한 주제의 글을 탐색하며
@@ -38,6 +61,7 @@ const IntroSearch = () => {
           <Spacer num={86} />
         </View>
 
+        {/* 일러스트레이션 및 진행 상태 */}
         <View
           style={{
             paddingHorizontal: scaleWidth(41),
@@ -45,20 +69,23 @@ const IntroSearch = () => {
         >
           <Intro_Search />
           <Spacer num={124} />
+          {/* 진행 상태: 3/3 */}
           <ActivityIndicator activeIndex={2} />
         </View>
       </View>
+
+      {/* 다음 버튼 */}
       <TouchableOpacity
         style={{
           height: scaleWidth(56),
           borderRadius: BORDER_RADIUS[16],
-          justifyContent: 'center',
-          alignItems: 'center',
           backgroundColor: COLORS.puple.main,
           marginHorizontal: scaleWidth(20),
         }}
-        onPress={() => {
-          navigation.navigate(RouteNames.SOCIAL_LOGIN);
+        onPress={async () => {
+          // 온보딩 단계를 'interests'로 설정하고 관심분야 선택 화면으로 이동
+          await setOnboardingStep('interests');
+          navigation.navigate(RouteNames.INTERESTS, {});
           logEvent('Next_Onboarding_Function03_Explore');
         }}
       >
@@ -72,70 +99,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: scaleWidth(20),
-    paddingTop: scaleWidth(40),
-    paddingBottom: scaleWidth(40),
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: scaleWidth(300),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(20),
-  },
-  textPlaceholder: {
-    width: '100%',
-    height: scaleWidth(80),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(8),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(40),
-  },
-  placeholderText: {
-    color: COLORS.gray600,
-    fontSize: scaleWidth(14),
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(40),
-    gap: scaleWidth(8),
-  },
-  dot: {
-    width: scaleWidth(8),
-    height: scaleWidth(8),
-    borderRadius: scaleWidth(4),
-    backgroundColor: COLORS.grayMedium,
-  },
-  activeDot: {
-    backgroundColor: COLORS.onboardingPurple,
-    width: scaleWidth(24),
-  },
-  button: {
-    width: '100%',
-    height: scaleWidth(56),
-    backgroundColor: COLORS.onboardingGreen,
-    borderRadius: scaleWidth(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  socialButton: {
-    width: '100%',
-    height: scaleWidth(56),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(12),
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: scaleWidth(16),
-    fontWeight: '600',
   },
 });
 
