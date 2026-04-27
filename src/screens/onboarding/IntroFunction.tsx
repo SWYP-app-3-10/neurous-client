@@ -6,7 +6,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteNames } from '../../../routes';
 import { BORDER_RADIUS, COLORS, scaleWidth } from '../../styles/global';
 import { OnboardingStackParamList } from '../../navigation/types';
-import Header from '../../components/Header';
 import Spacer from '../../components/Spacer';
 import ActivityIndicator from '../../components/ActivityIndicator';
 import {
@@ -16,45 +15,43 @@ import {
 } from '../../styles/typography';
 import { Intro_Fuction } from '../../icons/commonIcons/simpleImages';
 import { logEvent } from '../../services/analyticsService';
+
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
+
+/** 온보딩 인트로 2/3 - 캐릭터 성장 소개 */
 
 const IntroFuction = () => {
   const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={{ flex: 1 }}>
-        <Header />
-        <View style={{ paddingHorizontal: scaleWidth(20) }}>
+      <View style={styles.contentWrapper}>
+        {/* 제목 및 설명 영역 */}
+        <View style={styles.textSection}>
+          <Spacer num={scaleWidth(48)} />
           <Text style={[Heading_24EB_Round, { color: COLORS.black }]}>
             레벨업하며 성장하는
             {'\n'}캐릭터를 확인해보세요
           </Text>
-          <Spacer num={20} />
+          <Spacer num={scaleWidth(20)} />
           <Text style={[Body_15M, { color: COLORS.gray600 }]}>
-            활동을 통해 경험치를 모으면 레벨이 오르고 새 {'\n'}로운 캐릭터를
+            활동을 통해 경험치를 모으면 레벨이 오르고 {'\n'} 새로운 캐릭터를
             만날 수 있어요
           </Text>
-          <Spacer num={47} />
+          <Spacer num={scaleWidth(47)} />
         </View>
 
-        <View
-          style={{
-            paddingHorizontal: scaleWidth(41),
-          }}
-        >
+        {/* 일러스트레이션 및 진행 상태 영역 */}
+        <View style={styles.illustrationSection}>
           <Intro_Fuction />
-          <Spacer num={69} />
+          <Spacer num={scaleWidth(70)} />
           <ActivityIndicator activeIndex={1} />
         </View>
       </View>
+
+      {/* 다음 버튼 */}
       <TouchableOpacity
-        style={{
-          height: scaleWidth(56),
-          borderRadius: BORDER_RADIUS[16],
-          backgroundColor: COLORS.puple.main,
-          marginHorizontal: scaleWidth(20),
-        }}
+        style={styles.button}
         onPress={() => {
           navigation.navigate(RouteNames.INTRO_SEARCH);
           logEvent('Next_Onboarding_Function02_Character');
@@ -67,73 +64,35 @@ const IntroFuction = () => {
 };
 
 const styles = StyleSheet.create({
+  /** 전체 컨테이너 */
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
   },
-  content: {
+
+  /** 콘텐츠 영역 */
+  contentWrapper: {
     flex: 1,
+  },
+
+  /** 제목 및 설명 영역 */
+  textSection: {
     paddingHorizontal: scaleWidth(20),
-    paddingTop: scaleWidth(40),
-    paddingBottom: scaleWidth(40),
   },
-  imagePlaceholder: {
-    width: '100%',
-    height: scaleWidth(300),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(12),
-    justifyContent: 'center',
+
+  /** 일러스트레이션 영역 (가운데 정렬) */
+  illustrationSection: {
     alignItems: 'center',
-    marginBottom: scaleWidth(20),
   },
-  textPlaceholder: {
-    width: '100%',
-    height: scaleWidth(80),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(8),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(40),
-  },
-  placeholderText: {
-    color: COLORS.gray600,
-    fontSize: scaleWidth(14),
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(40),
-    gap: scaleWidth(8),
-  },
-  dot: {
-    width: scaleWidth(8),
-    height: scaleWidth(8),
-    borderRadius: scaleWidth(4),
-    backgroundColor: COLORS.grayMedium,
-  },
-  activeDot: {
-    backgroundColor: COLORS.onboardingPurple,
-    width: scaleWidth(24),
-  },
+
+  /** 다음 버튼 - 화면 하단 고정 */
   button: {
-    width: '100%',
     height: scaleWidth(56),
-    backgroundColor: COLORS.onboardingGreen,
-    borderRadius: scaleWidth(12),
+    borderRadius: BORDER_RADIUS[16],
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  socialButton: {
-    width: '100%',
-    height: scaleWidth(56),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(12),
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: scaleWidth(16),
-    fontWeight: '600',
+    backgroundColor: COLORS.puple.main,
+    marginHorizontal: scaleWidth(20),
   },
 });
 

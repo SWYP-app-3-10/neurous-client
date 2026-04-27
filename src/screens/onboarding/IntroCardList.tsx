@@ -18,43 +18,40 @@ import { logEvent } from '../../services/analyticsService';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
 
+/** 온보딩 인트로 1/3 - 미션 소개 */
+
 const IntroCardList = () => {
   const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: scaleWidth(20) }}>
-          <Spacer num={48} />
+      <View style={styles.contentWrapper}>
+        {/* 제목 및 설명 영역 */}
+        <View style={styles.textSection}>
+          <Spacer num={scaleWidth(48)} />
           <Text style={[Heading_24EB_Round, { color: COLORS.black }]}>
             미션을 확인하고 관심 있는
             {'\n'}분야의 글을 읽어보세요
           </Text>
-          <Spacer num={20} />
+          <Spacer num={scaleWidth(20)} />
           <Text style={[Body_15M, { color: COLORS.gray600 }]}>
             관심 있는 분야의 글을 추천받고, 오늘의 미션을
             {'\n'}수행하며 경험치와 포인트를 모아보세요
           </Text>
-          <Spacer num={47} />
+          <Spacer num={scaleWidth(47)} />
         </View>
-        <View
-          style={{
-            paddingHorizontal: scaleWidth(41),
-          }}
-        >
-          <Intro_CardList />
-          <Spacer num={69} />
 
+        {/* 일러스트레이션 및 진행 상태 영역 */}
+        <View style={styles.illustrationSection}>
+          <Intro_CardList />
+          <Spacer num={scaleWidth(70)} />
           <ActivityIndicator activeIndex={0} />
         </View>
       </View>
+
+      {/* 다음 버튼 */}
       <TouchableOpacity
-        style={{
-          height: scaleWidth(56),
-          borderRadius: BORDER_RADIUS[16],
-          backgroundColor: COLORS.puple.main,
-          marginHorizontal: scaleWidth(20),
-        }}
+        style={styles.button}
         onPress={() => {
           navigation.navigate(RouteNames.INTRO_FUNCTION);
           logEvent('Next_Onboarding_Function01_CardList');
@@ -67,73 +64,35 @@ const IntroCardList = () => {
 };
 
 const styles = StyleSheet.create({
+  /** 전체 컨테이너 */
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
   },
-  content: {
+
+  /** 콘텐츠 영역 */
+  contentWrapper: {
     flex: 1,
+  },
+
+  /** 제목 및 설명 영역 */
+  textSection: {
     paddingHorizontal: scaleWidth(20),
-    paddingTop: scaleWidth(40),
-    paddingBottom: scaleWidth(40),
   },
-  imagePlaceholder: {
-    width: '100%',
-    height: scaleWidth(300),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(12),
-    justifyContent: 'center',
+
+  /** 일러스트레이션 영역 (가운데 정렬) */
+  illustrationSection: {
     alignItems: 'center',
-    marginBottom: scaleWidth(20),
   },
-  textPlaceholder: {
-    width: '100%',
-    height: scaleWidth(80),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(8),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(40),
-  },
-  placeholderText: {
-    color: COLORS.gray600,
-    fontSize: scaleWidth(14),
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaleWidth(40),
-    gap: scaleWidth(8),
-  },
-  dot: {
-    width: scaleWidth(8),
-    height: scaleWidth(8),
-    borderRadius: scaleWidth(4),
-    backgroundColor: COLORS.grayMedium,
-  },
-  activeDot: {
-    backgroundColor: COLORS.onboardingPurple,
-    width: scaleWidth(24),
-  },
+
+  /** 다음 버튼 - 화면 하단 고정 */
   button: {
-    width: '100%',
     height: scaleWidth(56),
-    backgroundColor: COLORS.onboardingGreen,
-    borderRadius: scaleWidth(12),
+    borderRadius: BORDER_RADIUS[16],
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  socialButton: {
-    width: '100%',
-    height: scaleWidth(56),
-    backgroundColor: COLORS.grayLight,
-    borderRadius: scaleWidth(12),
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: scaleWidth(16),
-    fontWeight: '600',
+    backgroundColor: COLORS.puple.main,
+    marginHorizontal: scaleWidth(20),
   },
 });
 
