@@ -25,7 +25,7 @@
  * Release 빌드이지만 테스트 광고를 보고 싶을 때 true로 설정
  * (Google Play 내부 테스트, 베타 배포 시)
  */
-export const IS_INTERNAL_TEST = false;
+export const IS_INTERNAL_TEST = true;
 
 /**
  * 프로덕션 모드
