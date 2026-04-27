@@ -18,8 +18,9 @@
  * 처리 흐름:
  *   1. 퀴즈 데이터 로드 (fetchQuiz API)
  *   2. 사용자가 선택지 선택
- *   3. "다음" 버튼 클릭 → submitQuiz API 호출
- *   4. 포인트/경험치 획득 모달 표시
+ *   3. "다음" 버튼 클릭 → 완독 체크 API 호출
+ *   4. submitQuiz API 호출
+ *   5. 포인트/경험치 획득 모달 표시
  *   5. 피드백 화면으로 전환 (정답/오답 표시)
  *   6. "완료" 버튼 클릭 → 난이도 피드백 모달 표시 (하루 1회)
  *   7. 피드백 저장 → 즉시 분석 → 조건 충족 시 난이도 제안 팝업
@@ -56,7 +57,12 @@ import {
   checkCanSubmitDifficulty,
 } from '../../hooks/useDifficultySubmit';
 import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
-import { fetchQuiz, QuizResponse, submitQuiz } from '../../api/missionApi';
+import {
+  fetchQuiz,
+  QuizResponse,
+  submitQuiz,
+  checkReadStatus,
+} from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logEvent, logScreenView } from '../../services/analyticsService';
@@ -151,6 +157,12 @@ const QuizScreen: React.FC = () => {
   /** 난이도 모달 타이머 (모달 닫기 지연용) */
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** 퀴즈 제출 중인지 여부 (버튼 연타로 인한 중복 제출 방지) */
+  const isSubmittingQuizRef = useRef(false);
+
+  /** 완독 여부 체크 API를 이미 호출했는지 여부 (중복 호출 방지) */
+  const hasCheckedReadStatusRef = useRef(false);
+
   // ──────────────────────────────────────────────
   // Effect 1: 화면 상태에 따른 analytics 로그
   // ──────────────────────────────────────────────
@@ -222,6 +234,26 @@ const QuizScreen: React.FC = () => {
   }, [articleId]);
 
   // ──────────────────────────────────────────────
+  // Effect 3: articleId 변경 시 제출 관련 상태 초기화
+  // ──────────────────────────────────────────────
+
+  /**
+   * articleId가 변경되면 퀴즈 제출 관련 상태를 초기화한다.
+   *
+   * 이유:
+   *   - 같은 QuizScreen에서 다른 글의 퀴즈를 풀 수 있음
+   *   - 글마다 완독 체크와 제출 처리는 독립적으로 실행되어야 함
+   *
+   * 리셋 항목:
+   *   - 퀴즈 제출 진행 여부
+   *   - 완독 여부 체크 API 호출 여부
+   */
+  useEffect(() => {
+    isSubmittingQuizRef.current = false;
+    hasCheckedReadStatusRef.current = false;
+  }, [articleId]);
+
+  // ──────────────────────────────────────────────
   // 핸들러: 선택지 선택
   // ──────────────────────────────────────────────
 
@@ -248,31 +280,40 @@ const QuizScreen: React.FC = () => {
    *
    * 처리 흐름:
    *   1. 선택지 유효성 검사
-   *   2. submitQuiz API 호출
-   *   3. 포인트 및 경험치 추가 (로컬 상태)
-   *   4. 레벨업 정보 AsyncStorage에 저장 (MissionScreen에서 감지)
-   *   5. 포인트/경험치 획득 모달 표시
-   *   6. 퀴즈 상태를 'feedback'으로 전환
+   *   2. 버튼 연타로 인한 중복 제출 방지
+   *   3. 현재 사용자 정보 조회
+   *   4. 퀴즈 제출 시점에 완독 체크 API 호출
+   *   5. submitQuiz API 호출
+   *   6. 포인트 및 경험치 추가 (로컬 상태)
+   *   7. 레벨업 정보 AsyncStorage에 저장 (MissionScreen에서 감지)
+   *   8. 포인트/경험치 획득 모달 표시
+   *   9. 퀴즈 상태를 'feedback'으로 전환
    *
-   * API 요청 데이터:
-   *   - quizId: 퀴즈 ID
-   *   - selectedNo: 선택한 선택지의 choiceNo
-   *   - readContentId: 글 ID
+   * 변경된 보상 처리 방식:
+   *   - ArticleDetailScreen에서는 퀴즈 화면 이동만 처리
+   *   - QuizScreen에서 퀴즈 제출 API가 성공했을 때 포인트/경험치를 지급
    *
-   * API 응답 데이터:
-   *   - quizResultResponse: 정답 여부 및 정답 번호
-   *   - rewardResponse: 획득한 포인트 및 경험치
-   *   - userLevelInformation: 레벨업 정보 (레벨업 발생 시에만)
+   * 에러 처리:
+   *   - 완독 체크 API 호출에 실패해도 퀴즈 제출은 계속 진행
+   *   - 퀴즈 제출 API가 실패하면 보상 지급 및 피드백 화면 전환을 하지 않음
    */
   const handleNext = async () => {
+    console.log('[QuizScreen] 퀴즈 제출 버튼 클릭');
     if (!selectedOptionId || !quiz || !quizData) {
       return;
     }
+
+    if (isSubmittingQuizRef.current) {
+      return;
+    }
+
+    isSubmittingQuizRef.current = true;
 
     try {
       const userInfo = await getUserInfo();
       if (!userInfo || !userInfo.userId) {
         console.error('[퀴즈] 사용자 정보 없음');
+        isSubmittingQuizRef.current = false;
         return;
       }
 
@@ -282,10 +323,50 @@ const QuizScreen: React.FC = () => {
       );
       if (!selectedChoice) {
         console.error('[퀴즈] 선택한 선택지를 찾을 수 없습니다.');
+        isSubmittingQuizRef.current = false;
         return;
       }
 
-      // 퀴즈 제출 API 호출
+      // ──────────────────────────────────────────────
+      // Step 1: 퀴즈 제출 시점에 완독 체크
+      // ──────────────────────────────────────────────
+
+      /**
+       * 사용자가 퀴즈를 제출했다면 글을 읽고 퀴즈까지 진행한 것으로 판단한다.
+       *
+       * readTimeSeconds:
+       *   - 타이머 기반 읽기 시간 감지는 제거했으므로 0으로 전달
+       *
+       * isCompleted:
+       *   - 퀴즈 제출 시점이므로 true 전달
+       */
+      if (!hasCheckedReadStatusRef.current) {
+        hasCheckedReadStatusRef.current = true;
+
+        try {
+          const readStatusResponse = await checkReadStatus(
+            userInfo.userId,
+            articleId,
+            0,
+            true,
+          );
+
+          console.log(
+            '[QuizScreen] 퀴즈 제출 시 완독 체크 완료:',
+            readStatusResponse.data,
+          );
+        } catch (readStatusError) {
+          console.error(
+            '[QuizScreen] 퀴즈 제출 시 완독 체크 실패:',
+            readStatusError,
+          );
+        }
+      }
+
+      // ──────────────────────────────────────────────
+      // Step 2: 퀴즈 제출 API 호출
+      // ──────────────────────────────────────────────
+
       const submitRequest = {
         quizId: quiz.id,
         selectedNo: selectedChoice.choiceNo,
@@ -315,9 +396,21 @@ const QuizScreen: React.FC = () => {
         });
       }
 
-      // 포인트 및 경험치 추가 (로컬 상태)
-      addPoints(rewardResponse.earnedPoint);
-      addExperience(rewardResponse.earnedExp);
+      // ──────────────────────────────────────────────
+      // Step 3: 퀴즈 제출 성공 시 포인트 및 경험치 지급
+      // ──────────────────────────────────────────────
+
+      /**
+       * submitQuiz API 응답으로 받은 보상을 로컬 상태에 반영한다.
+       *
+       * 주의:
+       *   - 경험치는 ArticleDetailScreen에서 지급하지 않는다.
+       *   - 퀴즈 제출 API가 성공했을 때만 지급한다.
+       */
+      if (rewardResponse) {
+        addPoints(rewardResponse.earnedPoint);
+        addExperience(rewardResponse.earnedExp);
+      }
 
       // 레벨업 정보가 있으면 AsyncStorage에 저장
       // MissionScreen에서 이 정보를 감지하여 레벨업 모달 표시
@@ -352,6 +445,7 @@ const QuizScreen: React.FC = () => {
       setQuizState('feedback');
     } catch (error: any) {
       console.error('[퀴즈] 제출 실패:', error);
+      isSubmittingQuizRef.current = false;
     }
   };
 
