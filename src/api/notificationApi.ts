@@ -73,6 +73,38 @@ export async function registerFCMToken(token: string): Promise<void> {
 }
 
 /**
+ * FCM 디바이스 토큰을 서버에서 삭제
+ * - 로그아웃 시 호출하여 이전 계정의 토큰을 제거
+ * @param userId 사용자 ID
+ * @param token FCM 토큰
+ * @returns Promise<void>
+ */
+export async function deleteFCMToken(
+  userId: number,
+  token: string,
+): Promise<void> {
+  try {
+    console.log('[FCM] 토큰 서버 삭제 시작:', { userId, token });
+
+    // 백엔드 API 엔드포인트에 맞게 수정 필요
+    await client.delete('/api/notification/token', {
+      data: { userId, token },
+    });
+
+    console.log('[FCM] 토큰 서버 삭제 성공');
+  } catch (error: any) {
+    console.error('[FCM] 토큰 서버 삭제 실패:', error);
+    if (error.response) {
+      console.error('[FCM] 서버 응답:', {
+        status: error.response.status,
+        data: error.response.data,
+      });
+    }
+    // 삭제 실패해도 throw 안 함 (로그아웃은 계속 진행)
+  }
+}
+
+/**
  * 알림 목록 조회
  *
  * - 백엔드 응답을 프론트엔드 형식으로 변환
