@@ -61,9 +61,11 @@ export async function registerFCMToken(token: string): Promise<void> {
 
     console.log('[FCM] 토큰 서버 등록 시작:', request);
 
-    await client.post('/api/notification/token', request);
+    // API 호출 및 응답 저장
+    const response = await client.post('/api/notification/token', request);
 
     console.log('[FCM] 토큰 서버 등록 성공');
+    console.log('[FCM] 응답 상태:', response.status);
   } catch (error: any) {
     console.error('[FCM] 토큰 서버 등록 실패:', error);
     if (error.response) {
@@ -103,7 +105,8 @@ export async function unregisterFCMToken(): Promise<void> {
 
     console.log('[FCM] 토큰 서버 해제 시작:', { userId: userInfo.userId });
 
-    await client.delete('/api/notification/token', {
+    // API 호출 및 응답 저장
+    const response = await client.delete('/api/notification/token', {
       data: {
         userId: userInfo.userId,
         token,
@@ -111,6 +114,7 @@ export async function unregisterFCMToken(): Promise<void> {
     });
 
     console.log('[FCM] 토큰 서버 해제 성공');
+    console.log('[FCM] 응답 상태:', response.status);
   } catch (error: any) {
     console.error('[FCM] 토큰 서버 해제 실패:', error);
     if (error.response) {
@@ -138,14 +142,19 @@ export async function fetchNotifications(
   userId: number,
 ): Promise<NotificationItem[]> {
   try {
-    console.log('[알림 목록 API] 요청 시작:', userId);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[알림 목록 API] 요청 시작');
+    console.log('[알림 목록 API] userId:', userId);
 
     // GET /api/notification/get?userId={userId}
     const response = await client.get<NotificationItemRaw[]>(
       `/api/notification/get?userId=${userId}`,
     );
 
-    console.log('[알림 목록 API] 응답 성공:', response.data);
+    console.log('[알림 목록 API] 응답 상태:', response.status);
+    console.log('[알림 목록 API] 응답 데이터:', response.data);
+    console.log('[알림 목록 API] 데이터 개수:', response.data.length);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // 백엔드 응답을 프론트엔드 형식으로 변환
     const notifications: NotificationItem[] = response.data.map(item => ({
@@ -158,13 +167,20 @@ export async function fetchNotifications(
 
     return notifications;
   } catch (error: any) {
-    console.error('[알림 목록 API] 에러:', error);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('[알림 목록 API] 에러 발생');
+    console.error('[알림 목록 API] 에러:', error.message);
     if (error.response) {
-      console.error('[알림 목록 API] 서버 응답:', {
-        status: error.response.status,
-        data: error.response.data,
-      });
+      console.error('[알림 목록 API] 응답 상태:', error.response.status);
+      console.error('[알림 목록 API] 응답 데이터:', error.response.data);
+      console.error('[알림 목록 API] 응답 헤더:', error.response.headers);
+    } else if (error.request) {
+      console.error('[알림 목록 API] 요청은 전송되었으나 응답 없음');
+      console.error('[알림 목록 API] 요청:', error.request);
+    } else {
+      console.error('[알림 목록 API] 요청 설정 중 에러');
     }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     throw error;
   }
 }
@@ -190,12 +206,17 @@ export async function markNotificationAsRead(
 
   // ⚠️ 백엔드 읽음 처리 API가 구현되면 주석 해제
   // try {
-  //   await client.put(
+  //   const response = await client.put(
   //     `/api/notifications/${notificationId}/read?userId=${userId}`,
   //   );
   //   console.log('[알림 읽음 처리 API] 성공');
+  //   console.log('[알림 읽음 처리 API] 응답 상태:', response.status);
   // } catch (error: any) {
   //   console.error('[알림 읽음 처리 API] 에러:', error);
+  //   if (error.response) {
+  //     console.error('[알림 읽음 처리 API] 응답 상태:', error.response.status);
+  //     console.error('[알림 읽음 처리 API] 응답 데이터:', error.response.data);
+  //   }
   //   throw error;
   // }
 }
