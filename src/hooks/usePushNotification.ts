@@ -44,7 +44,7 @@ const initializeLocalNotification = () => {
 /**
  * FCM 토큰을 서버와 동기화
  *
- * 문서 원칙:
+ * 원칙:
  * - 로그인 상태일 때만 서버에 등록
  * - 로그인 상태가 아니면 서버 등록 안 함
  * - 앱 시작 시마다 호출해도 됨 (서버는 멱등성 있게 처리)
@@ -65,7 +65,7 @@ const syncFcmTokenIfLoggedIn = async () => {
     // 서버에 토큰 등록
     await registerFCMToken(token);
 
-    // AsyncStorage에도 저장 (중복 호출 방지용)
+    // AsyncStorage에도 저장 (참고용)
     await AsyncStorage.setItem(FCM_TOKEN_KEY, token);
 
     console.log('[FCM] 토큰 서버 동기화 완료');
@@ -77,7 +77,7 @@ const syncFcmTokenIfLoggedIn = async () => {
 /**
  * FCM 기반 푸시 알림 수신 훅
  *
- * 문서 기준 책임:
+ * 책임:
  * 1. 앱 시작 시 FCM 초기화 및 토큰 동기화
  * 2. 토큰 갱신 시 서버 재등록
  * 3. 포그라운드 푸시 수신 시 상태바 알림 표시
