@@ -72,6 +72,15 @@ const FALLBACK_THRESHOLD_UP = 0.7;
  */
 const SCROLL_TO_END_DELAY = 100;
 
+/**
+ * 프로그래밍 방식 스크롤 후 handleScroll 무시 기간 (ms)
+ *
+ * scrollToQuiz/scrollToTop 실행 시 의도적으로 상태를 변경했으므로,
+ * 스크롤 애니메이션 중 발생하는 handleScroll 이벤트가 상태를 덮어쓰지 않도록
+ * 일정 시간 동안 handleScroll을 무시함.
+ */
+const PROGRAMMATIC_SCROLL_IGNORE_DURATION = 500;
+
 export const useScrollToQuiz = ({
   scrollViewRef,
   quizSectionRef,
@@ -85,6 +94,15 @@ export const useScrollToQuiz = ({
    * ref를 병행 사용함. 불필요한 setState 호출도 방지함.
    */
   const lastShowQuizStateRef = useRef(false);
+
+  /**
+   * 프로그래밍 방식 스크롤 진행 중 플래그
+   *
+   * scrollToQuiz 또는 scrollToTop 실행 시 true로 설정하고,
+   * PROGRAMMATIC_SCROLL_IGNORE_DURATION 후 false로 리셋.
+   * 이 플래그가 true일 때는 handleScroll이 상태를 변경하지 않음.
+   */
+  const isProgrammaticScrollingRef = useRef(false);
 
   /**
    * 스크롤 이벤트 핸들러
@@ -101,6 +119,11 @@ export const useScrollToQuiz = ({
    */
   const handleScroll = useCallback(
     (event: any) => {
+      // 프로그래밍 방식 스크롤 중에는 상태 변경 무시
+      if (isProgrammaticScrollingRef.current) {
+        return;
+      }
+
       const { contentOffset, layoutMeasurement } = event.nativeEvent;
       const scrollY = contentOffset.y;
       const scrollViewHeight = layoutMeasurement.height;
@@ -157,11 +180,24 @@ export const useScrollToQuiz = ({
    * measureLayout으로 퀴즈 섹션의 y 좌표를 측정해 해당 위치로 스크롤함.
    * 측정 실패 시 scrollToEnd로 fallback.
    * SCROLL_TO_END_DELAY 만큼 지연 후 실행해 레이아웃 안정성 확보.
+   *
+   * 스크롤 시작과 동시에 showQuiz 상태를 true로 변경하고,
+   * 프로그래밍 스크롤 플래그를 설정하여 handleScroll이 상태를 덮어쓰지 않도록 함.
    */
   const scrollToQuiz = useCallback(() => {
     if (!quizSectionRef.current || !scrollViewRef.current) {
       return;
     }
+
+    // 즉시 상태 변경 및 프로그래밍 스크롤 플래그 설정
+    setShowQuiz(true);
+    lastShowQuizStateRef.current = true;
+    isProgrammaticScrollingRef.current = true;
+
+    // 일정 시간 후 플래그 해제 (애니메이션 완료 후 정상 동작 재개)
+    setTimeout(() => {
+      isProgrammaticScrollingRef.current = false;
+    }, PROGRAMMATIC_SCROLL_IGNORE_DURATION);
 
     quizSectionRef.current.measureLayout(
       scrollViewRef.current as any,
@@ -186,8 +222,20 @@ export const useScrollToQuiz = ({
    * 글 최상단으로 스크롤
    *
    * "글 보기" 버튼 클릭 시 호출됨.
+   * 스크롤 시작과 동시에 showQuiz 상태를 false로 변경하고,
+   * 프로그래밍 스크롤 플래그를 설정하여 handleScroll이 상태를 덮어쓰지 않도록 함.
    */
   const scrollToTop = useCallback(() => {
+    // 즉시 상태 변경 및 프로그래밍 스크롤 플래그 설정
+    setShowQuiz(false);
+    lastShowQuizStateRef.current = false;
+    isProgrammaticScrollingRef.current = true;
+
+    // 일정 시간 후 플래그 해제
+    setTimeout(() => {
+      isProgrammaticScrollingRef.current = false;
+    }, PROGRAMMATIC_SCROLL_IGNORE_DURATION);
+
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   }, [scrollViewRef]);
 
