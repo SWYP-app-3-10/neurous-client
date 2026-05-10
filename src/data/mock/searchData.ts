@@ -16,4 +16,5 @@ export interface NewsItems {
   readTime: string; // ex: "5분 소요"
   content: string;
   hits: number;
+  read: boolean;
 }
