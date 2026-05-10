@@ -69,7 +69,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export const useArticleNavigation = ({
   returnTo,
 }: UseArticleNavigationOptions): {
-  handleArticlePress: (articleId: number) => void;
+  handleArticlePress: (articleId: number, isRead?: boolean) => void;
 } => {
   const navigation = useNavigation<NavigationProp>();
   const showModal = useShowModal();
@@ -92,7 +92,21 @@ export const useArticleNavigation = ({
    *      → 확인 시 AdLoading 이동
    */
   const handleArticlePress = useCallback(
-    async (articleId: number) => {
+    async (articleId: number, isRead?: boolean) => {
+      // 이미 읽은 글인 경우 바로 ReadArticleDetailScreen으로 이동
+      if (isRead === true) {
+        console.log(
+          '[useArticleNavigation] 이미 읽은 글 → ReadArticleDetailScreen 이동',
+        );
+        navigation.navigate(RouteNames.FULL_SCREEN_STACK, {
+          screen: RouteNames.READ_ARTICLE_DETAIL,
+          params: {
+            articleId,
+          },
+        });
+        return;
+      }
+
       // 이전 요청이 아직 처리 중이면 무시 (빠른 연속 클릭 방지)
       if (isProcessingRef.current) {
         console.log('[useArticleNavigation] 이미 처리 중, 중복 호출 방지');
