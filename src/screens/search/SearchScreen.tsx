@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -116,6 +122,7 @@ export default function SearchScreen() {
       imageUrl: getImageUrl(c.imgUrl),
       content: '',
       hits: c.hits ?? 0,
+      read: (c as any).read ?? false,
     }));
   }, [data]);
 
@@ -196,7 +203,7 @@ export default function SearchScreen() {
               <SearchResultItem
                 item={item}
                 onPress={() => {
-                  handleArticlePress(Number(item.id));
+                  handleArticlePress(Number(item.id), item.read);
                   logEvent('ContectsList_Explore');
                 }}
               />
@@ -401,7 +408,11 @@ const HeaderArea = ({
 
     {/* 타이머 & 툴팁 영역 (정중앙 고정) */}
     <View style={styles.centerWrap}>
-      <Pressable onPress={tooltip.toggle} style={styles.timerPill} hitSlop={HIT_SLOP}>
+      <Pressable
+        onPress={tooltip.toggle}
+        style={styles.timerPill}
+        hitSlop={HIT_SLOP}
+      >
         <Text style={styles.timerPillText}>{timerText}</Text>
         <View style={styles.timerPillIconBox}>
           <InfoIcon />
@@ -412,7 +423,11 @@ const HeaderArea = ({
         <View style={styles.tooltipWrap} pointerEvents="none">
           {/* 꼬리 (SVG) */}
           <View style={styles.tooltipTailWrap}>
-            <ExploreTooltipTail width={TOOLTIP_TAIL_W} height={TOOLTIP_TAIL_H} color={'rgba(118, 124, 145, 0.95)'} />
+            <ExploreTooltipTail
+              width={TOOLTIP_TAIL_W}
+              height={TOOLTIP_TAIL_H}
+              color={'rgba(118, 124, 145, 0.95)'}
+            />
           </View>
 
           {/* 몸통(패딩 기반) */}
