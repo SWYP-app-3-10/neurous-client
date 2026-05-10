@@ -73,6 +73,7 @@ export default function SearchResultScreen() {
       imageUrl: getImageUrl(c.imgUrl),
       content: '',
       hits: (c as any).hits ?? 0,
+      read: (c as any).isRead ?? false,
     }));
   }, [data]);
 
@@ -145,7 +146,7 @@ export default function SearchResultScreen() {
                   const parsed = Number(item.id);
                   if (Number.isNaN(parsed)) return;
 
-                  handleArticlePress(parsed);
+                  handleArticlePress(parsed, item.read);
                   logEvent(`ContectsList${index + 1}_Search`);
                 }}
               />
@@ -171,8 +172,8 @@ export default function SearchResultScreen() {
                 {isError
                   ? '데이터를 불러오지 못했습니다.'
                   : hasNextPage
-                  ? '검색 결과를 찾는 중입니다...'
-                  : '검색 결과가 없습니다.'}
+                    ? '검색 결과를 찾는 중입니다...'
+                    : '검색 결과가 없습니다.'}
               </Text>
             }
           />
