@@ -146,7 +146,7 @@ export default function SearchResultScreen() {
                   const parsed = Number(item.id);
                   if (Number.isNaN(parsed)) return;
 
-                  handleArticlePress(parsed, item.read);
+                  handleArticlePress(parsed);
                   logEvent(`ContectsList${index + 1}_Search`);
                 }}
               />
