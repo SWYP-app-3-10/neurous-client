@@ -2,12 +2,29 @@ import { useEffect } from 'react';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import PushNotification from 'react-native-push-notification';
+// import PushNotification from 'react-native-push-notification';
+// iOS에서 react-native-push-notification native module 초기화 시
+// NativeEventEmitter 관련 crash가 발생하여 Android에서만 동적 로드 처리
 import { registerFCMToken } from '../api/notificationApi';
 import { getUserInfo } from '../services/authService';
 
 /** AsyncStorage 키 */
 const FCM_TOKEN_KEY = '@fcm_token';
+
+/**
+ * Android 전용 PushNotification module 반환
+ *
+ * 이유:
+ * - iOS에서 react-native-push-notification import 시
+ *   NativeEventEmitter 관련 native crash 발생
+ * - Android에서만 local notification 사용
+ */
+const getAndroidPushNotification = () => {
+  if (Platform.OS !== 'android') return null;
+
+  const pushNotificationModule = require('react-native-push-notification');
+  return pushNotificationModule.default || pushNotificationModule;
+};
 
 /**
  * 로컬 노티피케이션 초기화
@@ -16,8 +33,11 @@ const FCM_TOKEN_KEY = '@fcm_token';
  * - Android 채널 생성 (Android 8.0 이상 필수)
  */
 const initializeLocalNotification = () => {
+  const PushNotification = getAndroidPushNotification();
+  if (!PushNotification) return;
+
   PushNotification.configure({
-    onNotification: function (notification) {
+    onNotification: function (notification: any) {
       console.log('[로컬 노티] 탭:', notification);
     },
     requestPermissions: false,
@@ -31,7 +51,7 @@ const initializeLocalNotification = () => {
       importance: 4,
       vibrate: true,
     },
-    created => {
+    (created: boolean) => {
       if (created) {
         console.log('[로컬 노티] 채널 생성 성공');
       } else {
@@ -103,6 +123,11 @@ export function usePushNotification() {
             console.log('[FCM] iOS 권한 거부됨');
             return;
           }
+
+          // iOS APNs 등록
+          // registerDeviceForRemoteMessages 호출이 없으면
+          // iOS에서 FCM token 발급이 실패할 수 있음
+          await messaging().registerDeviceForRemoteMessages();
         }
 
         // ═══════════════════════════════════════════════
@@ -172,16 +197,28 @@ export function usePushNotification() {
       console.log('내용:', remoteMessage.notification?.body);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-      // 상태바 알림 표시
-      PushNotification.localNotification({
-        channelId: 'default-channel-id',
-        title: remoteMessage.notification?.title || '새 알림',
-        message: remoteMessage.notification?.body || '알림을 확인해주세요',
-        playSound: true,
-        soundName: 'default',
-      });
+      // Android는 foreground 상태에서 시스템 알림이 자동 표시되지 않아
+      // local notification 직접 호출
+      if (Platform.OS === 'android') {
+        const PushNotification = getAndroidPushNotification();
 
-      console.log('[FCM] 로컬 노티피케이션 호출 완료');
+        if (PushNotification) {
+          PushNotification.localNotification({
+            channelId: 'default-channel-id',
+            title: remoteMessage.notification?.title || '새 알림',
+            message: remoteMessage.notification?.body || '알림을 확인해주세요',
+            playSound: true,
+            soundName: 'default',
+          });
+
+          console.log('[FCM] Android 로컬 노티피케이션 호출 완료');
+        }
+      } else {
+        // iOS는 react-native-push-notification native crash 이슈로 인해
+        // foreground local notification 표시 임시 비활성화
+        // (FCM token 등록 및 background notification 수신은 정상 동작)
+        // console.log('[FCM] iOS 포그라운드 수신 - 로컬 알림 표시는 임시 비활성화');
+      }
     });
 
     // ═══════════════════════════════════════════════

@@ -79,6 +79,13 @@
 		<!-- 프로덕션 환경에서는 특정 도메인만 예외 처리 -->
 		<key>NSExceptionDomains</key>
 		<dict>
+			<key>34.22.107.53</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+			</dict>
 			<key>storage.googleapis.com</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
