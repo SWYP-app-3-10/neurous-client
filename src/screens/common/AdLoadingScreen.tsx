@@ -90,8 +90,11 @@ const AdLoadingScreen = () => {
   /** 콘텐츠를 이미 구매했는지 여부 (중복 API 호출 방지) */
   const hasPurchasedRef = useRef(false);
 
-  /** 광고 로드 타임아웃 타이머 */
-  const loadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  /** 광고 로드 타임아웃 타이머
+   * React Native 환경에서는 NodeJS.Timeout 대신
+   * ReturnType<typeof setTimeout> 사용
+   */
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** 에러 알림을 이미 표시했는지 여부 (중복 알림 방지) */
   const hasShownErrorRef = useRef(false);
@@ -312,11 +315,12 @@ const AdLoadingScreen = () => {
           console.log('[AdLoadingScreen] 광고 구매 응답:', purchaseResponse);
 
           // 구매 성공 후 글 상세 화면으로 이동
-          // replace 사용: 뒤로가기 시 광고 화면으로 돌아가지 않도록
+          // openType: ad -> 광고 시청 후 열린 글
+          // replace 사용 -> 뒤로가기 시 광고 화면으로 다시 돌아가지 않도록 처리
           navigation.replace(RouteNames.ARTICLE_DETAIL, {
             articleId,
             returnTo,
-            fromAd: true, // 광고를 통해 열린 글임을 표시 (토스트 메시지용)
+            openType: 'ad',
           });
         } catch (purchaseError: any) {
           console.error('[AdLoadingScreen] 광고 구매 에러:', purchaseError);
