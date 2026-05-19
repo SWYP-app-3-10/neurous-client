@@ -16,6 +16,8 @@ type Props = {
 export default function SearchResultItem({ item, onPress }: Props) {
   const [imgError, setImgError] = useState(false);
 
+  const isRead = item.read === true;
+
   const shouldShowImage = useMemo(() => {
     return !!item.imageUrl && item.imageUrl.trim().length > 0 && !imgError;
   }, [item.imageUrl, imgError]);
@@ -33,12 +35,21 @@ export default function SearchResultItem({ item, onPress }: Props) {
     return Number.isFinite(count) ? count.toLocaleString() : '0';
   }, [item.hits]);
 
+  const metaColor = isRead ? COLORS.gray400 : COLORS.gray700;
+  const iconColor = COLORS.gray600;
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.card, isRead && styles.cardRead]}
+      onPress={onPress}
+    >
       {/* 텍스트 영역 */}
       <View style={styles.left}>
         {/* 제목(2줄) */}
-        <Text style={styles.title} numberOfLines={2}>
+        <Text
+          style={[styles.title, isRead && styles.titleRead]}
+          numberOfLines={2}
+        >
           {item.title}
         </Text>
 
@@ -46,29 +57,25 @@ export default function SearchResultItem({ item, onPress }: Props) {
         <View style={styles.metaRow}>
           {/* 시간 블록 */}
           <View style={styles.metaGroup}>
-            <ClockIcon
-              width={ICON_SIZE}
-              height={ICON_SIZE}
-              color={COLORS.gray600}
-            />
-            <Text style={styles.metaText}>{readTimeText}</Text>
+            <ClockIcon width={ICON_SIZE} height={ICON_SIZE} color={iconColor} />
+            <Text style={[styles.metaText, { color: metaColor }]}>
+              {readTimeText}
+            </Text>
           </View>
 
           {/* 구분선 (1x8) */}
           <ExploreResultDivider
             width={DIVIDER_W}
             height={DIVIDER_H}
-            color={COLORS.gray600}
+            color={metaColor}
           />
 
           {/* 조회수 블록 */}
           <View style={styles.metaGroup}>
-            <ViewIcon
-              width={ICON_SIZE}
-              height={ICON_SIZE}
-              color={COLORS.gray600}
-            />
-            <Text style={styles.metaText}>{viewText}</Text>
+            <ViewIcon width={ICON_SIZE} height={ICON_SIZE} color={iconColor} />
+            <Text style={[styles.metaText, { color: metaColor }]}>
+              {viewText}
+            </Text>
           </View>
         </View>
       </View>
@@ -111,6 +118,10 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 14,
     alignItems: 'center',
+    backgroundColor: COLORS.white,
+  },
+  cardRead: {
+    backgroundColor: COLORS.gray100,
   },
   left: {
     flex: 1,
@@ -122,6 +133,9 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     paddingRight: scaleWidth(20),
     marginBottom: GAP_TITLE_META,
+  },
+  titleRead: {
+    color: COLORS.gray700,
   },
 
   // 메타 한 줄 (시간 / 구분선 / 조회수)
