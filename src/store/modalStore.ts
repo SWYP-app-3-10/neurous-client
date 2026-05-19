@@ -94,6 +94,14 @@ interface ToastModalState {
   height?: number; // 토스트 높이
   width?: number; // 토스트 너비
   borderRadius?: number; // 모서리 둥글기
+  /** 1px 테두리 색 (예: 글 열림 Toast Popup) */
+  borderColor?: string;
+  borderWidth?: number;
+  paddingHorizontal?: number;
+  paddingVertical?: number;
+  messageStyle?: StyleProp<TextStyle>;
+  /** safe area bottom에 더할 오프셋 (기본: scaleWidth(20)) */
+  bottomOffset?: number;
   onClose?: () => void; // 토스트 닫힐 때 실행할 콜백
 }
 
