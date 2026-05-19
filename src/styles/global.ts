@@ -47,6 +47,8 @@ export const COLORS = {
   gray600: '#ADB3C5',
   gray700: '#9EA5BB',
   gray800: '#767C91',
+  /** Toast Popup stroke (Figma gray border on Gray800 surface) */
+  gray800Stroke: '#6A6F82',
   gray800Opacity80: 'rgba(118, 124, 145, 0.8)',
   gray800Opacity95: 'rgba(118, 124, 145, 0.95)',
   black: '#19181E',
