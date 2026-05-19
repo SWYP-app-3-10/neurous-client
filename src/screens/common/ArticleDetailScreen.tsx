@@ -32,6 +32,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
+import { Body_16M } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import Spacer from '../../components/Spacer';
@@ -168,7 +169,7 @@ const ArticleDetailScreen = () => {
 
     switch (openType) {
       case 'ad':
-        message = '60P 획득!🥳·30P를 사용해 글을 열었어요';
+        message = '60P 획득! 🥳 · 30P를 사용해 글을 열었어요';
         break;
 
       case 'point':
@@ -182,11 +183,22 @@ const ArticleDetailScreen = () => {
 
     showToastModal({
       message,
-      position: 'center',
-      backgroundColor: COLORS.gray800Opacity80,
-      height: scaleWidth(39),
-      width: scaleWidth(148),
-      borderRadius: BORDER_RADIUS[8],
+      position: 'bottom',
+      // TODO: duration 초 조정 필요 (이전 2.2초)
+      duration: 10000, // 2200
+      backgroundColor: COLORS.gray800,
+      borderColor: COLORS.gray800Stroke,
+      borderWidth: 1,
+      width: scaleWidth(353),
+      borderRadius: BORDER_RADIUS[16],
+      paddingVertical: scaleWidth(18),
+      paddingHorizontal: scaleWidth(20),
+      messageStyle: {
+        ...Body_16M,
+        color: COLORS.white,
+        textAlign: 'left',
+      },
+      bottomOffset: scaleWidth(20 + 63 + 16),
     });
   }, [openType, showToastModal]);
 
