@@ -12,8 +12,6 @@ import {
   TouchableOpacity,
   FlatList,
   //Pressable,
-  RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -78,13 +76,6 @@ export default function SearchScreen() {
     NewsCategory | '전체'
   >('전체');
 
-  // 탭 전환 시 스크롤을 맨 위로 이동
-  useFocusEffect(
-    useCallback(() => {
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-    }, []),
-  );
-
   // 선택된 카테고리를 서버 파라미터(enum)로 변환
   const categoryParam = useMemo(
     () => SERVER_CATEGORY_MAP[selectedCategory],
@@ -100,8 +91,15 @@ export default function SearchScreen() {
     hasNextPage,
     isFetchingNextPage,
     refetch,
-    isRefetching,
   } = useExploreContents(categoryParam);
+
+  // 탐색 탭 진입/재진입 시 자동 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      refetch();
+    }, [refetch]),
+  );
 
   // 서버 응답(페이지들)을 FlatList에서 쓰는 형태로 가공 + contentId 기준 중복 제거
   const visibleData: NewsItems[] = useMemo(() => {
@@ -215,23 +213,7 @@ export default function SearchScreen() {
               }
             }}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={() =>
-              isFetchingNextPage ? (
-                <ActivityIndicator
-                  style={{ margin: 20 }}
-                  color={COLORS.puple.main}
-                />
-              ) : (
-                <View style={{ height: 20 }} />
-              )
-            }
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={refetch}
-                tintColor={COLORS.puple.main}
-              />
-            }
+            ListFooterComponent={() => <View style={{ height: 20 }} />}
             ListEmptyComponent={
               <Text style={styles.empty}>
                 {isError
