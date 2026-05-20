@@ -7,9 +7,7 @@ import { OnboardingStackParamList } from './types';
 import LoginScreen from '../screens/auth/LoginScreen';
 import InterestsScreen from '../screens/onboarding/InterestsScreen';
 import DifficultySettingScreen from '../screens/onboarding/DifficultySettingScreen';
-import IntroCardList from '../screens/onboarding/IntroCardList';
-import IntroFuction from '../screens/onboarding/IntroFunction';
-import IntroSearch from '../screens/onboarding/IntroSearch';
+import IntroSlidesScreen from '../screens/onboarding/IntroSlideScreen';
 import { useOnboardingStore } from '../store/onboardingStore';
 import TermsOfServiceScreen from '../screens/myPage/TermOfServiceScreen';
 import PrivacyPolicyScreen from '../screens/myPage/PrivacyPolicyScreen';
@@ -89,10 +87,8 @@ const OnboardingNavigator = () => {
       {/* 온보딩 인트로 화면들 */}
       <Stack.Screen
         name={RouteNames.INTRO_CARDLIST}
-        component={IntroCardList}
+        component={IntroSlidesScreen}
       />
-      <Stack.Screen name={RouteNames.INTRO_FUNCTION} component={IntroFuction} />
-      <Stack.Screen name={RouteNames.INTRO_SEARCH} component={IntroSearch} />
 
       {/* 로그인 및 약관 화면 */}
       <Stack.Screen name={RouteNames.SOCIAL_LOGIN} component={LoginScreen} />
