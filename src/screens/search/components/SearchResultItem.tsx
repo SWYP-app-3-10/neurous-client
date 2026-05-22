@@ -7,6 +7,7 @@ import { Body_16M, Caption_14R } from '../../../styles/typography';
 import ViewIcon from '../../../assets/svg/View.svg';
 import ClockIcon from '../../../assets/svg/clock.svg';
 import ExploreResultDivider from '../../../assets/svg/ExploreResultDivider.svg';
+import ReadDimCheckIcon from '../../../assets/svg/read_dim_check.svg';
 
 type Props = {
   item: NewsItems;
@@ -35,17 +36,11 @@ export default function SearchResultItem({ item, onPress }: Props) {
     return Number.isFinite(count) ? count.toLocaleString() : '0';
   }, [item.hits]);
 
-  const metaColor = isRead ? COLORS.gray400 : COLORS.gray700;
-  const iconColor = COLORS.gray600;
-
   return (
-    <TouchableOpacity
-      style={[styles.card, isRead && styles.cardRead]}
-      onPress={onPress}
-    >
+    <TouchableOpacity style={styles.card} onPress={onPress}>
       {/* 텍스트 영역 */}
       <View style={styles.left}>
-        {/* 제목(2줄) */}
+        {/* 제목(2줄) — 읽음: black 50% opacity (Figma Variant3) */}
         <Text
           style={[styles.title, isRead && styles.titleRead]}
           numberOfLines={2}
@@ -57,40 +52,49 @@ export default function SearchResultItem({ item, onPress }: Props) {
         <View style={styles.metaRow}>
           {/* 시간 블록 */}
           <View style={styles.metaGroup}>
-            <ClockIcon width={ICON_SIZE} height={ICON_SIZE} color={iconColor} />
-            <Text style={[styles.metaText, { color: metaColor }]}>
-              {readTimeText}
-            </Text>
+            <ClockIcon
+              width={ICON_SIZE}
+              height={ICON_SIZE}
+              color={COLORS.gray600}
+            />
+            <Text style={styles.metaText}>{readTimeText}</Text>
           </View>
 
           {/* 구분선 (1x8) */}
           <ExploreResultDivider
             width={DIVIDER_W}
             height={DIVIDER_H}
-            color={metaColor}
+            color={COLORS.gray700}
           />
 
           {/* 조회수 블록 */}
           <View style={styles.metaGroup}>
-            <ViewIcon width={ICON_SIZE} height={ICON_SIZE} color={iconColor} />
-            <Text style={[styles.metaText, { color: metaColor }]}>
-              {viewText}
-            </Text>
+            <ViewIcon
+              width={ICON_SIZE}
+              height={ICON_SIZE}
+              color={COLORS.gray600}
+            />
+            <Text style={styles.metaText}>{viewText}</Text>
           </View>
         </View>
       </View>
 
-      {/* 썸네일 */}
+      {/* 썸네일 — 읽음: 이미지 50% + 중앙 체크 */}
       <View style={styles.thumb}>
         {shouldShowImage ? (
           <Image
             source={{ uri: item.imageUrl }}
-            style={styles.thumbImage}
+            style={[styles.thumbImage, isRead && styles.thumbDim]}
             resizeMode="cover"
             onError={() => setImgError(true)}
           />
         ) : (
-          <View style={styles.thumbPlaceholder} />
+          <View style={[styles.thumbPlaceholder, isRead && styles.thumbDim]} />
+        )}
+        {isRead && (
+          <View style={styles.thumbCheckOverlay} pointerEvents="none">
+            <ReadDimCheckIcon width={CHECK_SIZE} height={CHECK_SIZE} />
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -99,6 +103,7 @@ export default function SearchResultItem({ item, onPress }: Props) {
 
 const THUMB_SIZE = scaleWidth(85);
 const THUMB_RADIUS = BORDER_RADIUS[16];
+const CHECK_SIZE = scaleWidth(31);
 
 const ICON_SIZE = scaleWidth(18);
 
@@ -120,9 +125,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.white,
   },
-  cardRead: {
-    backgroundColor: COLORS.gray100,
-  },
   left: {
     flex: 1,
   },
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     marginBottom: GAP_TITLE_META,
   },
   titleRead: {
-    color: COLORS.gray700,
+    opacity: 0.5,
   },
 
   // 메타 한 줄 (시간 / 구분선 / 조회수)
@@ -169,8 +171,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  thumbDim: {
+    opacity: 0.5,
+  },
   thumbPlaceholder: {
     flex: 1,
     backgroundColor: COLORS.gray300,
+  },
+  thumbCheckOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
