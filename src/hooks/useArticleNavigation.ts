@@ -143,8 +143,28 @@ export const useArticleNavigation = ({
           currentPoints,
         });
 
+        /**
+         * 이미 읽기 가능한 글
+         * - 무료 열람권 사용 / 이미 구매한 글 / 서버에서 추가 결제 불필요 인정
+         */
+        if (accessData.readable) {
+          navigation.navigate(RouteNames.FULL_SCREEN_STACK, {
+            screen: RouteNames.ARTICLE_DETAIL,
+            params: {
+              articleId,
+              returnTo,
+              openType: 'free',
+            },
+          });
+
+          isProcessingRef.current = false; // 네비게이션 완료 후 클릭 허용
+          return;
+        }
+
         if (currentPoints >= ARTICLE_READ_POINT_COST) {
-          // ── 포인트 충분: 포인트 사용 확인 모달 ──────────────────
+          // ───────────────────────────────────────────
+          //  포인트 충분 -> 포인트 사용 확인 모달
+          // ───────────────────────────────────────────
           await logScreenView('Popup_Reading', undefined, true);
           isProcessingRef.current = false; // 모달 표시 시점에 클릭 처리 완료 → 버튼 클릭 허용
 
@@ -224,6 +244,7 @@ export const useArticleNavigation = ({
                     params: {
                       articleId,
                       returnTo,
+                      openType: 'point',
                     },
                   });
                 } catch (error: any) {
@@ -248,7 +269,9 @@ export const useArticleNavigation = ({
             },
           });
         } else {
-          // ── 포인트 부족: 광고 시청 안내 모달 ────────────────────
+          // ───────────────────────────────────────────
+          // 포인트 부족 -> 광고 시청 안내 모달
+          // ───────────────────────────────────────────
           await logScreenView('Popup_Advertisement', undefined, true);
           isProcessingRef.current = false; // 모달 표시 시점에 클릭 처리 완료 → 버튼 클릭 허용
 

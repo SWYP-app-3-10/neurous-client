@@ -32,6 +32,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
+import { Body_16M } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import Spacer from '../../components/Spacer';
@@ -69,8 +70,13 @@ const ArticleDetailScreen = () => {
   /** 글을 읽은 후 돌아갈 화면 ('mission' | 'search') */
   const returnTo = route.params.returnTo;
 
-  /** 광고를 통해 열린 글인지 여부 (토스트 메시지 표시용) */
-  const fromAd = route.params.fromAd;
+  /**
+   * 글 오픈 방식
+   * free : 무료 열람권
+   * ad : 광고 시청 후 열람
+   * point : 포인트 사용 열람
+   */
+  const openType = route.params.openType;
 
   // ──────────────────────────────────────────────
   // State
@@ -140,37 +146,61 @@ const ArticleDetailScreen = () => {
   }, [articleId]);
 
   // ──────────────────────────────────────────────
-  // Effect 2: 광고 통해 열린 글 토스트 메시지 표시
+  // Effect 2: 열린 글 토스트 메시지 표시
   // ──────────────────────────────────────────────
 
   /**
-   * 광고를 통해 열린 글인 경우 "새로운 글이 열렸어요" 토스트 메시지를 표시한다.
+   * 글 오픈 방식에 따라 토스트 메시지를 다르게 표시한다.
    *
-   * 조건:
-   *   - fromAd: true일 때만 표시
+   * free  :
+   *   - 무료 열람권 사용
+   *   - 현재는 토스트 표시하지 않음
    *
-   * 타이밍:
-   *   - 화면 진입 후 0.5초 뒤에 토스트 표시 (부드러운 UX)
+   * ad :
+   *   - 광고 시청 후 글 열람
+   *   - 광고 보상 + 포인트 사용 안내 표시
    *
-   * 토스트 설정:
-   *   - 위치: 화면 중앙
-   *   - 배경색: 반투명 회색
-   *   - 크기: 148x39
+   * point :
+   *   - 포인트만 사용하여 글 열람
+   *   - 포인트 차감 안내 표시
    */
   useEffect(() => {
-    if (!fromAd) {
-      return;
+    let message = '';
+
+    switch (openType) {
+      case 'ad':
+        message = '60P 획득! 🥳 · 30P를 사용해 글을 열었어요';
+        break;
+
+      case 'point':
+        message = '30P를 사용해 글을 열었어요';
+        break;
+
+      case 'free':
+      default:
+        return;
     }
 
     showToastModal({
-      message: '새로운 글이 열렸어요',
-      position: 'center',
-      backgroundColor: COLORS.gray800Opacity80,
-      height: scaleWidth(39),
-      width: scaleWidth(148),
-      borderRadius: BORDER_RADIUS[8],
+      message,
+      position: 'bottom',
+      // TODO: duration 초 조정 필요 (이전 2.2초)
+      duration: 10000, // 2200
+      backgroundColor: COLORS.gray800,
+      borderColor: COLORS.gray800Stroke,
+      borderWidth: 1,
+      width: scaleWidth(353),
+      borderRadius: BORDER_RADIUS[16],
+      paddingVertical: scaleWidth(18),
+      paddingHorizontal: scaleWidth(20),
+      messageStyle: {
+        ...Body_16M,
+        color: COLORS.white,
+        textAlign: 'left',
+      },
+      bottomOffset: scaleWidth(20 + 63 + 16),
     });
-  }, [fromAd, showToastModal]);
+  }, [openType, showToastModal]);
 
   // ──────────────────────────────────────────────
   // 퀴즈 풀기 버튼 처리

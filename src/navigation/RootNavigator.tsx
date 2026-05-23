@@ -290,6 +290,12 @@ const RootNavigatorContent: React.FC<{
           height={modalState.height}
           width={modalState.width}
           borderRadius={modalState.borderRadius}
+          borderColor={modalState.borderColor}
+          borderWidth={modalState.borderWidth}
+          paddingHorizontal={modalState.paddingHorizontal}
+          paddingVertical={modalState.paddingVertical}
+          messageStyle={modalState.messageStyle}
+          bottomOffset={modalState.bottomOffset}
           onClose={() => {
             modalState.onClose?.();
             hideModal();

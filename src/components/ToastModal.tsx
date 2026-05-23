@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Modal, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  Animated,
+  StyleProp,
+  TextStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
 import { Caption_14R } from '../styles/typography';
@@ -15,6 +23,12 @@ interface ToastModalProps {
   height?: number;
   width?: number;
   borderRadius?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  paddingHorizontal?: number;
+  paddingVertical?: number;
+  messageStyle?: StyleProp<TextStyle>;
+  bottomOffset?: number;
   onClose?: () => void;
 }
 
@@ -24,12 +38,21 @@ const ToastModal: React.FC<ToastModalProps> = ({
   duration = 1500,
   position = 'bottom',
   backgroundColor = COLORS.gray800,
-  height = scaleWidth(48),
+  height,
   width = scaleWidth(200),
   borderRadius = BORDER_RADIUS[12],
+  borderColor,
+  borderWidth,
+  paddingHorizontal,
+  paddingVertical,
+  messageStyle,
+  bottomOffset,
   onClose,
 }) => {
   const { bottom } = useSafeAreaInsets();
+  const bottomGap = bottomOffset ?? scaleWidth(20);
+  const hasContentPadding =
+    paddingHorizontal !== undefined || paddingVertical !== undefined;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(
     new Animated.Value(position === 'bottom' ? scaleWidth(24) : 0),
@@ -119,7 +142,7 @@ const ToastModal: React.FC<ToastModalProps> = ({
   const animatedStyle =
     position === 'bottom'
       ? {
-          bottom: bottom + scaleWidth(20),
+          bottom: bottom + bottomGap,
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
         }
@@ -127,6 +150,22 @@ const ToastModal: React.FC<ToastModalProps> = ({
           opacity: fadeAnim,
           transform: [{ scale: scaleAnim }],
         };
+
+  const toastBoxStyle = [
+    styles.toastContainer,
+    {
+      backgroundColor,
+      width,
+      borderRadius,
+      ...(height !== undefined ? { height } : {}),
+      ...(!height && !hasContentPadding ? { height: scaleWidth(48) } : {}),
+      ...(paddingHorizontal !== undefined ? { paddingHorizontal } : {}),
+      ...(paddingVertical !== undefined ? { paddingVertical } : {}),
+      ...(borderWidth != null && borderColor
+        ? { borderWidth, borderColor }
+        : {}),
+    },
+  ];
 
   return (
     <Modal
@@ -136,14 +175,8 @@ const ToastModal: React.FC<ToastModalProps> = ({
       onRequestClose={hideToast}
     >
       <View style={containerStyle} pointerEvents="box-none">
-        <Animated.View
-          style={[
-            styles.toastContainer,
-            { backgroundColor, height, width, borderRadius },
-            animatedStyle,
-          ]}
-        >
-          <Text style={styles.message}>{message}</Text>
+        <Animated.View style={[toastBoxStyle, animatedStyle]}>
+          <Text style={[styles.message, messageStyle]}>{message}</Text>
         </Animated.View>
       </View>
     </Modal>
@@ -165,7 +198,7 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   message: {
     ...Caption_14R,

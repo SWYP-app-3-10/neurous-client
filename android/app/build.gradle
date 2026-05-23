@@ -85,7 +85,7 @@ android {
         applicationId "io.neurous.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17 // 고도화 이전 빌드에서는 15까지 사용.
+        versionCode 18 // 고도화 이전 빌드에서는 15까지 사용.
         versionName "1.0.0"
         ndk {
             abiFilters "arm64-v8a", "x86_64"

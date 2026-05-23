@@ -237,12 +237,12 @@ export type FullScreenStackParamList = {
    * 글 상세 화면 (미션/검색에서 글 클릭 시)
    * @param articleId - 표시할 글 ID (필수)
    * @param returnTo - 글을 읽은 후 돌아갈 화면 ('mission' | 'search', 선택)
-   * @param fromAd - 광고를 통해 열린 글인지 여부 (선택, 토스트 메시지 표시용)
+   * @param openType - 글 열기 유형 ('free' | 'ad' | 'point', 선택)
    */
   [RouteNames.ARTICLE_DETAIL]: {
     articleId: number;
     returnTo?: 'mission' | 'search';
-    fromAd?: boolean;
+    openType?: 'free' | 'ad' | 'point';
   };
 
   /**
