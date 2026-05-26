@@ -3,12 +3,15 @@
 #import <React/RCTBundleURLProvider.h>
 #import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
 #import <React/RCTLinkingManager.h> 
-#import <RNKakaoLogins.h>           
+#import <RNKakaoLogins.h> 
+#import <Firebase.h> // Firebase 헤더 추가          
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  [FIRApp configure]; // Firebase 초기화
+
   self.moduleName = @"Neurous";
   self.dependencyProvider = [RCTAppDependencyProvider new];
   self.initialProps = @{};
