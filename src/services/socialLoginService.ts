@@ -5,14 +5,14 @@
  *
  * 처리 흐름 (모든 제공자 공통):
  *   1. 소셜 SDK로 로그인 → 소셜 액세스 토큰 획득
- *   2. Google/Apple은 Firebase Auth로 중간 인증 (idToken 발급)
+ *   2. Google은 accessToken을 서버로 전달, Apple은 Firebase Auth 사용
  *   3. 서버 API 호출 (/api/auth/login/provider) → 서버 JWT 토큰 발급
  *   4. 서버 토큰 + 사용자 정보 + 소셜 토큰을 AsyncStorage에 저장
  *   5. FCM 토큰 서버 등록 → 로그인 직후 푸시 수신 가능
  *   6. newUser 플래그 반환 (신규/기존 사용자 구분)
  *
  * 제공자별 특이사항:
- *   - Google : Firebase Auth 필수, idToken을 서버로 전송
+ *   - Google : accessToken을 서버로 정송, 서버에서 Google userinfo API 호출
  *   - Apple  : Firebase Auth 필수, authorizationCode를 별도 저장 (탈퇴 시 필요)
  *   - Kakao  : 직접 SDK 연동, accessToken을 서버로 전송
  *   - Naver  : 직접 SDK 연동, 타임아웃 처리로 취소 감지 (SDK 버그 우회)
@@ -29,10 +29,8 @@ import { GOOGLE_CONFIG, NAVER_CONFIG } from '../config/socialLoginConfig';
 import appleAuth from '@invertase/react-native-apple-authentication';
 import {
   getAuth,
-  GoogleAuthProvider,
   AppleAuthProvider,
   signInWithCredential,
-  signOut,
 } from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
 import { loginWithProvider } from '../api/authApi';
@@ -84,6 +82,7 @@ export const initializeGoogleSignIn = () => {
   try {
     GoogleSignin.configure({
       webClientId: GOOGLE_CONFIG.webClientId,
+      scopes: ['profile', 'email'],
       offlineAccess: true,
     });
   } catch (error) {
@@ -96,42 +95,48 @@ export const initializeGoogleSignIn = () => {
  *
  * 처리 흐름:
  *   1. GoogleSignin.signIn() → 사용자 계정 선택 화면 표시
- *   2. getTokens()로 idToken과 accessToken 획득
- *   3. Firebase Auth로 idToken 검증 및 Firebase 사용자 생성
- *   4. 서버 API 호출 (loginWithProvider) → 서버 JWT 발급
- *   5. 서버 토큰, 사용자 정보, 소셜 accessToken을 AsyncStorage에 저장
- *   6. FCM 토큰 서버 등록
+ *   2. getTokens()로 accessToken 획득
+ *   3. 서버 API 호출 (loginWithProvider) → 서버 JWT 발급
+ *   4. 서버 토큰, 사용자 정보, 소셜 accessToken을 AsyncStorage에 저장
+ *   5. FCM 토큰 서버 등록
  *
  * @returns SocialLoginResult (success, newUser, userInfo 등)
  */
 export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
   try {
+    // Google Play Services 확인
+    await GoogleSignin.hasPlayServices({
+      showPlayServicesUpdateDialog: true,
+    });
+
     // 1. Google 계정 선택 화면 표시
     await GoogleSignin.signIn();
+
+    // 2. Google accessToken 획득
     const tokens = await GoogleSignin.getTokens();
-    const idToken = tokens.idToken;
 
-    if (!idToken) {
-      console.error('Google ID Token이 없습니다. tokens:', tokens);
-      throw new Error('Google ID Token이 없습니다.');
+    // accessToken 필수 체크
+    const googleAccessToken = tokens.accessToken;
+
+    if (!googleAccessToken) {
+      console.error('Google Access Token이 없습니다. tokens:', tokens);
+      throw new Error('Google Access Token이 없습니다.');
     }
-
-    // 2. Firebase Auth로 idToken 검증
-    const authInstance = getAuth(getApp());
-    const googleCredential = GoogleAuthProvider.credential(idToken);
-    const userCredential = await signInWithCredential(
-      authInstance,
-      googleCredential,
-    );
-    const firebaseUser = userCredential.user;
 
     // 3. 서버 API 호출
     let newUser = true;
 
     try {
+      console.log('[GoogleLogin] 8. before server login');
+
       const loginResponse = await loginWithProvider('GOOGLE', {
-        accessToken: tokens.accessToken,
+        accessToken: googleAccessToken,
       });
+
+      console.log(
+        '[GoogleLogin] 9. after server login:',
+        JSON.stringify(loginResponse),
+      );
 
       newUser = loginResponse.data?.newUser ?? true;
 
@@ -150,27 +155,33 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
             ...loginResponse.data.userInfo,
             provider: 'GOOGLE',
             loginTime: Date.now(),
-            providerAccessToken: tokens.accessToken,
+            providerAccessToken: googleAccessToken,
           });
         }
       } else if (loginResponse.token) {
         await saveAuthToken(loginResponse.token);
+
         if (loginResponse.refreshToken) {
           await saveRefreshToken(loginResponse.refreshToken);
         }
+
         if (loginResponse.user) {
           await saveUserInfo({
             userId: parseInt(loginResponse.user.id, 10) || 0,
             name: loginResponse.user.name,
             email: loginResponse.user.email,
             profileImage: loginResponse.user.profileImage,
+
+            provider: 'GOOGLE',
+            loginTime: Date.now(),
+            providerAccessToken: googleAccessToken,
           });
         }
       } else {
         console.warn('서버에서 토큰을 받지 못했습니다.');
       }
 
-      // ✅ 5. FCM 토큰 서버 등록
+      // 5. FCM 토큰 서버 등록
       try {
         const fcmToken = await messaging().getToken();
         await registerFCMToken(fcmToken);
@@ -178,29 +189,54 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
       } catch (fcmError) {
         console.warn('[구글 로그인] FCM 토큰 등록 실패:', fcmError);
       }
-    } catch (apiError) {
+
+      const responseUserInfo = loginResponse.data?.userInfo;
+      const legacyUser = loginResponse.user;
+
+      return {
+        success: true,
+        provider: 'GOOGLE',
+
+        // 실제 Google accessToken 반환
+        accessToken: googleAccessToken,
+
+        // 서버 응답 기준 userInfo 반환
+        userInfo: responseUserInfo
+          ? {
+              id: String(responseUserInfo.userId ?? ''),
+              email: responseUserInfo.email,
+              name: responseUserInfo.name,
+              profileImage: responseUserInfo.profileImage,
+            }
+          : legacyUser
+            ? {
+                id: String(legacyUser.id ?? ''),
+                email: legacyUser.email,
+                name: legacyUser.name,
+                profileImage: legacyUser.profileImage,
+              }
+            : undefined,
+
+        newUser,
+      };
+    } catch (apiError: any) {
       console.error('서버 로그인 API 호출 실패:', apiError);
+      console.log('[GoogleLogin] server error code:', apiError?.code);
+      console.log('[GoogleLogin] server error message:', apiError?.message);
+      console.log('[GoogleLogin] server error response:', apiError?.response);
+
       return {
         success: false,
         provider: 'GOOGLE',
         error: '서버 로그인에 실패했습니다. 다시 시도해주세요.',
       };
     }
-
-    return {
-      success: true,
-      provider: 'GOOGLE',
-      accessToken: idToken,
-      userInfo: {
-        id: firebaseUser.uid,
-        email: firebaseUser.email || undefined,
-        name: firebaseUser.displayName || undefined,
-        profileImage: firebaseUser.photoURL || undefined,
-      },
-      newUser,
-    };
   } catch (error: any) {
     console.error('구글 로그인 에러:', error);
+    console.log('[GoogleLogin] ERROR raw:', error);
+    console.log('[GoogleLogin] ERROR code:', error?.code);
+    console.log('[GoogleLogin] ERROR message:', error?.message);
+    console.log('[GoogleLogin] ERROR stack:', error?.stack);
 
     const isCancelled =
       error?.code === '12501' ||
@@ -235,8 +271,6 @@ export const signOutGoogle = async (): Promise<void> => {
     }
 
     await GoogleSignin.signOut();
-    const authInstance = getAuth(getApp());
-    await signOut(authInstance);
   } catch (error) {
     console.error('구글 로그아웃 실패:', error);
   }
