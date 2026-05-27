@@ -10,7 +10,13 @@ react {
     autolinkLibrariesWithApp()
 }
 
-def enableProguardInReleaseBuilds = true
+// Naver Login SDK가 release minify(ProGuard/R8) 환경에서
+// java.lang.ClassCastException: Class cannot be cast to ParameterizedType
+// 오류를 발생시켜 내부테스트 로그인 실패가 발생함.
+//
+// 로그인 안정성을 우선하기 위해 현재 release ProGuard/R8 비활성화.
+// 추후 소셜 로그인 SDK keep rule 안정화 후 재활성화 검토 예정.
+def enableProguardInReleaseBuilds = false
 
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
@@ -25,8 +31,8 @@ android {
         applicationId "io.neurous.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 28 // 28, 2026-05-26 17:44
-        versionName "1.0.28"
+        versionCode 36 // 36, 2026-05-27 19:28
+        versionName "1.0.36"
         ndk {
             abiFilters "arm64-v8a", "x86_64"
         }
