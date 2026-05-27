@@ -46,6 +46,7 @@
       </intent-filter>
     </activity>
 
+    <!-- Kakao SDK 로그인 결과를 받는 액티비티 -->
     <activity
       android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
       android:exported="true">
@@ -59,5 +60,20 @@
       </intent-filter>
     </activity>
 
+    <!-- Naver SDK 로그인 결과를 받는 액티비티 -->
+    <activity
+      android:name="com.navercorp.nid.oauth.NidOAuthBridgeActivity"
+      android:exported="true">
+      <intent-filter>
+          <action android:name="android.intent.action.VIEW" />
+
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+
+          <data
+              android:scheme="io.neurous.app"
+              android:host="naverlogin" />
+      </intent-filter>
+    </activity>
   </application>
 </manifest>
