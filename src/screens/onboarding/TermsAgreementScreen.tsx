@@ -6,7 +6,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RouteNames } from '../../../routes';
 import { OnboardingStackParamList } from '../../navigation/types';
-import { SocialLoginProvider } from '../../services/socialLoginService';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
   Heading_24EB_Round,
@@ -33,7 +32,16 @@ const TermsAgreementScreen = () => {
   const route = useRoute<RouteP>();
 
   // 어떤 소셜 로그인 버튼을 눌렀는지(provider)
-  const provider: SocialLoginProvider = route.params.provider;
+  const provider = route.params?.provider;
+
+  console.error('[NaverLogin] TermsAgreementScreen provider:', provider);
+
+  useEffect(() => {
+    if (!provider) {
+      console.error('[NaverLogin] TermsAgreement provider is missing');
+      navigation.goBack();
+    }
+  }, [provider, navigation]);
 
   // 필수 체크 항목들 상태
   const [age14, setAge14] = useState(false); // 만 14세 이상
@@ -61,7 +69,16 @@ const TermsAgreementScreen = () => {
   // 약관 동의 완료 → LoginScreen(SOCIAL_LOGIN)으로 돌아가서 agreedProvider 전달
   // LoginScreen에서 route.params.agreedProvider 감지 후 기존 로그인 로직(handleSocialLogin) 실행
   const proceedToLogin = () => {
-    navigation.navigate(RouteNames.SOCIAL_LOGIN, { agreedProvider: provider });
+    if (!provider) {
+      console.error('[NaverLogin] proceedToLogin failed: provider missing');
+      return;
+    }
+
+    console.error('[NaverLogin] TermsAgreement agree provider:', provider);
+
+    navigation.navigate(RouteNames.SOCIAL_LOGIN, {
+      agreedProvider: provider,
+    });
   };
 
   // 필수 3개를 다 체크한 순간 자동으로 LoginScreen으로 복귀(1회만)
