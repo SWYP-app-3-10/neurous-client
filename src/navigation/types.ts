@@ -28,7 +28,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { RouteNames } from '../../routes';
 import { NewsCategory } from '../data/mock/searchData';
-import { SocialLoginProvider } from '../services/socialLoginService';
+
+export type SocialLoginProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'APPLE';
 
 // ──────────────────────────────────────────────
 // 온보딩 스택 파라미터 타입
