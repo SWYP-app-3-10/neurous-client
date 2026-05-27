@@ -102,8 +102,59 @@
 # ============================================
 # 네이버 로그인
 # ============================================
+
+# Generic / Reflection metadata
+# Naver SDK 내부에서 reflection/generic 타입 정보를 사용하므로 유지
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes RuntimeInvisibleParameterAnnotations
+-keepattributes AnnotationDefault
+
+# Kotlin metadata
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+
+# Naver Login SDK
+-keep class com.navercorp.** { *; }
+-dontwarn com.navercorp.**
+
+-keep class com.navercorp.nid.** { *; }
+-dontwarn com.navercorp.nid.**
+
+-keep class com.navercorp.nid.oauth.** { *; }
+-dontwarn com.navercorp.nid.oauth.**
+
+-keep class com.naver.** { *; }
+-dontwarn com.naver.**
+
 -keep class com.nhn.android.naverlogin.** { *; }
 -dontwarn com.nhn.android.naverlogin.**
+
+# React Native Naver Login bridge
+-keep class com.dooboolab.** { *; }
+-dontwarn com.dooboolab.**
+
+-keep class com.crossplatformkorea.** { *; }
+-dontwarn com.crossplatformkorea.**
+
+-keep class com.reactnativenaverlogin.** { *; }
+-dontwarn com.reactnativenaverlogin.**
+
+-keep class com.reactnativenaver.** { *; }
+-dontwarn com.reactnativenaver.**
+
+# Gson / reflection fallback
+-keep class com.google.gson.** { *; }
+-dontwarn com.google.gson.**
+
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
 
 # ============================================
 # 카카오 SDK
