@@ -77,6 +77,9 @@ const LoginScreen = () => {
   /** 현재 로그인 중인 소셜 제공자 (로딩 스피너 표시용) */
   const [loading, setLoading] = useState<SocialLoginProvider | null>(null);
 
+  /** 소셜 로그인 중복 실행 방지 */
+  const socialLoginInProgressRef = useRef(false);
+
   /** 최근 로그인 정보 (최근 사용한 로그인 방법 표시용) */
   const [recentLogin, setRecentLogin] = useState<RecentLoginInfo | null>(null);
 
@@ -402,20 +405,33 @@ const LoginScreen = () => {
    */
   const handleSocialLogin = useCallback(
     async (provider: SocialLoginProvider) => {
-      console.log(`[LoginScreen] handleSocialLogin 진입: ${provider}`);
-
-      // STEP 1: iOS 추적 권한 (로그인 창 띄우기 전)
-      if (Platform.OS === 'ios') {
-        await handleTrackingModal();
-        // ATT 시스템 모달이 완전히 닫힐 때까지 대기 (0.5초)
-        await new Promise(resolve => setTimeout(resolve, 500));
+      if (socialLoginInProgressRef.current) {
+        console.error('[NaverLogin] duplicated login blocked:', provider);
+        return;
       }
 
-      // STEP 2: 소셜 로그인 시도
+      socialLoginInProgressRef.current = true;
+
+      console.error('[NaverLogin] handleSocialLogin called:', provider);
+
       try {
+        // STEP 1: iOS 추적 권한 (로그인 창 띄우기 전)
+        if (Platform.OS === 'ios') {
+          await handleTrackingModal();
+
+          // ATT 시스템 모달이 완전히 닫힐 때까지 대기
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // STEP 2: 소셜 로그인 시도
         setLoading(provider);
 
         const result = await signInWithSocial(provider);
+
+        console.error(
+          '[NaverLogin] handleSocialLogin result:',
+          JSON.stringify(result),
+        );
 
         if (!result) {
           console.error('[LoginScreen] 로그인 결과가 undefined입니다.');
@@ -437,14 +453,16 @@ const LoginScreen = () => {
             // 신규 사용자: 알림 권한 → 온보딩 인트로
             await handleNotificationModal(false);
           }
-        } else {
-          // STEP 4: 로그인 실패 또는 취소 처리
-          if (result.error) {
-            if (!result.error.includes('취소')) {
-              Alert.alert('로그인 실패', result.error);
-            } else {
-              console.log('로그인이 취소되었습니다.');
-            }
+
+          return;
+        }
+
+        // STEP 4: 로그인 실패 또는 취소 처리
+        if (result.error) {
+          if (!result.error.includes('취소')) {
+            Alert.alert('로그인 실패', result.error);
+          } else {
+            console.log('로그인이 취소되었습니다.');
           }
         }
       } catch (error: any) {
@@ -452,6 +470,7 @@ const LoginScreen = () => {
         Alert.alert('오류', '로그인 중 알 수 없는 오류가 발생했습니다.');
       } finally {
         setLoading(null);
+        socialLoginInProgressRef.current = false;
       }
     },
     [handleTrackingModal, handleNotificationModal],
@@ -473,12 +492,27 @@ const LoginScreen = () => {
    */
   useEffect(() => {
     const agreedProvider = route.params?.agreedProvider;
-    console.log('[LoginScreen] useEffect - agreedProvider:', agreedProvider);
 
-    if (agreedProvider) {
-      handleSocialLogin(agreedProvider);
-      navigation.setParams({ agreedProvider: undefined });
+    console.error('[NaverLogin] LoginScreen agreedProvider:', agreedProvider);
+
+    if (!agreedProvider) {
+      return;
     }
+
+    console.error(
+      '[NaverLogin] clear agreedProvider before login:',
+      agreedProvider,
+    );
+
+    // 로그인 실행 전에 먼저 params를 비워서 useEffect 재실행/중복 실행을 막음
+    navigation.setParams({
+      agreedProvider: undefined,
+    });
+
+    // params 초기화와 같은 렌더 사이클에서 바로 실행하지 않도록 한 틱 늦춤
+    setTimeout(() => {
+      handleSocialLogin(agreedProvider);
+    }, 0);
   }, [route.params?.agreedProvider, handleSocialLogin, navigation]);
 
   // ──────────────────────────────────────────────
@@ -494,7 +528,11 @@ const LoginScreen = () => {
    * @param provider 약관 동의할 소셜 제공자
    */
   const goTermsAgreement = (provider: SocialLoginProvider) => {
-    navigation.navigate(RouteNames.TERMS_AGREEMENT, { provider });
+    console.error('[NaverLogin] goTermsAgreement provider:', provider);
+
+    navigation.navigate(RouteNames.TERMS_AGREEMENT, {
+      provider,
+    });
   };
 
   // ──────────────────────────────────────────────
@@ -537,6 +575,7 @@ const LoginScreen = () => {
           <SocialLoginButton
             provider="NAVER"
             onPress={() => {
+              console.error('[NaverLogin] NAVER button pressed');
               goTermsAgreement('NAVER');
               logEvent('NAVER_Login_Onboarding_SocialLogin');
             }}
