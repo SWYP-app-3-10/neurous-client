@@ -32,6 +32,16 @@ export interface AuthStatus {
 const AUTH_TOKEN_KEY = '@auth_token';
 const REFRESH_TOKEN_KEY = '@refresh_token';
 const USER_INFO_KEY = '@user_info';
+const RECENT_PROVIDER_KEY = '@recent_provider'; // 최근 로그인한 소셜 제공자 저장용 키
+
+export const getRecentProvider = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(RECENT_PROVIDER_KEY);
+  } catch (error) {
+    console.error('최근 로그인 provider 조회 실패:', error);
+    return null;
+  }
+};
 
 // ──────────────────────────────────────────────
 // 인증 상태 확인
@@ -143,6 +153,11 @@ export const saveUserInfo = async (userInfo: {
 }): Promise<void> => {
   try {
     await AsyncStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+
+    // 로그아웃 후 로그인 화면 툴팁 표시를 위해 provider 별도 보존
+    if (userInfo.provider) {
+      await AsyncStorage.setItem(RECENT_PROVIDER_KEY, userInfo.provider);
+    }
   } catch (error) {
     console.error('사용자 정보 저장 실패:', error);
   }
@@ -260,6 +275,7 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
       USER_INFO_KEY,
       '@fcm_token', // FCM 토큰도 삭제
       '@fcm_token_pending', // 대기 토큰도 삭제
+      // RECENT_PROVIDER_KEY는 로그인 화면 툴팁 표시를 위해 유지
     ]);
 
     console.log('[logout] 완료');
