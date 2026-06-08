@@ -336,6 +336,9 @@ export const signInWithKakao = async (): Promise<SocialLoginResult> => {
             name: loginResponse.user.name,
             email: loginResponse.user.email,
             profileImage: loginResponse.user.profileImage,
+            provider: 'KAKAO',
+            loginTime: Date.now(),
+            providerAccessToken: token.accessToken,
           });
         }
       } else {
@@ -414,8 +417,6 @@ export const initializeNaverLogin = () => {
         // Android에서는 네이버 개발자센터의 Android 패키지명 설정을 사용함
         serviceUrlSchemeIOS: NAVER_CONFIG.serviceUrlScheme,
       });
-
-      console.error('[NaverLogin] initialize success');
     }
   } catch (error) {
     console.warn('[NaverLogin] initialize failed:', error);
@@ -549,11 +550,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
         accessToken,
         email: userInfo.email,
       });
-
-      console.log(
-        '[NaverLogin] 9. after server login:',
-        JSON.stringify(loginResponse),
-      );
 
       if (loginResponse.data?.accessToken) {
         await saveAuthToken(loginResponse.data.accessToken);
@@ -774,8 +770,6 @@ export const signInWithApple = async (): Promise<SocialLoginResult> => {
 export const signInWithSocial = async (
   provider: SocialLoginProvider,
 ): Promise<SocialLoginResult> => {
-  console.error('[NaverLogin] signInWithSocial called:', provider);
-
   switch (provider) {
     case 'GOOGLE':
       return signInWithGoogle();
