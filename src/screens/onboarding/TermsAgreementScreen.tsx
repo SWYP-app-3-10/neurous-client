@@ -34,11 +34,10 @@ const TermsAgreementScreen = () => {
   // 어떤 소셜 로그인 버튼을 눌렀는지(provider)
   const provider = route.params?.provider;
 
-  console.error('[NaverLogin] TermsAgreementScreen provider:', provider);
+  console.log('[TermsAgreement] TermsAgreementScreen provider:', provider);
 
   useEffect(() => {
     if (!provider) {
-      console.error('[NaverLogin] TermsAgreement provider is missing');
       navigation.goBack();
     }
   }, [provider, navigation]);
@@ -70,11 +69,11 @@ const TermsAgreementScreen = () => {
   // LoginScreen에서 route.params.agreedProvider 감지 후 기존 로그인 로직(handleSocialLogin) 실행
   const proceedToLogin = () => {
     if (!provider) {
-      console.error('[NaverLogin] proceedToLogin failed: provider missing');
+      console.log('[TermsAgreement] proceedToLogin failed: provider missing');
       return;
     }
 
-    console.error('[NaverLogin] TermsAgreement agree provider:', provider);
+    console.log('[TermsAgreement] TermsAgreement agree provider:', provider);
 
     navigation.navigate(RouteNames.SOCIAL_LOGIN, {
       agreedProvider: provider,

@@ -406,13 +406,13 @@ const LoginScreen = () => {
   const handleSocialLogin = useCallback(
     async (provider: SocialLoginProvider) => {
       if (socialLoginInProgressRef.current) {
-        console.error('[NaverLogin] duplicated login blocked:', provider);
+        console.log('[Login] duplicated login blocked:', provider);
         return;
       }
 
       socialLoginInProgressRef.current = true;
 
-      console.error('[NaverLogin] handleSocialLogin called:', provider);
+      console.log('[Login] handleSocialLogin called:', provider);
 
       try {
         // STEP 1: iOS 추적 권한 (로그인 창 띄우기 전)
@@ -427,11 +427,6 @@ const LoginScreen = () => {
         setLoading(provider);
 
         const result = await signInWithSocial(provider);
-
-        console.error(
-          '[NaverLogin] handleSocialLogin result:',
-          JSON.stringify(result),
-        );
 
         if (!result) {
           console.error('[LoginScreen] 로그인 결과가 undefined입니다.');
@@ -493,16 +488,9 @@ const LoginScreen = () => {
   useEffect(() => {
     const agreedProvider = route.params?.agreedProvider;
 
-    console.error('[NaverLogin] LoginScreen agreedProvider:', agreedProvider);
-
     if (!agreedProvider) {
       return;
     }
-
-    console.error(
-      '[NaverLogin] clear agreedProvider before login:',
-      agreedProvider,
-    );
 
     // 로그인 실행 전에 먼저 params를 비워서 useEffect 재실행/중복 실행을 막음
     navigation.setParams({
@@ -528,8 +516,6 @@ const LoginScreen = () => {
    * @param provider 약관 동의할 소셜 제공자
    */
   const goTermsAgreement = (provider: SocialLoginProvider) => {
-    console.error('[NaverLogin] goTermsAgreement provider:', provider);
-
     navigation.navigate(RouteNames.TERMS_AGREEMENT, {
       provider,
     });
@@ -575,7 +561,6 @@ const LoginScreen = () => {
           <SocialLoginButton
             provider="NAVER"
             onPress={() => {
-              console.error('[NaverLogin] NAVER button pressed');
               goTermsAgreement('NAVER');
               logEvent('NAVER_Login_Onboarding_SocialLogin');
             }}
