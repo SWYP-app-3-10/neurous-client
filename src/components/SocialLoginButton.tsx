@@ -92,7 +92,7 @@ const SocialLoginButton: React.FC<SocialLoginButtonProps> = ({
   return (
     <View style={styles.buttonWrapper}>
       {showTooltip && (
-        <View style={styles.tooltipContainer}>
+        <View style={styles.tooltipContainer} pointerEvents="none">
           <View style={styles.tooltipBackground} />
           <Tooltip_RecentIcon />
         </View>
