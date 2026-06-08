@@ -218,6 +218,7 @@ const LoginScreen = () => {
 
     const loadRecentLogin = async () => {
       const recent = await getRecentLogin();
+      console.log('[LoginScreen] recentLogin:', JSON.stringify(recent));
       setRecentLogin(recent);
     };
 
