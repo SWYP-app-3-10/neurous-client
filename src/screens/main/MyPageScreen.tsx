@@ -261,6 +261,11 @@ const MyPageScreen = () => {
     return [];
   }, [myPageData?.interests]);
 
+  /** 이메일 존재 여부 */
+  const hasEmail = useMemo(() => {
+    return !!myPageData?.email && myPageData.email.trim().length > 0;
+  }, [myPageData?.email]);
+
   /** 현재 난이도 설정 (초급/중급/고급) */
   const currentDifficulty = myPageData?.level || null;
 
@@ -316,7 +321,9 @@ const MyPageScreen = () => {
           <View style={styles.profileImageContainer}>{ProfileImage}</View>
           <View style={styles.profileInfo}>
             <Text style={styles.userId}>{myPageData?.name}</Text>
-            <Text style={styles.userEmail}>{myPageData?.email}</Text>
+            {hasEmail && (
+              <Text style={styles.userEmail}>{myPageData?.email}</Text>
+            )}
           </View>
         </View>
 
@@ -491,6 +498,8 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
+    minHeight: scaleWidth(90),
+    justifyContent: 'center',
   },
   userId: {
     ...Heading_18EB_Round,
