@@ -275,6 +275,7 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
       USER_INFO_KEY,
       '@fcm_token', // FCM 토큰도 삭제
       '@fcm_token_pending', // 대기 토큰도 삭제
+      '@difficulty_submit_date', // 로그아웃 시 난이도 제출 날짜 초기화
       // RECENT_PROVIDER_KEY는 로그인 화면 툴팁 표시를 위해 유지
     ]);
 
@@ -454,6 +455,7 @@ export const withdraw = async (): Promise<void> => {
       USER_INFO_KEY,
       '@fcm_token', // FCM 토큰도 삭제
       '@fcm_token_pending', // 대기 토큰도 삭제
+      '@difficulty_submit_date', // 로그아웃 시 난이도 제출 날짜 초기화
     ]);
 
     console.log('[withdraw] 완료');
