@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   NavigationContainer,
   CommonActions,
@@ -102,93 +102,94 @@ const RootNavigatorContent: React.FC<{
     prevOnboardingCompletedRef.current = isOnboardingCompleted;
   }, [isOnboardingCompleted, navigationRef, isReady, queryClient]);
 
-  // 경험치 변경 시 characterData refetch
+  // 두 useEffect에서 공유하기 위해 useCallback으로 선언
+  const checkPendingLevelUp = useCallback(async () => {
+    if (hasCheckedPendingLevelUpRef.current) {
+      return;
+    }
+
+    try {
+      const pendingLevelUpData =
+        await AsyncStorage.getItem('@pending_level_up');
+
+      if (pendingLevelUpData) {
+        try {
+          const levelUpInfo: LevelUpInfo = JSON.parse(pendingLevelUpData);
+
+          if (!levelUpInfo || typeof levelUpInfo !== 'object') {
+            console.warn(
+              '[RootNavigator] 레벨업 정보 형식이 올바르지 않습니다:',
+              levelUpInfo,
+            );
+            await AsyncStorage.removeItem('@pending_level_up');
+            return;
+          }
+
+          hasCheckedPendingLevelUpRef.current = true;
+
+          // 레벨업 모달 표시
+          showModal({
+            title: levelUpInfo.title || '축하해요! 레벨 업!',
+            image: <Modal_IMG />,
+            imageTopOffset: scaleWidth(-100.62),
+            imagePaddingTop: scaleWidth(64),
+            titleStyle: { ...Heading_24EB_Round },
+            titleDescriptionGapSize: 4,
+            description:
+              levelUpInfo.message || '조금씩 생각이 자라나고 있어요.',
+            descriptionColor: COLORS.gray700,
+            children: React.createElement(LevelUpModalContent, {
+              newLevel: (() => {
+                // "LEVEL_2" 형식에서 숫자 추출
+                const match = levelUpInfo.levelCode?.match(/LEVEL_(\d+)/);
+                return match ? parseInt(match[1], 10) : 0;
+              })(),
+            }),
+            primaryButton: {
+              title: '확인',
+              onPress: async () => {
+                // 레벨업 정보 삭제
+                await AsyncStorage.removeItem('@pending_level_up');
+                hasCheckedPendingLevelUpRef.current = false;
+              },
+            },
+          });
+        } catch (parseError) {
+          console.error('[RootNavigator] 레벨업 정보 파싱 실패:', parseError);
+          // 잘못된 데이터 삭제
+          await AsyncStorage.removeItem('@pending_level_up');
+        }
+      }
+    } catch (error) {
+      console.error('[RootNavigator] 레벨업 체크 실패:', error);
+    }
+  }, [showModal]);
+
+  // 앱 진입 시 미처리 레벨업 정보 체크
   useEffect(() => {
     if (!isOnboardingCompleted) {
       return;
     }
-    // 경험치가 변경되면 characterData를 refetch하여 최신 레벨 정보 가져오기
+
+    checkPendingLevelUp();
+  }, [isOnboardingCompleted, checkPendingLevelUp]);
+
+  // 경험치 변경 시 characterData refetch + 레벨업 체크
+  useEffect(() => {
+    if (!isOnboardingCompleted) {
+      return;
+    }
+
     const previousExp = lastCheckedExpRef.current;
     if (experience !== previousExp && experience > previousExp) {
       // 경험치가 증가했을 때만 refetch
       queryClient.invalidateQueries({ queryKey: characterKeys.data() });
-      // 경험치가 증가했을 때 레벨업 체크도 다시 수행
+      // ref 리셋 직접 호출 - useEffect 의존성 재실행 없이도 즉시 체크
       hasCheckedPendingLevelUpRef.current = false;
+      checkPendingLevelUp();
     }
     lastCheckedExpRef.current = experience;
-  }, [experience, isOnboardingCompleted, queryClient]);
-
-  // 완독 체크 API 응답의 레벨업 정보 체크
-  useEffect(() => {
-    if (!isOnboardingCompleted) {
-      return;
-    }
-
-    const checkPendingLevelUp = async () => {
-      if (hasCheckedPendingLevelUpRef.current) {
-        return;
-      }
-
-      try {
-        const pendingLevelUpData =
-          await AsyncStorage.getItem('@pending_level_up');
-
-        if (pendingLevelUpData) {
-          try {
-            const levelUpInfo: LevelUpInfo = JSON.parse(pendingLevelUpData);
-
-            // levelUpInfo가 유효한지 확인
-            if (!levelUpInfo || typeof levelUpInfo !== 'object') {
-              console.warn(
-                '[RootNavigator] 레벨업 정보 형식이 올바르지 않습니다:',
-                levelUpInfo,
-              );
-              await AsyncStorage.removeItem('@pending_level_up');
-              return;
-            }
-
-            hasCheckedPendingLevelUpRef.current = true;
-
-            // 레벨업 모달 표시
-            showModal({
-              title: levelUpInfo.title || '축하해요! 레벨 업!',
-              image: <Modal_IMG />,
-              imageTopOffset: scaleWidth(-100.62),
-              imagePaddingTop: scaleWidth(64),
-              titleStyle: { ...Heading_24EB_Round },
-              titleDescriptionGapSize: 4,
-              description:
-                levelUpInfo.message || '조금씩 생각이 자라나고 있어요.',
-              descriptionColor: COLORS.gray700,
-              children: React.createElement(LevelUpModalContent, {
-                newLevel: (() => {
-                  // "LEVEL_2" 형식에서 숫자 추출
-                  const match = levelUpInfo.levelCode?.match(/LEVEL_(\d+)/);
-                  return match ? parseInt(match[1], 10) : 0;
-                })(),
-              }),
-              primaryButton: {
-                title: '확인',
-                onPress: async () => {
-                  // 레벨업 정보 삭제
-                  await AsyncStorage.removeItem('@pending_level_up');
-                  hasCheckedPendingLevelUpRef.current = false;
-                },
-              },
-            });
-          } catch (parseError) {
-            console.error('[RootNavigator] 레벨업 정보 파싱 실패:', parseError);
-            // 잘못된 데이터 삭제
-            await AsyncStorage.removeItem('@pending_level_up');
-          }
-        }
-      } catch (error) {
-        console.error('[RootNavigator] 레벨업 체크 실패:', error);
-      }
-    };
-
-    checkPendingLevelUp();
-  }, [isOnboardingCompleted, showModal]);
+  }, [experience, isOnboardingCompleted, queryClient, checkPendingLevelUp]);
 
   return (
     <>
