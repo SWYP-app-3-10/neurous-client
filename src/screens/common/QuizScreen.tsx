@@ -20,11 +20,10 @@
  *   2. 사용자가 선택지 선택
  *   3. "다음" 버튼 클릭 → 완독 체크 API 호출
  *   4. submitQuiz API 호출
- *   5. 포인트/경험치 획득 모달 표시
  *   5. 피드백 화면으로 전환 (정답/오답 표시)
  *   6. "완료" 버튼 클릭 → 난이도 피드백 모달 표시 (하루 1회)
  *   7. 피드백 저장 → 즉시 분석 → 조건 충족 시 난이도 제안 팝업
- *   8. 원래 화면으로 이동 (mission 또는 search)
+ *   8. 원래 화면으로 이동 (mission 또는 search) + 리워드 팝업 노출
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -286,8 +285,7 @@ const QuizScreen: React.FC = () => {
    *   5. submitQuiz API 호출
    *   6. 포인트 및 경험치 추가 (로컬 상태)
    *   7. 레벨업 정보 AsyncStorage에 저장 (MissionScreen에서 감지)
-   *   8. 포인트/경험치 획득 모달 표시
-   *   9. 퀴즈 상태를 'feedback'으로 전환
+   *   8. 퀴즈 상태를 'feedback'으로 전환
    *
    * 변경된 보상 처리 방식:
    *   - ArticleDetailScreen에서는 퀴즈 화면 이동만 처리
@@ -421,27 +419,7 @@ const QuizScreen: React.FC = () => {
         );
       }
 
-      // 포인트 & 경험치 획득 모달 표시
-      showModal({
-        title: '포인트 & 경험치 획득!',
-        image: <Modal_IMG />,
-        titleStyle: {
-          ...Heading_20EB_Round,
-        },
-        titleDescriptionGapSize: scaleWidth(20),
-        children: React.createElement(ExperienceModalContent, {
-          point: true,
-          correct: quizResultResponse.isAnswerCorrect,
-        }),
-        primaryButton: {
-          title: '확인',
-          onPress: () => {
-            // 모달 닫기 (hideModal은 모달 컴포넌트에서 처리)
-          },
-        },
-      });
-
-      // 피드백 화면으로 전환
+      // 피드백 화면으로 전환 (리워드 팝업은 완료 버튼 후 이전 화면 이동 시 노출)
       setQuizState('feedback');
     } catch (error: any) {
       console.error('[퀴즈] 제출 실패:', error);
@@ -450,32 +428,37 @@ const QuizScreen: React.FC = () => {
   };
 
   // ──────────────────────────────────────────────
-  // 핸들러: "완료" 버튼 클릭 (난이도 피드백 모달)
+  // 핸들러: "완료" 버튼 클릭 (난이도 피드백 모달 + 리워드 팝업)
   // ──────────────────────────────────────────────
 
   /**
-   * "완료" 버튼 클릭 시 난이도 피드백 모달을 표시하고 원래 화면으로 이동한다.
+   * 이전 화면으로 이동한 직후 리워드 팝업을 노출한다.
    *
-   * 처리 흐름:
-   *   1. 기존 타이머 정리 (메모리 누수 방지)
-   *   2. checkCanSubmitDifficulty()로 오늘 이미 난이도를 제출했는지 확인
-   *   3. 이미 제출했으면 모달 없이 바로 원래 화면으로 이동
-   *   4. 제출하지 않았으면 난이도 선택 모달 표시
-   *   5. 사용자가 난이도 선택 시:
-   *      - saveDifficultyFeedback() 피드백 저장
-   *      - checkAfterFeedback() 즉시 분석
-   *      - 조건 충족 시 난이도 제안 팝업
-   *      - submitDifficultyToServer() API 호출
-   *      - 0.2초 후 모달 닫기 및 원래 화면으로 이동
-   *
-   * 난이도 피드백:
-   *   - 하루에 한 번만 표시됨 (checkCanSubmitDifficulty)
-   *   - 사용자가 선택한 난이도를 서버에 전송하여 글 난이도 조정에 활용
-   *
-   * 화면 이동:
-   *   - createQuizCompleteNavigation(returnTo)를 사용하여
-   *     퀴즈를 푼 후 적절한 화면으로 이동 (mission 또는 search)
+   * navigation.dispatch() 이후 호출하며,
+   * 전역 모달(RootNavigator 레벨)이므로 화면 전환 이후에도 정상 노출된다.
+   * "확인" 버튼을 누르면 팝업만 닫힌다 (이미 이전 화면에 있으므로 별도 이동 없음).
    */
+  const showRewardModal = () => {
+    showModal({
+      title: '포인트 & 경험치 획득!',
+      image: <Modal_IMG />,
+      titleStyle: {
+        ...Heading_20EB_Round,
+      },
+      titleDescriptionGapSize: scaleWidth(20),
+      children: React.createElement(ExperienceModalContent, {
+        point: true,
+        correct: quizResult?.isAnswerCorrect ?? false,
+      }),
+      primaryButton: {
+        title: '확인',
+        onPress: () => {
+          // hideModal은 RootNavigator에서 primaryButton.onPress 후 자동 호출됨
+        },
+      },
+    });
+  };
+
   const handleComplete = async () => {
     // 기존 타이머가 있으면 클리어
     if (timeoutRef.current) {
@@ -485,9 +468,10 @@ const QuizScreen: React.FC = () => {
     // 하루에 한 번만 난이도 모달 표시 체크
     const canSubmit = await checkCanSubmitDifficulty();
 
-    // 오늘 이미 전송했다면 모달 표시하지 않고 바로 이동
+    // 오늘 이미 전송했다면 난이도 모달 없이 바로 이전 화면으로 이동 후 리워드 팝업 노출
     if (!canSubmit) {
       navigation.dispatch(createQuizCompleteNavigation(returnTo));
+      showRewardModal();
       return;
     }
 
@@ -571,6 +555,8 @@ const QuizScreen: React.FC = () => {
                       navigation.dispatch(
                         createQuizCompleteNavigation(returnTo),
                       );
+                      // 난이도 제안 수락 후 이전 화면 이동 시 리워드 팝업 노출
+                      showRewardModal();
                     },
 
                     onDecline: async () => {
@@ -580,6 +566,8 @@ const QuizScreen: React.FC = () => {
                       navigation.dispatch(
                         createQuizCompleteNavigation(returnTo),
                       );
+                      // 난이도 제안 거절 후 이전 화면 이동 시 리워드 팝업 노출
+                      showRewardModal();
                     },
                   }),
                   primaryButton: undefined,
@@ -590,17 +578,18 @@ const QuizScreen: React.FC = () => {
             }
 
             // ──────────────────────────────────────────────
-            // Step 4: 즉시 분석 실행
+            // Step 4: 서버로 난이도 전송 후 이전 화면으로 이동
             // ──────────────────────────────────────────────
 
             // 서버로 난이도 전송
             await submitDifficultyToServer(articleId, difficulty);
 
-            // 난이도 선택 시 모달 닫고 원래 화면으로 이동
+            // 난이도 선택 시 모달 닫고 원래 화면으로 이동 후 리워드 팝업 노출
             // 0.2초 지연: 사용자가 선택한 것을 시각적으로 확인할 수 있도록
             setTimeout(() => {
               hideModal();
               navigation.dispatch(createQuizCompleteNavigation(returnTo));
+              showRewardModal();
             }, 200);
           }}
         />
