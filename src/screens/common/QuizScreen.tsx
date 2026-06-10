@@ -13,17 +13,18 @@
  *
  * 화면 상태:
  *   - question: 문제 화면 (선택지 선택 가능)
- *   - feedback: 피드백 화면 (정답/오답 표시)
+ *   - feedback: 정답 체크 화면 (정답/오답 표시)
  *
  * 처리 흐름:
- *   1. 퀴즈 데이터 로드 (fetchQuiz API)
- *   2. 사용자가 선택지 선택
- *   3. "다음" 버튼 클릭 → 완독 체크 API 호출
- *   4. submitQuiz API 호출
- *   5. 피드백 화면으로 전환 (정답/오답 표시)
- *   6. "완료" 버튼 클릭 → 난이도 피드백 모달 표시 (하루 1회)
- *   7. 피드백 저장 → 즉시 분석 → 조건 충족 시 난이도 제안 팝업
- *   8. 원래 화면으로 이동 (mission 또는 search) + 리워드 팝업 노출
+ *   1. 퀴즈 화면 진입과 동시에 난이도 평가 팝업 표시 (하루 1회)
+ *   2. 난이도 선택 → 피드백 저장 → 즉시 분석 → 조건 충족 시 난이도 제안 팝업
+ *   3. 퀴즈 데이터 로드 (fetchQuiz API)
+ *   4. 사용자가 선택지 선택
+ *   5. "다음" 버튼 클릭 → 완독 체크 API 호출 → submitQuiz API 호출
+ *   6. 포인트/경험치 지급 (로컬 상태)
+ *   7. 정답 체크 화면으로 전환 (정답/오답 표시)
+ *   8. "완료" 버튼 클릭 → 리워드 팝업 표시
+ *   9. 리워드 팝업 "확인" 클릭 → 원래 화면으로 이동 (mission 또는 search)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -117,7 +118,7 @@ const QuizScreen: React.FC = () => {
   /** 사용자가 선택한 선택지 ID */
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
 
-  /** 현재 화면 상태 (문제 화면 or 피드백 화면) */
+  /** 현재 화면 상태 (문제 화면 or 정답 체크 화면) */
   const [quizState, setQuizState] = useState<QuizState>('question');
 
   /** 사용자가 선택한 난이도 (난이도 피드백 모달용) */
@@ -167,7 +168,7 @@ const QuizScreen: React.FC = () => {
   // ──────────────────────────────────────────────
 
   /**
-   * 피드백 화면으로 전환될 때만 로그 기록
+   * 정답 체크 화면으로 전환될 때만 로그 기록
    *
    * 'question' 상태는 RootNavigator에서 이미 '퀴즈'로 자동 로그가 기록되므로
    * 여기서는 'feedback' 상태로 변경될 때만 별도 로그를 남긴다.
@@ -253,6 +254,141 @@ const QuizScreen: React.FC = () => {
   }, [articleId]);
 
   // ──────────────────────────────────────────────
+  // Effect 4: 화면 진입 시 난이도 피드백 모달 표시
+  // ──────────────────────────────────────────────
+
+  /**
+   * 퀴즈 화면 진입과 동시에 난이도 평가 팝업을 표시한다.
+   *
+   * 처리 흐름:
+   *   1. checkCanSubmitDifficulty()로 오늘 이미 난이도를 제출했는지 확인
+   *   2. 이미 제출했으면 모달 표시 없이 종료
+   *   3. 제출하지 않았으면 난이도 선택 모달 표시
+   *   4. 사용자가 난이도 선택 시:
+   *      - saveDifficultyFeedback() 피드백 저장
+   *      - checkAfterFeedback() 즉시 분석
+   *      - 조건 충족 시 난이도 제안 팝업 (LevelSuggestionModal)
+   *      - submitDifficultyToServer() API 호출
+   *      - 0.2초 후 모달 닫기
+   *
+   * 변경 사유:
+   *   - 기존: 퀴즈 완료 후 "완료" 버튼 클릭 시 표시
+   *   - 변경: 퀴즈 화면 진입과 동시에 표시 (기획 변경)
+   */
+  useEffect(() => {
+    const showDifficultyModalOnEnter = async () => {
+      // 하루 한 번만 표시
+      const canSubmit = await checkCanSubmitDifficulty();
+      if (!canSubmit) {
+        return;
+      }
+
+      logEvent('Complete_Quiz_Answer');
+
+      showModal({
+        title: '이번 글의 난이도는\n 어떠셨나요?',
+        titleStyle: {
+          ...Heading_18EB_Round,
+        },
+        description: '글의 난이도에 반영해드려요!',
+        descriptionColor: COLORS.gray600,
+        titleDescriptionGapSize: scaleWidth(8),
+        closeOnBackdropPress: false,
+        children: (
+          <DifficultySelectionModal
+            initialDifficulty={selectedDifficulty}
+            onSelect={async difficulty => {
+              setSelectedDifficulty(difficulty);
+
+              // Step 1: 피드백 저장
+              let feedbackType: 'easy' | 'normal' | 'hard';
+              if (difficulty === 'easy') {
+                feedbackType = 'easy';
+              } else if (difficulty === 'normal') {
+                feedbackType = 'normal';
+              } else {
+                feedbackType = 'hard';
+              }
+
+              // AsyncStorage에 피드백 저장 (최근 20개 유지)
+              await saveDifficultyFeedback(
+                articleId,
+                currentDifficulty || LevelCategory.BEGINNER,
+                feedbackType,
+              );
+
+              // Step 2: 즉시 분석 실행
+              const analysis = await checkAfterFeedback();
+
+              // Step 3: 제안 조건 충족 시 제안 팝업 표시
+              if (
+                analysis &&
+                analysis.shouldSuggest &&
+                analysis.suggestedLevel
+              ) {
+                logEvent('Show_Level_Suggestion_Modal');
+                const suggestedLevel = analysis.suggestedLevel;
+
+                // 기존 난이도 선택 모달 닫기
+                hideModal();
+
+                // 0.3초 후 제안 모달 표시 (모달 충돌 방지)
+                setTimeout(() => {
+                  const suggestionTitle =
+                    analysis.reason === 'easy'
+                      ? '조금 더 어려운 글도 읽어볼까요?'
+                      : '조금 더 편하게 읽어볼까요?';
+
+                  showModal({
+                    title: suggestionTitle,
+                    titleStyle: {
+                      ...Heading_18EB_Round,
+                    },
+                    titleDescriptionGapSize: scaleWidth(16),
+                    closeOnBackdropPress: true,
+                    children: React.createElement(LevelSuggestionModal, {
+                      suggestedLevel,
+                      reason: analysis.reason as 'easy' | 'hard',
+                      stats: analysis.stats,
+
+                      onAccept: async () => {
+                        logEvent('Accept_Level_Suggestion');
+                        await handleAcceptSuggestion(suggestedLevel);
+                        hideModal();
+                      },
+
+                      onDecline: async () => {
+                        logEvent('Decline_Level_Suggestion');
+                        await handleDeclineSuggestion();
+                        hideModal();
+                      },
+                    }),
+                    primaryButton: undefined,
+                  });
+                }, 300);
+
+                return;
+              }
+
+              // Step 4: 서버로 난이도 전송 후 모달 닫기
+              await submitDifficultyToServer(articleId, difficulty);
+
+              // 0.2초 지연: 사용자가 선택한 것을 시각적으로 확인할 수 있도록
+              setTimeout(() => {
+                hideModal();
+              }, 200);
+            }}
+          />
+        ),
+      });
+    };
+
+    showDifficultyModalOnEnter();
+    // 진입 시 1회만 실행 (articleId는 Effect 3에서 변경 시 초기화되므로 의존성에서 제외)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ──────────────────────────────────────────────
   // 핸들러: 선택지 선택
   // ──────────────────────────────────────────────
 
@@ -260,7 +396,7 @@ const QuizScreen: React.FC = () => {
    * 사용자가 선택지를 클릭했을 때 호출된다.
    *
    * 문제 화면(question)에서만 선택 가능하며,
-   * 피드백 화면(feedback)에서는 선택 불가능하다.
+   * 정답 체크 화면(feedback)에서는 선택 불가능하다.
    *
    * @param optionId 선택한 선택지 ID
    */
@@ -293,7 +429,7 @@ const QuizScreen: React.FC = () => {
    *
    * 에러 처리:
    *   - 완독 체크 API 호출에 실패해도 퀴즈 제출은 계속 진행
-   *   - 퀴즈 제출 API가 실패하면 보상 지급 및 피드백 화면 전환을 하지 않음
+   *   - 퀴즈 제출 API가 실패하면 보상 지급 및 정답 체크 화면 전환을 하지 않음
    */
   const handleNext = async () => {
     console.log('[QuizScreen] 퀴즈 제출 버튼 클릭');
@@ -386,7 +522,7 @@ const QuizScreen: React.FC = () => {
         userLevelInformation,
       });
 
-      // 퀴즈 결과 저장 (피드백 화면에서 정답 판단용)
+      // 퀴즈 결과 저장 (정답 체크 화면에서 정답 판단용)
       if (quizResultResponse) {
         setQuizResult({
           correctChoiceNo: quizResultResponse.correctChoiceNo,
@@ -419,7 +555,7 @@ const QuizScreen: React.FC = () => {
         );
       }
 
-      // 피드백 화면으로 전환 (리워드 팝업은 완료 버튼 후 이전 화면 이동 시 노출)
+      // 정답 체크 화면으로 전환 (리워드 팝업은 "완료" 버튼 클릭 시 노출)
       setQuizState('feedback');
     } catch (error: any) {
       console.error('[퀴즈] 제출 실패:', error);
@@ -428,17 +564,20 @@ const QuizScreen: React.FC = () => {
   };
 
   // ──────────────────────────────────────────────
-  // 핸들러: "완료" 버튼 클릭 (난이도 피드백 모달 + 리워드 팝업)
+  // 핸들러: "완료" 버튼 클릭 (리워드 팝업)
   // ──────────────────────────────────────────────
 
   /**
-   * 이전 화면으로 이동한 직후 리워드 팝업을 노출한다.
+   * "완료" 버튼 클릭 시 리워드 모달을 표시한다.
+   * 모달 "확인" 클릭 시 원래 화면으로 이동한다.
    *
-   * navigation.dispatch() 이후 호출하며,
-   * 전역 모달(RootNavigator 레벨)이므로 화면 전환 이후에도 정상 노출된다.
-   * "확인" 버튼을 누르면 팝업만 닫힌다 (이미 이전 화면에 있으므로 별도 이동 없음).
+   * 난이도 피드백 모달은 퀴즈 화면 진입 시점(Effect 4)에서 처리한다.
    */
-  const showRewardModal = () => {
+  const handleComplete = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
     showModal({
       title: '포인트 & 경험치 획득!',
       image: <Modal_IMG />,
@@ -453,147 +592,9 @@ const QuizScreen: React.FC = () => {
       primaryButton: {
         title: '확인',
         onPress: () => {
-          // hideModal은 RootNavigator에서 primaryButton.onPress 후 자동 호출됨
+          navigation.dispatch(createQuizCompleteNavigation(returnTo));
         },
       },
-    });
-  };
-
-  const handleComplete = async () => {
-    // 기존 타이머가 있으면 클리어
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // 하루에 한 번만 난이도 모달 표시 체크
-    const canSubmit = await checkCanSubmitDifficulty();
-
-    // 오늘 이미 전송했다면 난이도 모달 없이 바로 이전 화면으로 이동 후 리워드 팝업 노출
-    if (!canSubmit) {
-      navigation.dispatch(createQuizCompleteNavigation(returnTo));
-      showRewardModal();
-      return;
-    }
-
-    logEvent('Complete_Quiz_Answer');
-
-    // 난이도 선택 모달 표시
-    showModal({
-      title: '이번 글의 난이도는\n 어떠셨나요?',
-      titleStyle: {
-        ...Heading_18EB_Round,
-      },
-      description: '글의 난이도에 반영해드려요!',
-      descriptionColor: COLORS.gray600,
-      titleDescriptionGapSize: scaleWidth(8),
-      closeOnBackdropPress: false, // 배경 터치로 닫기 비활성화
-      children: (
-        <DifficultySelectionModal
-          initialDifficulty={selectedDifficulty}
-          onSelect={async difficulty => {
-            setSelectedDifficulty(difficulty);
-
-            // ──────────────────────────────────────────────
-            // Step 1: 피드백 저장
-            // ──────────────────────────────────────────────
-
-            let feedbackType: 'easy' | 'normal' | 'hard';
-
-            if (difficulty === 'easy') {
-              feedbackType = 'easy';
-            } else if (difficulty === 'normal') {
-              feedbackType = 'normal';
-            } else {
-              feedbackType = 'hard';
-            }
-
-            // AsyncStorage에 피드백 저장 (최근 20개 유지)
-            await saveDifficultyFeedback(
-              articleId,
-              currentDifficulty || LevelCategory.BEGINNER,
-              feedbackType,
-            );
-
-            // ──────────────────────────────────────────────
-            // Step 2: 즉시 분석 실행
-            // ──────────────────────────────────────────────
-            const analysis = await checkAfterFeedback();
-
-            // ──────────────────────────────────────────────
-            // Step 3: 제안 조건 충족 시 제안 팝업 표시
-            // ──────────────────────────────────────────────
-            if (analysis && analysis.shouldSuggest && analysis.suggestedLevel) {
-              logEvent('Show_Level_Suggestion_Modal');
-              const suggestedLevel = analysis.suggestedLevel;
-
-              // 기존 난이도 선택 모달 닫기
-              hideModal();
-
-              // 0.3초 후 제안 모달 표시 (모달 충돌 방지)
-              setTimeout(() => {
-                const suggestionTitle =
-                  analysis.reason === 'easy'
-                    ? '조금 더 어려운 글도 읽어볼까요?'
-                    : '조금 더 편하게 읽어볼까요?';
-
-                showModal({
-                  title: suggestionTitle,
-                  titleStyle: {
-                    ...Heading_18EB_Round,
-                  },
-                  titleDescriptionGapSize: scaleWidth(16),
-                  closeOnBackdropPress: true,
-                  children: React.createElement(LevelSuggestionModal, {
-                    suggestedLevel,
-                    reason: analysis.reason as 'easy' | 'hard',
-                    stats: analysis.stats,
-
-                    onAccept: async () => {
-                      logEvent('Accept_Level_Suggestion');
-                      await handleAcceptSuggestion(suggestedLevel);
-                      hideModal();
-                      navigation.dispatch(
-                        createQuizCompleteNavigation(returnTo),
-                      );
-                      // 난이도 제안 수락 후 이전 화면 이동 시 리워드 팝업 노출
-                      showRewardModal();
-                    },
-
-                    onDecline: async () => {
-                      logEvent('Decline_Level_Suggestion');
-                      await handleDeclineSuggestion();
-                      hideModal();
-                      navigation.dispatch(
-                        createQuizCompleteNavigation(returnTo),
-                      );
-                      // 난이도 제안 거절 후 이전 화면 이동 시 리워드 팝업 노출
-                      showRewardModal();
-                    },
-                  }),
-                  primaryButton: undefined,
-                });
-              }, 300);
-
-              return;
-            }
-
-            // ──────────────────────────────────────────────
-            // Step 4: 서버로 난이도 전송 후 이전 화면으로 이동
-            // ──────────────────────────────────────────────
-
-            // 서버로 난이도 전송
-            await submitDifficultyToServer(articleId, difficulty);
-
-            // 난이도 선택 시 모달 닫고 원래 화면으로 이동 후 리워드 팝업 노출
-            // 0.2초 지연: 사용자가 선택한 것을 시각적으로 확인할 수 있도록
-            setTimeout(() => {
-              hideModal();
-              navigation.dispatch(createQuizCompleteNavigation(returnTo));
-              showRewardModal();
-            }, 200);
-          }}
-        />
-      ),
     });
   };
 
@@ -656,9 +657,9 @@ const QuizScreen: React.FC = () => {
    *
    * 판단 로직:
    *   - 문제 화면(question): 초기 데이터의 correct 필드 사용
-   *   - 피드백 화면(feedback): API 응답의 correctChoiceNo 사용
+   *   - 정답 체크 화면(feedback): API 응답의 correctChoiceNo 사용
    *
-   * 피드백 화면에서 API 응답을 사용하는 이유:
+   * 정답 체크 화면에서 API 응답을 사용하는 이유:
    *   - 서버에서 실제로 정답으로 판정한 선택지를 표시하기 위함
    *   - 초기 데이터와 서버 판정이 다를 수 있음 (드물지만 발생 가능)
    *
@@ -670,7 +671,7 @@ const QuizScreen: React.FC = () => {
       return false;
     }
 
-    // 피드백 화면: API 응답의 correctChoiceNo 사용
+    // 정답 체크 화면: API 응답의 correctChoiceNo 사용
     if (quizState === 'feedback' && quizResult) {
       const option = quizData.choices.find(
         choice => choice.quizChoiceId === optionId,
@@ -695,7 +696,7 @@ const QuizScreen: React.FC = () => {
    *     - 체크 아이콘 표시 (선택됨 / 선택 안 됨)
    *     - 클릭 가능
    *
-   *   - feedback (피드백 화면):
+   *   - feedback (정답 체크 화면):
    *     - 정답/오답에 따라 스타일 변경
    *     - QuizOptionCard 컴포넌트 사용 (정답 표시 아이콘 포함)
    *     - 클릭 불가능
@@ -748,7 +749,7 @@ const QuizScreen: React.FC = () => {
         </Pressable>
       );
     } else {
-      // 피드백 화면: 정답/오답에 따라 스타일 변경
+      // 정답 체크 화면: 정답/오답에 따라 스타일 변경
       const correct = isCorrect(option.id);
       return (
         <QuizOptionCard key={option.id} option={option} isCorrect={correct} />
