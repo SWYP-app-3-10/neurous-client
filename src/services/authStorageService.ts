@@ -10,7 +10,7 @@
  */
 
 import { SocialLoginProvider } from './socialLoginService';
-import { getUserInfo, clearUserInfo } from './authService';
+import { getUserInfo, clearUserInfo, getRecentProvider } from './authService';
 
 /**
  * 화면에서 사용할 최근 로그인 정보 타입
@@ -45,7 +45,17 @@ export const getRecentLogin = async (): Promise<RecentLoginInfo | null> => {
 
     // provider나 loginTime이 없으면 불완전한 로그인 정보로 간주
     if (!userInfo || !userInfo.provider || !userInfo.loginTime) {
-      return null;
+      // @user_info 없을 때 @recent_provider 폴백으로 툴팁 표시
+      const recentProvider = await getRecentProvider();
+      if (!recentProvider) {
+        return null;
+      }
+
+      return {
+        provider: recentProvider as SocialLoginProvider,
+        userId: 0, // 사용자 ID는 없지만 최근 로그인한 소셜 제공자 정보는 존재하는 경우
+        loginTime: 0, // 로그인 시각 정보는 없으므로 0으로 설정 (자동 로그인 만료 계산에서 즉시 만료 처리)
+      };
     }
 
     // UI 표시에 필요한 필드만 추출하여 반환

@@ -1,16 +1,18 @@
 /**
  * 아티클 클릭 및 네비게이션 처리 커스텀 훅
  *
- * 아티클 카드 클릭 시 포인트 확인 → 모달 표시 → 화면 이동까지의
+ * 아티클 카드 클릭 시 접근 권한 확인 → 모달 표시 → 화면 이동까지의
  * 전체 흐름을 통합 관리함.
  *
  * [처리 흐름]
  * 아티클 클릭
  *   ↓
  * fetchContentAccess로 접근 권한 확인
- *   ↓ 포인트 충분   → "새 글 읽기" 모달 → 포인트 구매 → ArticleDetail 이동
- *   ↓ 포인트 부족   → "광고 시청" 모달  → AdLoading 이동
- *   ↓ 에러 발생     → Alert 표시
+ *   ↓ 이미 읽은 글       → ReadArticleDetail 이동 (접근 권한 확인 생략)
+ *   ↓ 무료 열람 가능     → ArticleDetail 이동 (openType: 'free')
+ *   ↓ 포인트 충분        → "새 글 읽기" 모달 → 포인트 구매 → ArticleDetail 이동
+ *   ↓ 포인트 부족        → "광고 시청" 모달  → AdLoading 이동
+ *   ↓ 에러 발생          → Alert 표시
  */
 import React, { useCallback, useRef } from 'react';
 import { Alert, ActivityIndicator, View } from 'react-native';
@@ -83,17 +85,17 @@ export const useArticleNavigation = ({
    * 아티클 카드 클릭 핸들러
    *
    * [처리 순서]
-   * 1. 중복 클릭 방지 (isProcessingRef)
-   * 2. 유저 정보 조회
-   * 3. fetchContentAccess로 접근 권한 및 포인트 확인
-   * 4-A. 포인트 충분 → 포인트 사용 확인 모달
-   *      → 확인 시 purchaseContentWithPoint 호출 → ArticleDetail 이동
-   * 4-B. 포인트 부족 → 광고 시청 안내 모달
-   *      → 확인 시 AdLoading 이동
+   * 1. 이미 읽은 글이면 ReadArticleDetailScreen으로 바로 이동
+   * 2. 중복 클릭 방지 (isProcessingRef)
+   * 3. 유저 정보 조회
+   * 4. fetchContentAccess로 접근 권한 및 포인트 확인
+   * 5-A. readable === true → 무료 열람권 / 이미 구매한 글 → ArticleDetail 이동
+   * 5-B. 포인트 충분 → 포인트 사용 확인 모달 → 구매 후 ArticleDetail 이동
+   * 5-C. 포인트 부족 → 광고 시청 안내 모달 → AdLoading 이동
    */
   const handleArticlePress = useCallback(
     async (articleId: number, isRead?: boolean) => {
-      // 이미 읽은 글인 경우 바로 ReadArticleDetailScreen으로 이동
+      // 이미 읽은 글이면 접근 권한 확인 없이 바로 이동
       if (isRead === true) {
         console.log(
           '[useArticleNavigation] 이미 읽은 글 → ReadArticleDetailScreen 이동',
@@ -144,8 +146,9 @@ export const useArticleNavigation = ({
         });
 
         /**
-         * 이미 읽기 가능한 글
-         * - 무료 열람권 사용 / 이미 구매한 글 / 서버에서 추가 결제 불필요 인정
+         * readable === true: 추가 결제 없이 바로 읽을 수 있는 글
+         * - 무료 열람권 잔여 횟수 있음 (accessType: null)
+         * - 이미 포인트/광고로 구매한 글
          */
         if (accessData.readable) {
           navigation.navigate(RouteNames.FULL_SCREEN_STACK, {
@@ -163,10 +166,10 @@ export const useArticleNavigation = ({
 
         if (currentPoints >= ARTICLE_READ_POINT_COST) {
           // ───────────────────────────────────────────
-          //  포인트 충분 -> 포인트 사용 확인 모달
+          // 포인트 충분 → 포인트 사용 확인 모달
           // ───────────────────────────────────────────
           await logScreenView('Popup_Reading', undefined, true);
-          isProcessingRef.current = false; // 모달 표시 시점에 클릭 처리 완료 → 버튼 클릭 허용
+          isProcessingRef.current = false; // 모달 표시 시점에 처리 완료 → 모달 내 버튼 클릭 허용
 
           showModal({
             title: '새로운 글을 읽으시겠어요?',
@@ -270,10 +273,10 @@ export const useArticleNavigation = ({
           });
         } else {
           // ───────────────────────────────────────────
-          // 포인트 부족 -> 광고 시청 안내 모달
+          // 포인트 부족 → 광고 시청 안내 모달
           // ───────────────────────────────────────────
           await logScreenView('Popup_Advertisement', undefined, true);
-          isProcessingRef.current = false; // 모달 표시 시점에 클릭 처리 완료 → 버튼 클릭 허용
+          isProcessingRef.current = false; // 모달 표시 시점에 처리 완료 → 모달 내 버튼 클릭 허용
 
           showModal({
             title: '광고를 보고 포인트 받으시겠어요?',

@@ -76,16 +76,23 @@ target 'Neurous' do
     Pod::UI.puts "fmt patch target: #{fmt_file}".yellow
 
     if File.exist?(fmt_file)
-      text = File.read(fmt_file)
-      before = text.scan(/FMT_STRING\(/).size
+      begin
+        File.chmod(0644, fmt_file)
 
-      text = text.gsub(/FMT_STRING\("([^"\\]*(?:\\.[^"\\]*)*)"\)/) do
-        "\"#{$1}\""
+        text = File.read(fmt_file)
+        before = text.scan(/FMT_STRING\(/).size
+
+        text = text.gsub(/FMT_STRING\("([^"\\]*(?:\\.[^"\\]*)*)"\)/) do
+          "\"#{$1}\""
+        end
+
+        after = text.scan(/FMT_STRING\(/).size
+        File.write(fmt_file, text)
+        Pod::UI.puts "fmt patch applied: #{before - after} FMT_STRING replacements, #{after} remaining".yellow
+      rescue => e
+        Pod::UI.warn "fmt patch failed: #{e.message}"
+        Pod::UI.warn "Run `chmod -R u+w Pods` inside ios directory and retry `pod install` if fmt compile error occurs."
       end
-
-      after = text.scan(/FMT_STRING\(/).size
-      File.write(fmt_file, text)
-      Pod::UI.puts "fmt patch applied: #{before - after} FMT_STRING replacements, #{after} remaining".yellow
     else
       Pod::UI.warn "fmt patch skipped: format-inl.h not found"
     end

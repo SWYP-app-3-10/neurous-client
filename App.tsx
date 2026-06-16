@@ -13,9 +13,7 @@ const App = () => {
   );
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // FCM 푸시 알림 초기화 임시 비활성화
-  // iOS Firebase default app 초기화 이슈 해결 후 재활성화 예정
-  // usePushNotification();
+  usePushNotification();
 
   // 전역 StatusBar 기본값
   useEffect(() => {
@@ -28,18 +26,18 @@ const App = () => {
   }, []);
 
   // Firebase 초기화 확인 (개발 모드에서만)
-  // useEffect(() => {
-  //   if (__DEV__) {
-  //     try {
-  //       const firebase = require('@react-native-firebase/app').default;
-  //       const projectId = firebase.app().options.projectId;
-  //       console.log('🔥 Firebase Project:', projectId);
-  //       console.log('✅ Firebase initialized successfully');
-  //     } catch (error) {
-  //       console.error('❌ Firebase initialization check failed:', error);
-  //     }
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (__DEV__) {
+      try {
+        const firebase = require('@react-native-firebase/app').default;
+        const projectId = firebase.app().options.projectId;
+        console.log('🔥 Firebase Project:', projectId);
+        console.log('✅ Firebase initialized successfully');
+      } catch (error) {
+        console.error('❌ Firebase initialization check failed:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const initializeAppData = async () => {

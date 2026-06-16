@@ -77,6 +77,12 @@ const LoginScreen = () => {
   /** 현재 로그인 중인 소셜 제공자 (로딩 스피너 표시용) */
   const [loading, setLoading] = useState<SocialLoginProvider | null>(null);
 
+  /** 소셜 로그인 중복 실행 방지 */
+  const socialLoginInProgressRef = useRef(false);
+
+  /** 약관 동의 후 대기 중인 로그인 제공자 */
+  const pendingProviderRef = useRef<SocialLoginProvider | null>(null);
+
   /** 최근 로그인 정보 (최근 사용한 로그인 방법 표시용) */
   const [recentLogin, setRecentLogin] = useState<RecentLoginInfo | null>(null);
 
@@ -215,6 +221,7 @@ const LoginScreen = () => {
 
     const loadRecentLogin = async () => {
       const recent = await getRecentLogin();
+      console.log('[LoginScreen] recentLogin:', JSON.stringify(recent));
       setRecentLogin(recent);
     };
 
@@ -402,17 +409,25 @@ const LoginScreen = () => {
    */
   const handleSocialLogin = useCallback(
     async (provider: SocialLoginProvider) => {
-      console.log(`[LoginScreen] handleSocialLogin 진입: ${provider}`);
-
-      // STEP 1: iOS 추적 권한 (로그인 창 띄우기 전)
-      if (Platform.OS === 'ios') {
-        await handleTrackingModal();
-        // ATT 시스템 모달이 완전히 닫힐 때까지 대기 (0.5초)
-        await new Promise(resolve => setTimeout(resolve, 500));
+      if (socialLoginInProgressRef.current) {
+        console.log('[Login] duplicated login blocked:', provider);
+        return;
       }
 
-      // STEP 2: 소셜 로그인 시도
+      socialLoginInProgressRef.current = true;
+
+      console.log('[Login] handleSocialLogin called:', provider);
+
       try {
+        // STEP 1: iOS 추적 권한 (로그인 창 띄우기 전)
+        if (Platform.OS === 'ios') {
+          await handleTrackingModal();
+
+          // ATT 시스템 모달이 완전히 닫힐 때까지 대기
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // STEP 2: 소셜 로그인 시도
         setLoading(provider);
 
         const result = await signInWithSocial(provider);
@@ -437,14 +452,16 @@ const LoginScreen = () => {
             // 신규 사용자: 알림 권한 → 온보딩 인트로
             await handleNotificationModal(false);
           }
-        } else {
-          // STEP 4: 로그인 실패 또는 취소 처리
-          if (result.error) {
-            if (!result.error.includes('취소')) {
-              Alert.alert('로그인 실패', result.error);
-            } else {
-              console.log('로그인이 취소되었습니다.');
-            }
+
+          return;
+        }
+
+        // STEP 4: 로그인 실패 또는 취소 처리
+        if (result.error) {
+          if (!result.error.includes('취소')) {
+            Alert.alert('로그인 실패', result.error);
+          } else {
+            console.log('로그인이 취소되었습니다.');
           }
         }
       } catch (error: any) {
@@ -452,6 +469,7 @@ const LoginScreen = () => {
         Alert.alert('오류', '로그인 중 알 수 없는 오류가 발생했습니다.');
       } finally {
         setLoading(null);
+        socialLoginInProgressRef.current = false;
       }
     },
     [handleTrackingModal, handleNotificationModal],
@@ -471,15 +489,28 @@ const LoginScreen = () => {
    *   4. 이 useEffect가 트리거되어 handleSocialLogin() 자동 실행
    *   5. params를 undefined로 리셋하여 재진입 시 중복 실행 방지
    */
+  // Effect 3-A: params 도착 즉시 ref에 저장하고 params 초기화
+  // setParams() → re-render → effect cleanup 순서로 인해 타이머/리스너가 취소되는
+  // race condition을 피하기 위해 cleanup이 없는 별도 effect로 분리
   useEffect(() => {
     const agreedProvider = route.params?.agreedProvider;
-    console.log('[LoginScreen] useEffect - agreedProvider:', agreedProvider);
+    if (!agreedProvider) return;
 
-    if (agreedProvider) {
-      handleSocialLogin(agreedProvider);
-      navigation.setParams({ agreedProvider: undefined });
-    }
-  }, [route.params?.agreedProvider, handleSocialLogin, navigation]);
+    pendingProviderRef.current = agreedProvider as SocialLoginProvider;
+    navigation.setParams({ agreedProvider: undefined });
+  }, [route.params?.agreedProvider, navigation]);
+
+  // Effect 3-B: 네비게이션 전환 애니메이션 완료 시 ref에 저장된 제공자로 로그인 실행
+  // transitionEnd는 애니메이션이 끝난 후에 발화하므로 Apple Sign In 시트가 안전하게 열림
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('transitionEnd', () => {
+      const provider = pendingProviderRef.current;
+      if (!provider) return;
+      pendingProviderRef.current = null;
+      handleSocialLogin(provider);
+    });
+    return () => unsubscribe();
+  }, [navigation, handleSocialLogin]);
 
   // ──────────────────────────────────────────────
   // UI 핸들러: 약관 동의 화면으로 이동
@@ -494,7 +525,9 @@ const LoginScreen = () => {
    * @param provider 약관 동의할 소셜 제공자
    */
   const goTermsAgreement = (provider: SocialLoginProvider) => {
-    navigation.navigate(RouteNames.TERMS_AGREEMENT, { provider });
+    navigation.navigate(RouteNames.TERMS_AGREEMENT, {
+      provider,
+    });
   };
 
   // ──────────────────────────────────────────────

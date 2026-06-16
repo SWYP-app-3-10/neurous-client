@@ -21,9 +21,11 @@
  */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
 
 import Header from '../../components/Header';
 import RightArrow from '../../assets/svg/RightArrow.svg';
@@ -37,6 +39,9 @@ import { IS_INTERNAL_TEST } from '../../config/env';
 
 import { useNotificationPermission } from '../../hooks/useNotificationPermission';
 import { useToastMessage, useClearToast } from '../../store/toastStore';
+import { registerFCMToken, unregisterFCMToken } from '../../api/notificationApi';
+
+const ALARM_ENABLED_KEY = '@alarm_enabled';
 
 const SettingScreen = () => {
   const navigation = useNavigation<any>();
@@ -102,13 +107,22 @@ const SettingScreen = () => {
         clearToast();
       }
 
-      // 알림 권한 상태 확인 및 토글 동기화
+      // OS 권한 + 앱 내부 저장값 모두 확인하여 토글 동기화
       const syncAlarmToggle = async () => {
         try {
           const shouldShowModal = await checkPermission();
-          // shouldShowModal이 true면 권한 없음 → 토글 OFF
-          // shouldShowModal이 false면 권한 있음 → 토글 ON
-          setIsAlarmOn(!shouldShowModal);
+          const hasOsPermission = !shouldShowModal;
+
+          if (!hasOsPermission) {
+            // OS 권한 자체가 없으면 무조건 OFF
+            setIsAlarmOn(false);
+            await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'false');
+          } else {
+            // OS 권한은 있음 → 앱 내부 저장값으로 결정
+            const stored = await AsyncStorage.getItem(ALARM_ENABLED_KEY);
+            // 저장값이 없으면 기본 ON
+            setIsAlarmOn(stored !== 'false');
+          }
         } catch (error) {
           console.error(error);
         } finally {
@@ -150,8 +164,14 @@ const SettingScreen = () => {
    */
   const handlePressAlarmRow = async () => {
     if (isAlarmOn) {
-      // 이미 ON → OFF로 변경 (앱 내부 수신만 비활성화)
-      setIsAlarmOn(false);
+      // ON → OFF: 서버에서 FCM 토큰 비활성화 + 저장
+      try {
+        setIsAlarmOn(false);
+        await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'false');
+        await unregisterFCMToken();
+      } catch (error) {
+        console.warn('[알림] FCM 토큰 비활성화 실패:', error);
+      }
       return;
     }
 
@@ -159,14 +179,28 @@ const SettingScreen = () => {
       const shouldShowModal = await checkPermission();
 
       if (!shouldShowModal) {
-        // 이미 권한 허용됨 → 앱 내부 알림만 활성화
+        // 이미 OS 권한 허용됨 → FCM 토큰 재등록 + 저장
+        if (Platform.OS === 'ios') {
+          await messaging().registerDeviceForRemoteMessages();
+        }
+        const token = await messaging().getToken();
+        await registerFCMToken(token);
+        await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'true');
         setIsAlarmOn(true);
         return;
       }
 
-      // 권한 요청 (시스템 팝업 또는 설정 화면)
+      // OS 권한 없음 → 권한 요청
       const granted = await requestPermission();
-      setIsAlarmOn(!!granted);
+      if (granted) {
+        if (Platform.OS === 'ios') {
+          await messaging().registerDeviceForRemoteMessages();
+        }
+        const token = await messaging().getToken();
+        await registerFCMToken(token);
+        await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'true');
+        setIsAlarmOn(true);
+      }
     } catch (error: any) {
       Alert.alert(
         '오류',

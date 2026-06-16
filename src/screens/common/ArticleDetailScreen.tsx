@@ -177,6 +177,8 @@ const ArticleDetailScreen = () => {
         break;
 
       case 'free':
+        message = '무료열람권 사용(임시)';
+        break;
       default:
         return;
     }
@@ -184,8 +186,7 @@ const ArticleDetailScreen = () => {
     showToastModal({
       message,
       position: 'bottom',
-      // TODO: duration 초 조정 필요 (이전 2.2초)
-      duration: 10000, // 2200
+      duration: 2200,
       backgroundColor: COLORS.gray800,
       borderColor: COLORS.gray800Stroke,
       borderWidth: 1,
@@ -198,7 +199,7 @@ const ArticleDetailScreen = () => {
         color: COLORS.white,
         textAlign: 'left',
       },
-      bottomOffset: scaleWidth(20 + 63 + 16),
+      bottomOffset: scaleWidth(20),
     });
   }, [openType, showToastModal]);
 
