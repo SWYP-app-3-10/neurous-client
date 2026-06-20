@@ -82,17 +82,22 @@ interface BottomSheetModalState {
  *   - "저장되었습니다"
  *   - "네트워크 오류가 발생했습니다"
  *   - "퀴즈 제출 완료"
+ *   - "난이도 설정이 완료되었어요" (아이콘 + 풀폭)
  */
 interface ToastModalState {
   type: 'toast';
   visible: boolean; // 모달 표시 여부
   message: string; // 토스트 메시지 (필수)
+  /** 메시지 왼쪽에 표시할 아이콘 (예: 체크 배지). 지정 시 가로 레이아웃으로 전환 */
+  icon?: ReactNode;
   duration?: number; // 자동 숨김 시간 (ms, 기본값: 2000)
   position?: ToastPosition; // 표시 위치 ('top' | 'bottom')
   backgroundColor?: string; // 배경색
   opacity?: number; // 투명도
   height?: number; // 토스트 높이
   width?: number; // 토스트 너비
+  /** width 미지정 시 화면 좌우 여백 기준 풀폭 너비 자동 계산 (아이콘 토스트 등) */
+  marginHorizontal?: number;
   borderRadius?: number; // 모서리 둥글기
   /** 1px 테두리 색 (예: 글 열림 Toast Popup) */
   borderColor?: string;
@@ -228,6 +233,13 @@ export const useModalStore = create<ModalStore>(set => ({
    *     message: '저장되었습니다',
    *     duration: 2000,
    *     position: 'top',
+   *   });
+   *
+   *   showToastModal({
+   *     message: '난이도 설정이 완료되었어요',
+   *     icon: <CheckBadge />,
+   *     position: 'bottom',
+   *     marginHorizontal: scaleWidth(20),
    *   });
    *
    * @param config 모달 설정 (visible, type 제외)
