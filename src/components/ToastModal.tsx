@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Modal,
   Animated,
+  Dimensions,
   StyleProp,
   TextStyle,
 } from 'react-native';
@@ -17,11 +18,15 @@ export type ToastPosition = 'bottom' | 'center';
 interface ToastModalProps {
   visible: boolean;
   message: string;
+  /** 메시지 왼쪽에 표시할 아이콘 (예: 체크 배지). 지정 시 가로 레이아웃으로 전환 */
+  icon?: React.ReactNode;
   duration?: number;
   position?: ToastPosition;
   backgroundColor?: string;
   height?: number;
   width?: number;
+  /** width 미지정 시, 화면 좌우에 둘 여백 기준으로 풀폭 너비를 자동 계산 */
+  marginHorizontal?: number;
   borderRadius?: number;
   borderColor?: string;
   borderWidth?: number;
@@ -35,11 +40,13 @@ interface ToastModalProps {
 const ToastModal: React.FC<ToastModalProps> = ({
   visible,
   message,
+  icon,
   duration = 1500,
   position = 'bottom',
   backgroundColor = COLORS.gray800,
   height,
-  width = scaleWidth(200),
+  width,
+  marginHorizontal,
   borderRadius = BORDER_RADIUS[12],
   borderColor,
   borderWidth,
@@ -50,9 +57,23 @@ const ToastModal: React.FC<ToastModalProps> = ({
   onClose,
 }) => {
   const { bottom } = useSafeAreaInsets();
+  const { width: SCREEN_WIDTH } = Dimensions.get('window');
   const bottomGap = bottomOffset ?? scaleWidth(20);
   const hasContentPadding =
     paddingHorizontal !== undefined || paddingVertical !== undefined;
+
+  /**
+   * 토스트 박스 너비 결정
+   * - width를 직접 지정하면 그대로 사용
+   * - width 없이 marginHorizontal만 지정하면 화면 좌우 여백 기준 풀폭 계산 (아이콘 토스트 등)
+   * - 둘 다 없으면 기존 기본값(200) 유지 (기존 호출부 영향 없음)
+   */
+  const resolvedWidth =
+    width ??
+    (marginHorizontal !== undefined
+      ? SCREEN_WIDTH - marginHorizontal * 2
+      : scaleWidth(200));
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(
     new Animated.Value(position === 'bottom' ? scaleWidth(24) : 0),
@@ -153,9 +174,10 @@ const ToastModal: React.FC<ToastModalProps> = ({
 
   const toastBoxStyle = [
     styles.toastContainer,
+    icon ? styles.toastContainerWithIcon : null, // 아이콘 있으면 가로 정렬로 전환
     {
       backgroundColor,
-      width,
+      width: resolvedWidth,
       borderRadius,
       ...(height !== undefined ? { height } : {}),
       ...(!height && !hasContentPadding ? { height: scaleWidth(48) } : {}),
@@ -176,7 +198,16 @@ const ToastModal: React.FC<ToastModalProps> = ({
     >
       <View style={containerStyle} pointerEvents="box-none">
         <Animated.View style={[toastBoxStyle, animatedStyle]}>
-          <Text style={[styles.message, messageStyle]}>{message}</Text>
+          {icon}
+          <Text
+            style={[
+              styles.message,
+              icon ? styles.messageWithIcon : null,
+              messageStyle,
+            ]}
+          >
+            {message}
+          </Text>
         </Animated.View>
       </View>
     </Modal>
@@ -200,10 +231,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'stretch',
   },
+  // 아이콘 + 텍스트 가로 배치 (예: 난이도 설정 완료 토스트)
+  toastContainerWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scaleWidth(12),
+  },
   message: {
     ...Caption_14R,
     color: COLORS.white,
     textAlign: 'center',
+  },
+  // 아이콘이 있을 때는 좌측 정렬 + 남은 공간 채움
+  messageWithIcon: {
+    flex: 1,
+    textAlign: 'left',
   },
 });
 
