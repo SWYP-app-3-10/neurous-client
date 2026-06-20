@@ -41,8 +41,12 @@ import Button from '../../components/Button';
 import QuizOptionCard from '../../components/QuizOptionCard';
 import QuizQuestion from '../../components/QuizQuestion';
 import Spacer from '../../components/Spacer';
-import { Modal_IMG, CheckIcon } from '../../icons';
-import { useShowModal, useHideModal } from '../../store/modalStore';
+import { Modal_IMG, CheckIcon, LevelChangeCheckIcon } from '../../icons';
+import {
+  useShowModal,
+  useShowToastModal,
+  useHideModal,
+} from '../../store/modalStore';
 import DifficultySelectionModal, {
   Difficulty,
 } from '../../components/DifficultySelectionModal';
@@ -139,6 +143,7 @@ const QuizScreen: React.FC = () => {
   // ──────────────────────────────────────────────
 
   const showModal = useShowModal();
+  const showToastModal = useShowToastModal();
   const hideModal = useHideModal();
   const { addPoints } = usePointStore();
   const { addExperience } = useExperienceStore();
@@ -354,6 +359,16 @@ const QuizScreen: React.FC = () => {
                         logEvent('Accept_Level_Suggestion');
                         await handleAcceptSuggestion(suggestedLevel);
                         hideModal();
+                        showToastModal({
+                          message: '난이도 설정이 완료되었어요',
+                          icon: <LevelChangeCheckIcon />,
+                          position: 'bottom',
+                          marginHorizontal: scaleWidth(20),
+                          paddingHorizontal: scaleWidth(20),
+                          paddingVertical: scaleWidth(14),
+                          borderRadius: BORDER_RADIUS[99],
+                          duration: 2000,
+                        });
                       },
 
                       onDecline: async () => {
