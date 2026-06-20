@@ -56,6 +56,7 @@ import {
 import { RouteNames } from '../../../routes';
 
 import {
+  LevelChangeCheckIcon,
   Check_2Icon,
   Level_1_Profile,
   Level_2_Profile,
@@ -66,7 +67,11 @@ import {
   SettingIcon,
   TriangleIcon,
 } from '../../icons';
-import { useShowBottomSheetModal, useHideModal } from '../../store/modalStore';
+import {
+  useShowBottomSheetModal,
+  useHideModal,
+  useShowToastModal,
+} from '../../store/modalStore';
 import LevelSelectionContent from '../../components/LevelSelectionContent';
 import { useCharacterData } from '../../hooks/useCharacter';
 import { useMyPage } from '../../hooks/useMyPage';
@@ -165,6 +170,7 @@ const MyPageScreen = () => {
   // ──────────────────────────────────────────────
 
   const showBottomSheetModal = useShowBottomSheetModal();
+  const showToastModal = useShowToastModal();
   const hideModal = useHideModal();
 
   /**
@@ -174,10 +180,23 @@ const MyPageScreen = () => {
    *   1. API로 난이도 업데이트
    *   2. myPageData 상태 갱신
    *   3. 모달 닫기
+   *   4. 완료 토스트 표시
    */
   const { handleUpdateLevel } = useUpdateLevel({
     setMyPageData,
-    onSuccess: () => hideModal(),
+    onSuccess: () => {
+      hideModal();
+      showToastModal({
+        message: '난이도 설정이 완료되었어요',
+        icon: <LevelChangeCheckIcon />,
+        position: 'bottom',
+        marginHorizontal: scaleWidth(20),
+        paddingHorizontal: scaleWidth(20),
+        paddingVertical: scaleWidth(14),
+        borderRadius: BORDER_RADIUS[99],
+        duration: 2000,
+      });
+    },
     onError: () => hideModal(),
   });
 
