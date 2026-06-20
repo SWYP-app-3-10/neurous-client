@@ -285,11 +285,13 @@ const RootNavigatorContent: React.FC<{
         <ToastModal
           visible={modalState.visible}
           message={modalState.message}
+          icon={modalState.icon}
           duration={modalState.duration}
           position={modalState.position}
           backgroundColor={modalState.backgroundColor}
           height={modalState.height}
           width={modalState.width}
+          marginHorizontal={modalState.marginHorizontal}
           borderRadius={modalState.borderRadius}
           borderColor={modalState.borderColor}
           borderWidth={modalState.borderWidth}
