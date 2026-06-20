@@ -16,7 +16,8 @@ import Button from '../../components/Button';
 
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 
-import { useShowToast } from '../../store/toastStore';
+import { useShowToastModal } from '../../store/modalStore';
+import { LevelChangeCheckIcon } from '../../icons';
 import { getUserInfo } from '../../services/authService';
 import {
   Body_16M,
@@ -27,7 +28,7 @@ import {
 
 const InquiryScreen = () => {
   const navigation = useNavigation<any>();
-  const showToast = useShowToast();
+  const showToastModal = useShowToastModal();
 
   const [content, setContent] = useState('');
   const [email, setEmail] = useState('');
@@ -49,7 +50,16 @@ const InquiryScreen = () => {
 
   const onPressSubmit = () => {
     console.log('[Inquiry] submit', { content, email });
-    showToast('전달이 완료되었어요');
+    showToastModal({
+      message: '문의 전달이 완료되었어요',
+      icon: <LevelChangeCheckIcon />,
+      position: 'bottom',
+      marginHorizontal: scaleWidth(20),
+      paddingHorizontal: scaleWidth(20),
+      paddingVertical: scaleWidth(14),
+      borderRadius: BORDER_RADIUS[99],
+      duration: 2000,
+    });
     navigation.goBack();
   };
 
