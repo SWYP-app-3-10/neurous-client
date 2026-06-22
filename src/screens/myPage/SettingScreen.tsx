@@ -37,6 +37,8 @@ import { IS_INTERNAL_TEST } from '../../config/env';
 
 import { useNotificationPermission } from '../../hooks/useNotificationPermission';
 import { useToastMessage, useClearToast } from '../../store/toastStore';
+import { updateNotificationStatus } from '../../api/notificationApi';
+import { getUserInfo } from '../../services/authService';
 
 const SettingScreen = () => {
   const navigation = useNavigation<any>();
@@ -150,8 +152,15 @@ const SettingScreen = () => {
    */
   const handlePressAlarmRow = async () => {
     if (isAlarmOn) {
-      // 이미 ON → OFF로 변경 (앱 내부 수신만 비활성화)
       setIsAlarmOn(false);
+      try {
+        const userInfo = await getUserInfo();
+        if (userInfo?.userId) {
+          await updateNotificationStatus(userInfo.userId, false);
+        }
+      } catch {
+        console.warn('[SettingScreen] 알림 수신 설정 false 업데이트 실패');
+      }
       return;
     }
 
@@ -159,14 +168,29 @@ const SettingScreen = () => {
       const shouldShowModal = await checkPermission();
 
       if (!shouldShowModal) {
-        // 이미 권한 허용됨 → 앱 내부 알림만 활성화
         setIsAlarmOn(true);
+        try {
+          const userInfo = await getUserInfo();
+          if (userInfo?.userId) {
+            await updateNotificationStatus(userInfo.userId, true);
+          }
+        } catch {
+          console.warn('[SettingScreen] 알림 수신 설정 true 업데이트 실패');
+        }
         return;
       }
 
       // 권한 요청 (시스템 팝업 또는 설정 화면)
       const granted = await requestPermission();
       setIsAlarmOn(!!granted);
+      try {
+        const userInfo = await getUserInfo();
+        if (userInfo?.userId) {
+          await updateNotificationStatus(userInfo.userId, !!granted);
+        }
+      } catch {
+        console.warn('[SettingScreen] 알림 수신 설정 업데이트 실패');
+      }
     } catch (error: any) {
       Alert.alert(
         '오류',
