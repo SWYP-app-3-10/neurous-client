@@ -106,15 +106,28 @@ const IntroSlidesScreen = () => {
     });
   };
 
-  const handleMomentumScrollEnd = (
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const nextIndex = Math.round(offsetX / width);
+  const pendingIndexRef = useRef<number | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
 
-    if (nextIndex !== currentIndex) {
-      fadeTransition(() => setCurrentIndex(nextIndex));
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // 버튼으로 이동 중일 때는 onScroll fade 트리거 무시
+    if (isProgrammaticScrollRef.current) return;
+
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const ratio = offsetX / width;
+    const nearest = Math.round(ratio);
+
+    // 절반 넘어가는 순간 한 번만 fade 트리거
+    if (nearest !== currentIndex && nearest !== pendingIndexRef.current) {
+      pendingIndexRef.current = nearest;
+      fadeTransition(() => setCurrentIndex(nearest));
     }
+  };
+
+  const handleMomentumScrollEnd = () => {
+    // 스크롤 완전히 끝난 후 pending 초기화
+    pendingIndexRef.current = null;
+    isProgrammaticScrollRef.current = false;
   };
 
   const handleNext = async () => {
@@ -124,6 +137,7 @@ const IntroSlidesScreen = () => {
     if (currentIndex < INTRO_SLIDES.length - 1) {
       const nextIndex = currentIndex + 1;
 
+      isProgrammaticScrollRef.current = true;
       flatListRef.current?.scrollToIndex({
         index: nextIndex,
         animated: true,
@@ -183,6 +197,8 @@ const IntroSlidesScreen = () => {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           bounces={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           onMomentumScrollEnd={handleMomentumScrollEnd}
         />
       </View>
