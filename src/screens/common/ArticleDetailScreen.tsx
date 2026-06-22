@@ -177,7 +177,7 @@ const ArticleDetailScreen = () => {
         break;
 
       case 'free':
-        message = '무료열람권 사용(임시)';
+        message = '무료 열람권을 사용해 글을 열었어요';
         break;
       default:
         return;
