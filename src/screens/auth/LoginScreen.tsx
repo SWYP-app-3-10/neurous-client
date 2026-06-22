@@ -59,6 +59,8 @@ import Spacer from '../../components/Spacer';
 import { SocialLoginButton } from '../../components';
 import { LoginBackground } from '../../icons/commonIcons/simpleImages';
 import { logEvent, logScreenView } from '../../services/analyticsService';
+import { updateNotificationStatus } from '../../api/notificationApi';
+import { getUserInfo } from '../../services/authService';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
 type LoginRouteProp = RouteProp<
@@ -173,10 +175,16 @@ const LoginScreen = () => {
           const { isExistingUser } = waitingForSettingsRef.current;
           waitingForSettingsRef.current = { isWaiting: false };
 
-          console.log(
-            '[LoginScreen] 설정에서 돌아옴 - 기존 사용자 여부:',
-            isExistingUser,
-          );
+          // 설정 복귀 후 최종 OS 권한 상태를 확인해서 서버에 동기화
+          try {
+            const userInfo = await getUserInfo();
+            if (userInfo?.userId) {
+              const shouldShowModal = await checkNotiPermission();
+              await updateNotificationStatus(userInfo.userId, !shouldShowModal);
+            }
+          } catch {
+            console.warn('[AppState] 알림 수신 설정 동기화 실패');
+          }
 
           if (isExistingUser) {
             // 기존 사용자: 온보딩 완료 → 메인 화면으로 이동
@@ -190,7 +198,7 @@ const LoginScreen = () => {
     );
 
     return () => subscription.remove();
-  }, [navigation, completeOnboarding]);
+  }, [navigation, completeOnboarding, checkNotiPermission]);
 
   // ──────────────────────────────────────────────
   // Effect 2: 소셜 로그인 SDK 초기화
@@ -320,6 +328,25 @@ const LoginScreen = () => {
         }
       };
 
+      /**
+       * OS 권한 최종 상태를 서버에 동기화한 뒤 다음 화면으로 이동
+       * - checkNOtiPermission()이 false면 권한 있음 -> true로 PATCH
+       * - checkNotiPermission()이 true면 권한 없음 -> false로 PATCH
+       * - 실패해도 화면 전환은 계속 진행
+       */
+      const syncAndProceed = async () => {
+        try {
+          const userInfo = await getUserInfo();
+          if (userInfo?.userId) {
+            const shouldShowModal = await checkNotiPermission();
+            await updateNotificationStatus(userInfo.userId, !shouldShowModal);
+          }
+        } catch {
+          console.warn('[handleNotificationModal] 알림 수신 설정 동기화 실패');
+        }
+        await proceedNext();
+      };
+
       try {
         const shouldShowModal = await checkNotiPermission();
 
@@ -344,9 +371,9 @@ const LoginScreen = () => {
                 }
 
                 console.log(
-                  '[LoginScreen] 권한 허용 또는 취소 - proceedNext 호출',
+                  '[LoginScreen] 권한 허용 또는 취소 - syncAndProceed 호출',
                 );
-                await proceedNext();
+                await syncAndProceed();
                 logEvent('EnableNotifications_Popup_App_Notification');
               },
             },
@@ -356,17 +383,17 @@ const LoginScreen = () => {
               textStyle: { color: COLORS.gray700, ...Heading_16B },
               style: { borderColor: COLORS.gray300, height: scaleWidth(48) },
               onPress: async () => {
-                await proceedNext();
+                await syncAndProceed();
                 logEvent('Dismiss_Popup_App_Notification');
               },
             },
           });
         } else {
-          await proceedNext();
+          await syncAndProceed();
         }
       } catch (error) {
         console.error('알림 권한 로직 오류:', error);
-        await proceedNext();
+        await syncAndProceed();
       }
     },
     [
