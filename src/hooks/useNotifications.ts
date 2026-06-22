@@ -41,6 +41,10 @@ export const useNotifications = () => {
 
 /**
  * 알림 읽음 처리 Mutation 훅
+ *
+ * - 서버에 읽음 처리 API(PATCH) 연동
+ * - Optimistic Update로 클릭 즉시 캐시 반영
+ * - 실패 시 캐시를 이전 상태로 롤백
  */
 export const useMarkNotificationAsRead = () => {
   const queryClient = useQueryClient();
@@ -82,10 +86,16 @@ export const useMarkNotificationAsRead = () => {
       return { previousData };
     },
 
-    // 에러 핸들러: err 사용하도록 수정
-    onError: err => {
-      console.log('[알림 읽음 처리] 로컬만 처리 (정상):', err.message);
-      // 백엔드 API 없으므로 롤백하지 않음
+    // 에러 시 롤백: 서버 처리 실패 시 낙관적 업데이트를 되돌림
+    onError: (err, _notificationId, context) => {
+      console.error('[알림 읽음 처리] 실패, 롤백 처리:', err);
+
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          notificationKeys.lists(),
+          context.previousData,
+        );
+      }
     },
 
     onSuccess: () => {
