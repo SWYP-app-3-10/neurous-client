@@ -15,7 +15,10 @@ import { getRecentLogin, RecentLoginInfo } from './authStorageService';
 import { signOutSocial, SocialLoginProvider } from './socialLoginService';
 import { logoutFromServer } from '../api/authApi';
 import { withdrawUser } from '../api/withdrawApi';
-import { unregisterFCMToken } from '../api/notificationApi';
+import {
+  unregisterFCMToken,
+  updateNotificationStatus,
+} from '../api/notificationApi';
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAccessToken as getKakaoAccessToken } from '@react-native-seoul/kakao-login';
@@ -261,6 +264,20 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
     } catch (fcmError) {
       console.warn('[logout] FCM 토큰 서버 해제 실패:', fcmError);
       // 실패해도 로그아웃은 계속 진행
+    }
+
+    // ── STEP 2.5. 알림 수신 설정 false로 리셋 ──────────
+    // 계정 전환 시 이전 계정의 알림 설정이 새 계정에 이어지는 것을 방지
+    // 주의: accessToken 삭제 전에 호출해야 함
+    if (userId) {
+      try {
+        await updateNotificationStatus(userId, false);
+        console.log('[logout] 알림 수신 설정 false로 리셋 완료');
+      } catch {
+        console.warn(
+          '[logout] 알림 수신 설정 리셋 실패 - 로그아웃은 계속 진행합니다.',
+        );
+      }
     }
 
     // ── STEP 3. 소셜 SDK 로그아웃 (소셜 세션 종료) ───────
