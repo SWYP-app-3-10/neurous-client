@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -71,6 +72,9 @@ const INTRO_SLIDES: IntroSlide[] = [
 /**
  * 온보딩 인트로 슬라이드 화면
  *
+ * - 텍스트(타이틀+설명)는 고정 위치에서 fade 전환
+ * - 예시 이미지(일러스트)는 좌우 슬라이딩
+ * - 하단 인디케이터는 Animated spring으로 매끄럽게 전환
  * - 버튼으로 다음 페이지 이동 가능
  * - 좌우 스와이프로 앞/뒤 페이지 이동 가능
  * - 마지막 페이지에서 다음 버튼 클릭 시 관심분야 설정 화면으로 이동
@@ -81,10 +85,26 @@ const IntroSlidesScreen = () => {
 
   const flatListRef = useRef<FlatList<IntroSlide>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const setOnboardingStep = useOnboardingStore(
     state => state.setOnboardingStep,
   );
+
+  const fadeTransition = (callback: () => void) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      callback();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
 
   const handleMomentumScrollEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
@@ -92,21 +112,24 @@ const IntroSlidesScreen = () => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const nextIndex = Math.round(offsetX / width);
 
-    setCurrentIndex(nextIndex);
+    if (nextIndex !== currentIndex) {
+      fadeTransition(() => setCurrentIndex(nextIndex));
+    }
   };
 
   const handleNext = async () => {
     const currentSlide = INTRO_SLIDES[currentIndex];
-
     logEvent(currentSlide.eventName);
 
     if (currentIndex < INTRO_SLIDES.length - 1) {
+      const nextIndex = currentIndex + 1;
+
       flatListRef.current?.scrollToIndex({
-        index: currentIndex + 1,
+        index: nextIndex,
         animated: true,
       });
 
-      setCurrentIndex(currentIndex + 1);
+      fadeTransition(() => setCurrentIndex(nextIndex));
       return;
     }
 
@@ -114,48 +137,63 @@ const IntroSlidesScreen = () => {
     navigation.navigate(RouteNames.INTERESTS, {});
   };
 
+  const currentSlide = INTRO_SLIDES[currentIndex];
+
   const renderItem = ({ item }: { item: IntroSlide }) => {
     const Illustration = item.Illustration;
 
     return (
       <View style={[styles.slide, { width }]}>
-        <View style={styles.contentWrapper}>
-          <View style={styles.textSection}>
-            <Spacer num={scaleWidth(48)} />
-            <Text style={[Heading_24EB_Round, { color: COLORS.black }]}>
-              {item.title}
-            </Text>
-            <Spacer num={scaleWidth(20)} />
-            <Text style={[Body_15M, { color: COLORS.gray600 }]}>
-              {item.description}
-            </Text>
-            <Spacer num={scaleWidth(47)} />
-          </View>
-
-          <View style={styles.illustrationSection}>
-            <Illustration />
-            <Spacer num={scaleWidth(70)} />
-            <ActivityIndicator activeIndex={currentIndex} />
-          </View>
-        </View>
+        <Illustration />
       </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <FlatList
-        ref={flatListRef}
-        data={INTRO_SLIDES}
-        keyExtractor={item => String(item.id)}
-        renderItem={renderItem}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
-      />
+      {/* 텍스트 영역 - 고정, fade 전환 */}
+      <View style={styles.textSection}>
+        <Spacer num={scaleWidth(48)} />
+        <Animated.Text
+          style={[
+            Heading_24EB_Round,
+            { color: COLORS.black },
+            { opacity: fadeAnim },
+          ]}
+        >
+          {currentSlide.title}
+        </Animated.Text>
+        <Spacer num={scaleWidth(20)} />
+        <Animated.Text
+          style={[Body_15M, { color: COLORS.gray600 }, { opacity: fadeAnim }]}
+        >
+          {currentSlide.description}
+        </Animated.Text>
+        <Spacer num={scaleWidth(47)} />
+      </View>
 
+      {/* 이미지 영역 - 슬라이딩 */}
+      <View style={styles.illustrationSection}>
+        <FlatList
+          ref={flatListRef}
+          data={INTRO_SLIDES}
+          keyExtractor={item => String(item.id)}
+          renderItem={renderItem}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+        />
+      </View>
+
+      {/* 인디케이터 */}
+      <Spacer num={scaleWidth(70)} />
+      <ActivityIndicator activeIndex={currentIndex} />
+
+      <Spacer num={scaleWidth(24)} />
+
+      {/* 다음 버튼 */}
       <TouchableOpacity style={styles.button} onPress={handleNext}>
         <Text style={[Heading_18EB_Round, { color: COLORS.white }]}>다음</Text>
       </TouchableOpacity>
@@ -164,34 +202,21 @@ const IntroSlidesScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  /** 전체 컨테이너 */
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
   },
-
-  /** 슬라이드 한 페이지 */
-  slide: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
-
-  /** 콘텐츠 영역 */
-  contentWrapper: {
-    flex: 1,
-  },
-
-  /** 제목 및 설명 영역 */
   textSection: {
     paddingHorizontal: scaleWidth(20),
   },
-
-  /** 일러스트레이션 영역 */
   illustrationSection: {
-    alignItems: 'center',
+    flex: 1,
   },
-
-  /** 다음 버튼 */
+  slide: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   button: {
     height: scaleWidth(56),
     borderRadius: BORDER_RADIUS[16],
