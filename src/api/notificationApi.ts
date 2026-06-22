@@ -21,8 +21,9 @@ export interface RegisterTokenRequest {
 export interface NotificationItemRaw {
   notificationId: number;
   title: string;
-  body: string; // message가 아니라 body
-  displayDate: string; // ISO 8601 형식
+  body: string;
+  displayDate: string;
+  isRead: boolean; // 서버에서 읽음 여부 제공
 }
 
 /**
@@ -33,7 +34,7 @@ export interface NotificationItem {
   title: string;
   message: string; // body를 message로 변환
   createdAt: string; // displayDate를 createdAt으로 변환 (ISO 8601)
-  isRead: boolean; // 프론트에서 로컬 관리
+  isRead: boolean; // 서버 응답값 사용
 }
 
 /**
@@ -61,7 +62,6 @@ export async function registerFCMToken(token: string): Promise<void> {
 
     console.log('[FCM] 토큰 서버 등록 시작:', request);
 
-    // POST /api/notification/token
     const response = await client.post('/api/notification/token', request);
 
     console.log('[FCM] 토큰 서버 등록 성공');
@@ -107,13 +107,9 @@ export async function unregisterFCMToken(): Promise<void> {
       userId: userInfo.userId,
     });
 
-    // PATCH /api/notification/token/deactivate?userId={userId}
-    // Body: { token: "..." }
     const response = await client.patch(
       `/api/notification/token/deactivate?userId=${userInfo.userId}`,
-      {
-        token,
-      },
+      { token },
     );
 
     console.log('[FCM] 토큰 서버 비활성화 성공');
@@ -132,12 +128,53 @@ export async function unregisterFCMToken(): Promise<void> {
 }
 
 /**
+ * 알림 수신 여부 설정 업데이트
+ *
+ * - 로그인 시 OS 권한 결과에 따라 호출
+ * - 설정 화면에서 토글 변경 시 호출
+ * - 로그아웃 시 false로 호출 (계정 전환 시 오염 방지)
+ * - 실패해도 throw 안 함 (UX 흐름은 계속 진행)
+ *
+ * @param userId 사용자 ID
+ * @param notificationStatus 알림 수신 여부
+ * @returns Promise<void>
+ */
+export async function updateNotificationStatus(
+  userId: number,
+  notificationStatus: boolean,
+): Promise<void> {
+  try {
+    console.log('[알림 수신 설정 API] 요청 시작:', {
+      userId,
+      notificationStatus,
+    });
+
+    // PATCH /api/user/notification?userId={userId}
+    const response = await client.patch(
+      `/api/user/notification?userId=${userId}`,
+      { notificationStatus },
+    );
+
+    console.log('[알림 수신 설정 API] 성공');
+    console.log('[알림 수신 설정 API] 응답 상태:', response.status);
+    console.log('[알림 수신 설정 API] 응답 데이터:', response.data);
+  } catch (error: any) {
+    console.error('[알림 수신 설정 API] 에러:', error);
+    if (error.response) {
+      console.error('[알림 수신 설정 API] 응답 상태:', error.response.status);
+      console.error('[알림 수신 설정 API] 응답 데이터:', error.response.data);
+    }
+    // 실패해도 throw 안 함 (UX 흐름은 계속 진행)
+  }
+}
+
+/**
  * 알림 목록 조회
  *
  * - 백엔드 응답을 프론트엔드 형식으로 변환
  * - body → message
  * - displayDate → createdAt
- * - isRead는 기본값 false (백엔드에 필드 없음)
+ * - isRead 서버 응답값 그대로 사용
  *
  * @param userId 사용자 ID
  * @returns Promise<NotificationItem[]>
@@ -150,7 +187,6 @@ export async function fetchNotifications(
     console.log('[알림 목록 API] 요청 시작');
     console.log('[알림 목록 API] userId:', userId);
 
-    // GET /api/notification/get?userId={userId}
     const response = await client.get<NotificationItemRaw[]>(
       `/api/notification/get?userId=${userId}`,
     );
@@ -160,13 +196,12 @@ export async function fetchNotifications(
     console.log('[알림 목록 API] 데이터 개수:', response.data.length);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // 백엔드 응답을 프론트엔드 형식으로 변환
     const notifications: NotificationItem[] = response.data.map(item => ({
       notificationId: item.notificationId,
       title: item.title,
-      message: item.body, // body → message
-      createdAt: item.displayDate, // displayDate → createdAt
-      isRead: false, // 기본값: 읽지 않음 (백엔드에 필드 없음)
+      message: item.body,
+      createdAt: item.displayDate,
+      isRead: item.isRead, // 서버 응답값 사용
     }));
 
     return notifications;
@@ -208,7 +243,6 @@ export async function markNotificationAsRead(
       notificationId,
     });
 
-    // PATCH /api/notification/{notificationId}/read?userId={userId}
     const response = await client.patch(
       `/api/notification/${notificationId}/read?userId=${userId}`,
     );
