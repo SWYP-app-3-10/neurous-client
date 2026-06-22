@@ -62,6 +62,7 @@ ios/xcuserdata/
 *.xcuserstate
 **/.xcode.env.local
 *.xcconfig
+*.plist
 
 # (옵션) 보통 커밋 안 하는 편
 ios/.xcode.env

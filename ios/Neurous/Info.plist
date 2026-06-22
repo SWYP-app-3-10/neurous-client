@@ -71,14 +71,19 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- 개발 환경: HTTP 연결 허용 (프로덕션에서는 false로 변경 필요) -->
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
-		<!-- 프로덕션 환경에서는 특정 도메인만 예외 처리 -->
 		<key>NSExceptionDomains</key>
 		<dict>
+			<key>34.22.107.53</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+			</dict>
 			<key>storage.googleapis.com</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
@@ -106,6 +111,23 @@
 		<string>Roboto-Medium.ttf</string>
 		<string>NanumSquareRoundEB.ttf</string>
 	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

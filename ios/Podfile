@@ -58,11 +58,43 @@ target 'Neurous' do
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+
+        # RCT-Folly C++ compile error 대응
+        if target.name == 'RCT-Folly'
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
+        end
+
         # Hermes dSYM 생성을 위한 설정
         if target.name == 'hermes-engine'
           config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
         end
       end
+    end
+
+    # fmt consteval compile error 대응
+    fmt_file = File.join(__dir__, 'Pods/fmt/include/fmt/format-inl.h')
+    Pod::UI.puts "fmt patch target: #{fmt_file}".yellow
+
+    if File.exist?(fmt_file)
+      begin
+        File.chmod(0644, fmt_file)
+
+        text = File.read(fmt_file)
+        before = text.scan(/FMT_STRING\(/).size
+
+        text = text.gsub(/FMT_STRING\("([^"\\]*(?:\\.[^"\\]*)*)"\)/) do
+          "\"#{$1}\""
+        end
+
+        after = text.scan(/FMT_STRING\(/).size
+        File.write(fmt_file, text)
+        Pod::UI.puts "fmt patch applied: #{before - after} FMT_STRING replacements, #{after} remaining".yellow
+      rescue => e
+        Pod::UI.warn "fmt patch failed: #{e.message}"
+        Pod::UI.warn "Run `chmod -R u+w Pods` inside ios directory and retry `pod install` if fmt compile error occurs."
+      end
+    else
+      Pod::UI.warn "fmt patch skipped: format-inl.h not found"
     end
   end
 end

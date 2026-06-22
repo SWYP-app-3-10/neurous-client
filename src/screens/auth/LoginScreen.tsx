@@ -82,6 +82,9 @@ const LoginScreen = () => {
   /** 소셜 로그인 중복 실행 방지 */
   const socialLoginInProgressRef = useRef(false);
 
+  /** 약관 동의 후 대기 중인 로그인 제공자 */
+  const pendingProviderRef = useRef<SocialLoginProvider | null>(null);
+
   /** 최근 로그인 정보 (최근 사용한 로그인 방법 표시용) */
   const [recentLogin, setRecentLogin] = useState<RecentLoginInfo | null>(null);
 
@@ -513,23 +516,28 @@ const LoginScreen = () => {
    *   4. 이 useEffect가 트리거되어 handleSocialLogin() 자동 실행
    *   5. params를 undefined로 리셋하여 재진입 시 중복 실행 방지
    */
+  // Effect 3-A: params 도착 즉시 ref에 저장하고 params 초기화
+  // setParams() → re-render → effect cleanup 순서로 인해 타이머/리스너가 취소되는
+  // race condition을 피하기 위해 cleanup이 없는 별도 effect로 분리
   useEffect(() => {
     const agreedProvider = route.params?.agreedProvider;
+    if (!agreedProvider) return;
 
-    if (!agreedProvider) {
-      return;
-    }
+    pendingProviderRef.current = agreedProvider as SocialLoginProvider;
+    navigation.setParams({ agreedProvider: undefined });
+  }, [route.params?.agreedProvider, navigation]);
 
-    // 로그인 실행 전에 먼저 params를 비워서 useEffect 재실행/중복 실행을 막음
-    navigation.setParams({
-      agreedProvider: undefined,
+  // Effect 3-B: 네비게이션 전환 애니메이션 완료 시 ref에 저장된 제공자로 로그인 실행
+  // transitionEnd는 애니메이션이 끝난 후에 발화하므로 Apple Sign In 시트가 안전하게 열림
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('transitionEnd', () => {
+      const provider = pendingProviderRef.current;
+      if (!provider) return;
+      pendingProviderRef.current = null;
+      handleSocialLogin(provider);
     });
-
-    // params 초기화와 같은 렌더 사이클에서 바로 실행하지 않도록 한 틱 늦춤
-    setTimeout(() => {
-      handleSocialLogin(agreedProvider);
-    }, 0);
-  }, [route.params?.agreedProvider, handleSocialLogin, navigation]);
+    return () => unsubscribe();
+  }, [navigation, handleSocialLogin]);
 
   // ──────────────────────────────────────────────
   // UI 핸들러: 약관 동의 화면으로 이동

@@ -24,6 +24,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Header from '../../components/Header';
 import RightArrow from '../../assets/svg/RightArrow.svg';
@@ -39,6 +40,8 @@ import { useNotificationPermission } from '../../hooks/useNotificationPermission
 import { useToastMessage, useClearToast } from '../../store/toastStore';
 import { updateNotificationStatus } from '../../api/notificationApi';
 import { getUserInfo } from '../../services/authService';
+
+const ALARM_ENABLED_KEY = '@alarm_enabled';
 
 const SettingScreen = () => {
   const navigation = useNavigation<any>();
@@ -92,8 +95,9 @@ const SettingScreen = () => {
    *    - 표시 후 store에서 제거
    *
    * 2. 알림 권한 상태 동기화
-   *    - OS 설정에서 권한 변경 후 복귀 시 토글 상태 업데이트
-   *    - checkPermission() 결과를 반전하여 토글 상태 설정
+   *    - OS 권한 + 앱 내부 저장값 모두 확인하여 토글 동기화
+   *    - OS 권한이 없으면 무조건 OFF
+   *    - OS 권한이 있으면 AsyncStorage 저장값으로 결정 (없으면 기본 ON)
    */
   useFocusEffect(
     useCallback(() => {
@@ -104,13 +108,22 @@ const SettingScreen = () => {
         clearToast();
       }
 
-      // 알림 권한 상태 확인 및 토글 동기화
+      // OS 권한 + 앱 내부 저장값 모두 확인하여 토글 동기화
       const syncAlarmToggle = async () => {
         try {
           const shouldShowModal = await checkPermission();
-          // shouldShowModal이 true면 권한 없음 → 토글 OFF
-          // shouldShowModal이 false면 권한 있음 → 토글 ON
-          setIsAlarmOn(!shouldShowModal);
+          const hasOsPermission = !shouldShowModal;
+
+          if (!hasOsPermission) {
+            // OS 권한 자체가 없으면 무조건 OFF
+            setIsAlarmOn(false);
+            await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'false');
+          } else {
+            // OS 권한은 있음 → 앱 내부 저장값으로 결정
+            const stored = await AsyncStorage.getItem(ALARM_ENABLED_KEY);
+            // 저장값이 없으면 기본 ON
+            setIsAlarmOn(stored !== 'false');
+          }
         } catch (error) {
           console.error(error);
         } finally {
@@ -140,11 +153,11 @@ const SettingScreen = () => {
    *
    * 동작 흐름:
    *   1. 현재 ON 상태인 경우
-   *      → 앱 내부 알림만 비활성화 (OS 권한은 유지)
+   *      → 앱 내부 알림 비활성화 (OS 권한은 유지) + 서버 패치
    *
    *   2. 현재 OFF 상태인 경우
    *      2-1. 이미 OS 권한이 허용되어 있음
-   *           → 앱 내부 알림만 활성화
+   *           → 앱 내부 알림만 활성화 + 서버 패치
    *      2-2. OS 권한이 없음
    *           → requestPermission() 호출
    *           → iOS: 시스템 권한 팝업 또는 설정 화면 이동
@@ -152,7 +165,9 @@ const SettingScreen = () => {
    */
   const handlePressAlarmRow = async () => {
     if (isAlarmOn) {
+      // ON → OFF
       setIsAlarmOn(false);
+      await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'false');
       try {
         const userInfo = await getUserInfo();
         if (userInfo?.userId) {
@@ -168,7 +183,9 @@ const SettingScreen = () => {
       const shouldShowModal = await checkPermission();
 
       if (!shouldShowModal) {
+        // 이미 OS 권한 허용됨 → 앱 내부 알림 활성화 + 서버 패치
         setIsAlarmOn(true);
+        await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'true');
         try {
           const userInfo = await getUserInfo();
           if (userInfo?.userId) {
@@ -180,9 +197,15 @@ const SettingScreen = () => {
         return;
       }
 
-      // 권한 요청 (시스템 팝업 또는 설정 화면)
+      // OS 권한 없음 → 권한 요청
       const granted = await requestPermission();
-      setIsAlarmOn(!!granted);
+      if (granted) {
+        setIsAlarmOn(true);
+        await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'true');
+      } else {
+        setIsAlarmOn(false);
+        await AsyncStorage.setItem(ALARM_ENABLED_KEY, 'false');
+      }
       try {
         const userInfo = await getUserInfo();
         if (userInfo?.userId) {

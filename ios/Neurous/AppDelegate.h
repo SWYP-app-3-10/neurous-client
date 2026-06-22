@@ -1,8 +1,10 @@
-#import "RCTAppDelegate.h"
-#import <React/RCTBundleURLProvider.h>
-#import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
 #import <UIKit/UIKit.h>
+#import "RCTDefaultReactNativeFactoryDelegate.h"
+#import "RCTReactNativeFactory.h"
 
-@interface AppDelegate : RCTAppDelegate <UIApplicationDelegate>
+@interface AppDelegate : RCTDefaultReactNativeFactoryDelegate <UIApplicationDelegate>
+
+@property (nonatomic, strong) UIWindow *window;
+@property (nonatomic, strong) RCTReactNativeFactory *reactNativeFactory;
 
 @end
