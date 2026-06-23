@@ -278,7 +278,7 @@ const ArticleDetailScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* 글 본문 */}
-        <ArticleContent content={contentDetail} />
+        <ArticleContent content={contentDetail} showReconstructedBanner />
         <Spacer num={48} />
       </ScrollView>
 
