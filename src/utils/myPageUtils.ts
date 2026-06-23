@@ -4,7 +4,14 @@ import {
   LevelCategory,
 } from '../types/interests';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { MyPageContent, ReadArticlesByDate } from '../api/userApi';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const KST = 'Asia/Seoul';
 
 /**
  * 난이도 -> 레벨 표시 텍스트 변환
@@ -62,33 +69,25 @@ export const formatArticleDate = (
 };
 
 /**
- * 주간 날짜 범위 계산
+ * 주간 날짜 범위 계산 (월요일 시작 기준)
  */
 export const calculateWeekRange = (selectedWeek: number): string => {
-  const today = new Date();
-  const targetDate = new Date(today);
-  targetDate.setDate(today.getDate() + selectedWeek * 7);
+  const today = dayjs().tz(KST);
+  const targetDate = today.add(selectedWeek * 7, 'day');
 
-  const dayOfWeek = targetDate.getDay();
-  const startDate = new Date(targetDate);
-  startDate.setDate(targetDate.getDate() - dayOfWeek);
+  // 월요일(1) 기준으로 주 시작일 계산 (일요일=0이면 6일 전이 월요일)
+  const dayOfWeek = targetDate.day();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const startDate = targetDate.subtract(daysFromMonday, 'day');
+  const endDate = startDate.add(6, 'day');
 
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + 6);
-
-  const formatDate = (date: Date) => {
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    return `${month.toString().padStart(2, '0')}.${day
-      .toString()
-      .padStart(2, '0')}`;
-  };
+  const formatDate = (d: dayjs.Dayjs) => `${d.format('MM')}.${d.format('DD')}`;
 
   return `${formatDate(startDate)} - ${formatDate(endDate)}`;
 };
 
 /**
- * 다음 주에 데이터가 있는지 확인
+ * 다음 주에 데이터가 있는지 확인 (월요일 시작 기준)
  * @param selectedWeek 선택된 주 (0 = 현재 주)
  * @param readArticles 읽은 글 목록 (ReadArticlesByDate[])
  */
@@ -100,42 +99,40 @@ export const hasNextWeekData = (
     return false;
   }
 
-  const today = new Date();
-  const nextWeekDate = new Date(today);
-  nextWeekDate.setDate(today.getDate() + (selectedWeek + 1) * 7);
+  const today = dayjs().tz(KST);
+  const nextWeekDate = today.add((selectedWeek + 1) * 7, 'day');
 
-  const dayOfWeek = nextWeekDate.getDay();
-  const startDate = new Date(nextWeekDate);
-  startDate.setDate(nextWeekDate.getDate() - dayOfWeek);
-
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + 6);
+  const dayOfWeek = nextWeekDate.day();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const startDate = nextWeekDate.subtract(daysFromMonday, 'day');
+  const endDate = startDate.add(6, 'day');
 
   return readArticles.some(dateGroup => {
-    const articleDate = new Date(dateGroup.date);
-    return articleDate >= startDate && articleDate <= endDate;
+    const articleDate = dayjs(dateGroup.date);
+    return (
+      (articleDate.isAfter(startDate) ||
+        articleDate.isSame(startDate, 'day')) &&
+      (articleDate.isBefore(endDate) || articleDate.isSame(endDate, 'day'))
+    );
   });
 };
 
 /**
  * MM.DD 형태의 날짜를 YYYY-MM-DD 형태로 변환
- * @param dateStr "12.28" 형태의 문자열
+ * calculateWeekRange가 KST 기준으로 연도까지 계산하므로 현재 연도 그대로 사용
+ * @param dateStr "06.21" 형태의 문자열
  * @returns "YYYY-MM-DD" 형태의 문자열
  */
 export const convertToYYYYMMDD = (dateStr: string): string => {
   const [month, day] = dateStr.split('.');
-  const currentYear = dayjs().year();
-  // 현재 날짜를 기준으로 연도 결정 (12월이면 내년일 수도 있음)
-  const date = dayjs(`${currentYear}-${month}-${day}`);
-  // 만약 날짜가 미래라면 올해, 과거라면 내년으로 간주
-  const year = date.isAfter(dayjs()) ? currentYear - 1 : currentYear;
+  const year = dayjs().tz(KST).year();
   return dayjs(`${year}-${month}-${day}`).format('YYYY-MM-DD');
 };
 
 /**
- * 요일 이름을 한글로 변환
+ * 요일 이름을 한글로 변환 (KST 기준 YYYY-MM-DD 문자열 입력)
  */
-const getDayOfWeek = (date: Date): string => {
+const getDayOfWeek = (kstDateStr: string): string => {
   const days = [
     '일요일',
     '월요일',
@@ -145,12 +142,12 @@ const getDayOfWeek = (date: Date): string => {
     '금요일',
     '토요일',
   ];
-  return days[date.getDay()];
+  return days[dayjs.tz(kstDateStr, KST).day()];
 };
 
 /**
  * MyPageContent[]를 ReadArticlesByDate[] 형태로 변환
-아마 수정 필요...
+ * readAt은 UTC ISO 문자열이므로 KST(Asia/Seoul) 기준으로 날짜 그룹화
  */
 export const convertMyPageContentsToReadArticles = (
   contents: MyPageContent[],
@@ -159,26 +156,28 @@ export const convertMyPageContentsToReadArticles = (
     return [];
   }
 
-  // 날짜별로 그룹화
-  const groupedByDate = contents.reduce((acc, content) => {
-    const readDate = dayjs(content.readAt).format('YYYY-MM-DD');
-    if (!acc[readDate]) {
-      acc[readDate] = [];
-    }
-    acc[readDate].push(content);
-    return acc;
-  }, {} as Record<string, MyPageContent[]>);
+  // KST 기준으로 날짜별 그룹화
+  const groupedByDate = contents.reduce(
+    (acc, content) => {
+      const readDate = dayjs(content.readAt).tz(KST).format('YYYY-MM-DD');
+      if (!acc[readDate]) {
+        acc[readDate] = [];
+      }
+      acc[readDate].push(content);
+      return acc;
+    },
+    {} as Record<string, MyPageContent[]>,
+  );
 
   // ReadArticlesByDate 형태로 변환
   return Object.entries(groupedByDate)
     .map(([date, articles]) => {
-      const dateObj = new Date(date);
       return {
         date,
-        dayOfWeek: getDayOfWeek(dateObj),
+        dayOfWeek: getDayOfWeek(date),
         count: articles.length,
-        articles, // MyPageContent[] 그대로 사용
+        articles,
       };
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // 최신순 정렬
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
