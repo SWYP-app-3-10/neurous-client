@@ -12,6 +12,8 @@ import { ViewIcon } from '../icons';
 
 interface ArticleContentProps {
   content?: ContentDetail;
+  /** AI 재구성 안내 배너 표시 여부 */
+  showReconstructedBanner?: boolean;
 }
 
 const formatDate = (dateString: string | undefined): string => {
@@ -21,7 +23,10 @@ const formatDate = (dateString: string | undefined): string => {
   return dateString.replace(/-/g, '.');
 };
 
-const ArticleContent: React.FC<ArticleContentProps> = ({ content }) => {
+const ArticleContent: React.FC<ArticleContentProps> = ({
+  content,
+  showReconstructedBanner = false,
+}) => {
   const [imageError, setImageError] = useState(false);
 
   return (
@@ -32,7 +37,7 @@ const ArticleContent: React.FC<ArticleContentProps> = ({ content }) => {
           source={{ uri: content?.imageUrl }}
           style={styles.articleImage}
           resizeMode="cover"
-          onError={(error) => {
+          onError={error => {
             console.error('[ArticleContent] 이미지 로딩 실패:', {
               url: content?.imageUrl,
               error: error.nativeEvent?.error || error,
@@ -59,7 +64,23 @@ const ArticleContent: React.FC<ArticleContentProps> = ({ content }) => {
             <Text style={styles.meta}> {content?.hits}</Text>
           </View>
         </View>
-        <Spacer num={40} />
+        {showReconstructedBanner && (
+          <>
+            <Spacer num={32} />
+            <View style={styles.reconstructedBanner}>
+              <Text style={styles.reconstructedBannerEmoji}>📝</Text>
+              <Text style={styles.reconstructedBannerText}>
+                <Text style={styles.reconstructedBannerTextGray}>기사의 </Text>
+                <Text style={styles.reconstructedBannerTextPurple}>
+                  핵심 사실만 추출해 재구성한 글
+                </Text>
+                <Text style={styles.reconstructedBannerTextGray}>이에요</Text>
+              </Text>
+            </View>
+          </>
+        )}
+
+        <Spacer num={showReconstructedBanner ? 32 : 40} />
 
         {/* 본문 */}
         <Text style={styles.body}>{content?.content}</Text>
@@ -117,6 +138,29 @@ const styles = StyleSheet.create({
   },
   metaWrapper: {
     flex: 1,
+  },
+  reconstructedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scaleWidth(12),
+    paddingVertical: scaleWidth(12),
+    paddingHorizontal: scaleWidth(16),
+    backgroundColor: COLORS.gray100,
+    borderRadius: BORDER_RADIUS[16],
+  },
+  reconstructedBannerEmoji: {
+    fontSize: scaleWidth(18),
+    lineHeight: scaleWidth(24),
+  },
+  reconstructedBannerText: {
+    ...Caption_14R,
+    flex: 1,
+  },
+  reconstructedBannerTextGray: {
+    color: COLORS.gray800,
+  },
+  reconstructedBannerTextPurple: {
+    color: COLORS.puple.main,
   },
 });
 
