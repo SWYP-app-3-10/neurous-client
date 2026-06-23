@@ -90,9 +90,14 @@ const clearAuthAndRedirect = async () => {
  */
 client.interceptors.request.use(
   async config => {
-    if (config.url?.includes('/api/auth/refresh')) {
-      // refresh 엔드포인트는 Authorization 헤더 없이 호출해야 함
-      // (헤더가 있으면 서버가 만료된 accessToken을 검증하려다 실패할 수 있음)
+    if (
+      config.url?.includes('/api/auth/refresh') ||
+      config.url?.includes('/api/auth/login/')
+    ) {
+      // 인증이 필요 없는 공개 엔드포인트는 Authorization 헤더 제거
+      // - /api/auth/refresh : 헤더가 있으면 만료된 토큰을 검증하려다 실패할 수 있음
+      // - /api/auth/login/  : 소셜 로그인 API로, 헤더에 이전 계정 토큰이 남아있으면
+      //                       탈퇴된 계정 토큰이 딸려가 서버 500 유발 가능
       if (config.headers) {
         delete config.headers.Authorization;
       }
