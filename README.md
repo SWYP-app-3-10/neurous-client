@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./src/assets/png/readme_thumnail.png" alt="Neurous Banner" width="50%" />
+</p>
+
 # Neurous (뉴로스)
 
 성인 문해력 향상을 위한 뉴로스 모바일 애플리케이션 클라이언트 레포지토리입니다.
