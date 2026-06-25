@@ -66,7 +66,7 @@ const ArticleContent: React.FC<ArticleContentProps> = ({
         </View>
         {showReconstructedBanner && (
           <>
-            <Spacer num={32} />
+            <Spacer num={26} />
             <View style={styles.reconstructedBanner}>
               <Text style={styles.reconstructedBannerEmoji}>📝</Text>
               <Text style={styles.reconstructedBannerText}>
@@ -80,7 +80,7 @@ const ArticleContent: React.FC<ArticleContentProps> = ({
           </>
         )}
 
-        <Spacer num={showReconstructedBanner ? 32 : 40} />
+        <Spacer num={showReconstructedBanner ? 26 : 40} />
 
         {/* 본문 */}
         <Text style={styles.body}>{content?.content}</Text>
