@@ -103,8 +103,8 @@ export function analyzeDifficultyFeedback(
 
   // 3-1. 쉬움 피드백이 13회 이상 -> 상향 제안
   // TODO: 테스트용으로 2회 시 모달 띄우도록 임시 변경
-  if (easyCount >= 2) {
-    // 2 -> 13 원복 예정
+  if (easyCount >= 1) {
+    // 1 -> 13 원복 예정
     const nextLevel = getNextLevel(currentLevel);
 
     if (nextLevel) {
@@ -127,8 +127,8 @@ export function analyzeDifficultyFeedback(
 
   // 3-2. 어려움 피드백이 8회 이상 -> 하향 제안
   // TODO: 테스트용으로 2회 시 모달 띄우도록 임시 변경
-  if (hardCount >= 2) {
-    // 2 -> 8 원복 예정
+  if (hardCount >= 1) {
+    // 1 -> 8 원복 예정
     const previousLevel = getPreviousLevel(currentLevel);
 
     if (previousLevel) {
