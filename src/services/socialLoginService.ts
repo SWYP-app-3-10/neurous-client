@@ -182,13 +182,13 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
       }
 
       // 5. FCM 토큰 서버 등록
-      try {
-        const fcmToken = await messaging().getToken();
-        await registerFCMToken(fcmToken);
-        console.log('[구글 로그인] FCM 토큰 등록 완료');
-      } catch (fcmError) {
-        console.warn('[구글 로그인] FCM 토큰 등록 실패:', fcmError);
-      }
+      messaging()
+        .getToken()
+        .then(fcmToken => registerFCMToken(fcmToken))
+        .then(() => console.log('[구글 로그인] FCM 토큰 등록 완료'))
+        .catch(fcmError =>
+          console.warn('[구글 로그인] FCM 토큰 등록 실패:', fcmError),
+        );
 
       const responseUserInfo = loginResponse.data?.userInfo;
       const legacyUser = loginResponse.user;
@@ -345,14 +345,14 @@ export const signInWithKakao = async (): Promise<SocialLoginResult> => {
         console.warn('서버에서 토큰을 받지 못했습니다.');
       }
 
-      // ✅ FCM 토큰 서버 등록
-      try {
-        const fcmToken = await messaging().getToken();
-        await registerFCMToken(fcmToken);
-        console.log('[카카오 로그인] FCM 토큰 등록 완료');
-      } catch (fcmError) {
-        console.warn('[카카오 로그인] FCM 토큰 등록 실패:', fcmError);
-      }
+      // FCM 토큰 서버 등록
+      messaging()
+        .getToken()
+        .then(fcmToken => registerFCMToken(fcmToken))
+        .then(() => console.log('[카카오 로그인] FCM 토큰 등록 완료'))
+        .catch(fcmError =>
+          console.warn('[카카오 로그인] FCM 토큰 등록 실패:', fcmError),
+        );
     } catch (apiError) {
       console.error('서버 로그인 API 호출 실패:', apiError);
       return {
@@ -569,13 +569,13 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       }
 
       // FCM 토큰 서버 등록
-      try {
-        const fcmToken = await messaging().getToken();
-        await registerFCMToken(fcmToken);
-        console.log('[네이버 로그인] FCM 토큰 등록 완료');
-      } catch (fcmError) {
-        console.warn('[네이버 로그인] FCM 토큰 등록 실패:', fcmError);
-      }
+      messaging()
+        .getToken()
+        .then(fcmToken => registerFCMToken(fcmToken))
+        .then(() => console.log('[네이버 로그인] FCM 토큰 등록 완료'))
+        .catch(fcmError =>
+          console.warn('[네이버 로그인] FCM 토큰 등록 실패:', fcmError),
+        );
 
       return {
         success: true,
@@ -729,14 +729,14 @@ export const signInWithApple = async (): Promise<SocialLoginResult> => {
         console.warn('서버에서 토큰을 받지 못했습니다.');
       }
 
-      // ✅ FCM 토큰 서버 등록
-      try {
-        const fcmToken = await messaging().getToken();
-        await registerFCMToken(fcmToken);
-        console.log('[애플 로그인] FCM 토큰 등록 완료');
-      } catch (fcmError) {
-        console.warn('[애플 로그인] FCM 토큰 등록 실패:', fcmError);
-      }
+      // FCM 토큰 서버 등록
+      messaging()
+        .getToken()
+        .then(fcmToken => registerFCMToken(fcmToken))
+        .then(() => console.log('[애플 로그인] FCM 토큰 등록 완료'))
+        .catch(fcmError =>
+          console.warn('[애플 로그인] FCM 토큰 등록 실패:', fcmError),
+        );
     } catch (apiError) {
       console.error('서버 로그인 API 호출 실패:', apiError);
       return {
