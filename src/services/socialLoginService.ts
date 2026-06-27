@@ -7,15 +7,9 @@
  *   1. 소셜 SDK로 로그인 → 소셜 액세스 토큰 획득
  *   2. Google은 accessToken을 서버로 전달, Apple은 Firebase Auth 사용
  *   3. 서버 API 호출 (/api/auth/login/provider) → 서버 JWT 토큰 발급
- *   4. 서버 토큰 + 사용자 정보 + 소셜 토큰을 AsyncStorage에 저장
- *   5. FCM 토큰 서버 등록 → 로그인 직후 푸시 수신 가능
+ *   4. 서버 토큰 + 사용자 정보를 AsyncStorage에 일괄 저장 (saveAuthData → multiSet 1회)
+ *   5. FCM 토큰 서버 등록 (백그라운드, 로그인 흐름 블로킹 없음)
  *   6. newUser 플래그 반환 (신규/기존 사용자 구분)
- *
- * 제공자별 특이사항:
- *   - Google : accessToken을 서버로 정송, 서버에서 Google userinfo API 호출
- *   - Apple  : Firebase Auth 필수, authorizationCode를 별도 저장 (탈퇴 시 필요)
- *   - Kakao  : 직접 SDK 연동, accessToken을 서버로 전송
- *   - Naver  : 직접 SDK 연동, 타임아웃 처리로 취소 감지 (SDK 버그 우회)
  */
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -34,23 +28,12 @@ import {
 } from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
 import { loginWithProvider } from '../api/authApi';
-import { saveAuthToken, saveRefreshToken, saveUserInfo } from './authService';
+import { saveAuthData } from './authService';
 import { registerFCMToken } from '../api/notificationApi';
 import messaging from '@react-native-firebase/messaging';
 
-// 소셜 로그인 제공자 타입
 export type SocialLoginProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'APPLE';
 
-/**
- * 소셜 로그인 결과 인터페이스
- *
- * @property success     - 로그인 성공 여부
- * @property provider    - 로그인 제공자
- * @property accessToken - 소셜 액세스 토큰 (Google/Apple은 idToken)
- * @property userInfo    - 소셜에서 가져온 사용자 정보
- * @property newUser     - 신규 사용자 여부 (서버에서 반환)
- * @property error       - 실패 시 에러 메시지
- */
 export interface SocialLoginResult {
   success: boolean;
   provider: SocialLoginProvider;
@@ -69,15 +52,6 @@ export interface SocialLoginResult {
 // 구글 로그인
 // ────────────────────────────────────────────────────────────────────────────────────────────
 
-/**
- * [구글 로그인 초기화]
- * Google Sign-In SDK를 초기화한다.
- *
- * webClientId: Firebase 콘솔에서 발급받은 OAuth 클라이언트 ID
- * offlineAccess: 리프레시 토큰 획득 활성화 (장기 세션 유지용)
- *
- * 앱 시작 시 한 번만 호출하면 되며, LoginScreen의 useEffect에서 실행된다.
- */
 export const initializeGoogleSignIn = () => {
   try {
     GoogleSignin.configure({
@@ -90,32 +64,14 @@ export const initializeGoogleSignIn = () => {
   }
 };
 
-/**
- * Google 소셜 로그인을 수행한다.
- *
- * 처리 흐름:
- *   1. GoogleSignin.signIn() → 사용자 계정 선택 화면 표시
- *   2. getTokens()로 accessToken 획득
- *   3. 서버 API 호출 (loginWithProvider) → 서버 JWT 발급
- *   4. 서버 토큰, 사용자 정보, 소셜 accessToken을 AsyncStorage에 저장
- *   5. FCM 토큰 서버 등록
- *
- * @returns SocialLoginResult (success, newUser, userInfo 등)
- */
 export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
   try {
-    // Google Play Services 확인
     await GoogleSignin.hasPlayServices({
       showPlayServicesUpdateDialog: true,
     });
 
-    // 1. Google 계정 선택 화면 표시
     await GoogleSignin.signIn();
-
-    // 2. Google accessToken 획득
     const tokens = await GoogleSignin.getTokens();
-
-    // accessToken 필수 체크
     const googleAccessToken = tokens.accessToken;
 
     if (!googleAccessToken) {
@@ -123,7 +79,6 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
       throw new Error('Google Access Token이 없습니다.');
     }
 
-    // 3. 서버 API 호출
     let newUser = true;
 
     try {
@@ -140,48 +95,41 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
 
       newUser = loginResponse.data?.newUser ?? true;
 
-      // 4. 서버 응답 데이터 저장
+      // 서버 응답 데이터 일괄 저장 (multiSet 1회)
       if (loginResponse.data) {
-        if (loginResponse.data.accessToken) {
-          await saveAuthToken(loginResponse.data.accessToken);
-        }
-
-        if (loginResponse.data.refreshToken) {
-          await saveRefreshToken(loginResponse.data.refreshToken);
-        }
-
-        if (loginResponse.data.userInfo) {
-          await saveUserInfo({
-            ...loginResponse.data.userInfo,
-            provider: 'GOOGLE',
-            loginTime: Date.now(),
-            providerAccessToken: googleAccessToken,
-          });
-        }
+        await saveAuthData({
+          accessToken: loginResponse.data.accessToken,
+          refreshToken: loginResponse.data.refreshToken,
+          userInfo: loginResponse.data.userInfo
+            ? {
+                ...loginResponse.data.userInfo,
+                provider: 'GOOGLE',
+                loginTime: Date.now(),
+                providerAccessToken: googleAccessToken,
+              }
+            : undefined,
+        });
       } else if (loginResponse.token) {
-        await saveAuthToken(loginResponse.token);
-
-        if (loginResponse.refreshToken) {
-          await saveRefreshToken(loginResponse.refreshToken);
-        }
-
-        if (loginResponse.user) {
-          await saveUserInfo({
-            userId: parseInt(loginResponse.user.id, 10) || 0,
-            name: loginResponse.user.name,
-            email: loginResponse.user.email,
-            profileImage: loginResponse.user.profileImage,
-
-            provider: 'GOOGLE',
-            loginTime: Date.now(),
-            providerAccessToken: googleAccessToken,
-          });
-        }
+        await saveAuthData({
+          accessToken: loginResponse.token,
+          refreshToken: loginResponse.refreshToken,
+          userInfo: loginResponse.user
+            ? {
+                userId: parseInt(loginResponse.user.id, 10) || 0,
+                name: loginResponse.user.name,
+                email: loginResponse.user.email,
+                profileImage: loginResponse.user.profileImage,
+                provider: 'GOOGLE',
+                loginTime: Date.now(),
+                providerAccessToken: googleAccessToken,
+              }
+            : undefined,
+        });
       } else {
         console.warn('서버에서 토큰을 받지 못했습니다.');
       }
 
-      // 5. FCM 토큰 서버 등록
+      // FCM 토큰 서버 등록 (백그라운드)
       messaging()
         .getToken()
         .then(fcmToken => registerFCMToken(fcmToken))
@@ -196,11 +144,7 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
       return {
         success: true,
         provider: 'GOOGLE',
-
-        // 실제 Google accessToken 반환
         accessToken: googleAccessToken,
-
-        // 서버 응답 기준 userInfo 반환
         userInfo: responseUserInfo
           ? {
               id: String(responseUserInfo.userId ?? ''),
@@ -216,7 +160,6 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
                 profileImage: legacyUser.profileImage,
               }
             : undefined,
-
         newUser,
       };
     } catch (apiError: any) {
@@ -259,9 +202,6 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
   }
 };
 
-/**
- * Google 소셜 로그아웃을 수행한다.
- */
 export const signOutGoogle = async (): Promise<void> => {
   try {
     try {
@@ -269,7 +209,6 @@ export const signOutGoogle = async (): Promise<void> => {
     } catch (initError) {
       console.warn('구글 로그인 초기화 실패 (로그아웃 시도):', initError);
     }
-
     await GoogleSignin.signOut();
   } catch (error) {
     console.error('구글 로그아웃 실패:', error);
@@ -309,43 +248,39 @@ export const signInWithKakao = async (): Promise<SocialLoginResult> => {
       newUser = loginResponse.data?.newUser ?? true;
 
       if (loginResponse.data) {
-        if (loginResponse.data.accessToken) {
-          await saveAuthToken(loginResponse.data.accessToken);
-        }
-
-        if (loginResponse.data.refreshToken) {
-          await saveRefreshToken(loginResponse.data.refreshToken);
-        }
-
-        if (loginResponse.data.userInfo) {
-          await saveUserInfo({
-            ...loginResponse.data.userInfo,
-            provider: 'KAKAO',
-            loginTime: Date.now(),
-            providerAccessToken: token.accessToken,
-          });
-        }
+        await saveAuthData({
+          accessToken: loginResponse.data.accessToken,
+          refreshToken: loginResponse.data.refreshToken,
+          userInfo: loginResponse.data.userInfo
+            ? {
+                ...loginResponse.data.userInfo,
+                provider: 'KAKAO',
+                loginTime: Date.now(),
+                providerAccessToken: token.accessToken,
+              }
+            : undefined,
+        });
       } else if (loginResponse.token) {
-        await saveAuthToken(loginResponse.token);
-        if (loginResponse.refreshToken) {
-          await saveRefreshToken(loginResponse.refreshToken);
-        }
-        if (loginResponse.user) {
-          await saveUserInfo({
-            userId: parseInt(loginResponse.user.id, 10) || 0,
-            name: loginResponse.user.name,
-            email: loginResponse.user.email,
-            profileImage: loginResponse.user.profileImage,
-            provider: 'KAKAO',
-            loginTime: Date.now(),
-            providerAccessToken: token.accessToken,
-          });
-        }
+        await saveAuthData({
+          accessToken: loginResponse.token,
+          refreshToken: loginResponse.refreshToken,
+          userInfo: loginResponse.user
+            ? {
+                userId: parseInt(loginResponse.user.id, 10) || 0,
+                name: loginResponse.user.name,
+                email: loginResponse.user.email,
+                profileImage: loginResponse.user.profileImage,
+                provider: 'KAKAO',
+                loginTime: Date.now(),
+                providerAccessToken: token.accessToken,
+              }
+            : undefined,
+        });
       } else {
         console.warn('서버에서 토큰을 받지 못했습니다.');
       }
 
-      // FCM 토큰 서버 등록
+      // FCM 토큰 서버 등록 (백그라운드)
       messaging()
         .getToken()
         .then(fcmToken => registerFCMToken(fcmToken))
@@ -412,9 +347,6 @@ export const initializeNaverLogin = () => {
         appName: NAVER_CONFIG.appName,
         consumerKey: NAVER_CONFIG.consumerKey,
         consumerSecret: NAVER_CONFIG.consumerSecret,
-
-        // iOS 전용 설정
-        // Android에서는 네이버 개발자센터의 Android 패키지명 설정을 사용함
         serviceUrlSchemeIOS: NAVER_CONFIG.serviceUrlScheme,
       });
     }
@@ -432,18 +364,7 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
 
     console.error('[NaverLogin] 3. before NaverLogin.login');
 
-    /**
-     * 초기화는 initializeNaverLogin()에서 이미 처리했으므로,
-     * login()에는 별도 인자를 넘기지 않는다.
-     *
-     * 기존처럼 login({ appName, consumerKey, ... }) 형태로 호출하면
-     * 라이브러리 버전/플랫폼에 따라 콜백 흐름이 꼬일 수 있음.
-     */
     const loginPromise = NaverLogin.login();
-
-    /**
-     * 네이버 SDK가 취소/복귀 상황에서 Promise를 끝내지 않는 경우를 대비한 타임아웃
-     */
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('TIMEOUT')), 5000);
     });
@@ -455,14 +376,12 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
     } catch (timeoutError: any) {
       if (timeoutError?.message === 'TIMEOUT') {
         console.log('[NaverLogin] timeout');
-
         return {
           success: false,
           provider: 'NAVER',
           error: '로그인이 취소되었습니다.',
         };
       }
-
       throw timeoutError;
     }
 
@@ -473,7 +392,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
 
     if (!result) {
       console.log('[NaverLogin] result is empty');
-
       return {
         success: false,
         provider: 'NAVER',
@@ -486,7 +404,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
         failureResponse: result?.failureResponse,
         result,
       });
-
       return {
         success: false,
         provider: 'NAVER',
@@ -497,10 +414,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       };
     }
 
-    /**
-     * accessToken 추출
-     * 라이브러리 버전에 따라 응답 구조가 다를 수 있으므로 fallback을 둔다.
-     */
     const accessToken =
       result?.successResponse?.accessToken ||
       result?.accessToken ||
@@ -510,7 +423,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
 
     if (!accessToken) {
       console.error('[NaverLogin] successResponse:', result?.successResponse);
-
       return {
         success: false,
         provider: 'NAVER',
@@ -518,11 +430,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       };
     }
 
-    /**
-     * 네이버 프로필 조회
-     * - 앱에서 userInfo를 즉시 구성하기 위한 용도
-     * - 서버 로그인은 accessToken 기준으로 별도 진행
-     */
     console.log('[NaverLogin] 6. before getProfile');
 
     const profileResult = await NaverLogin.getProfile(accessToken);
@@ -539,10 +446,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       profileImage: profileResult?.response?.profile_image || undefined,
     };
 
-    /**
-     * 서버 로그인
-     * 백엔드는 네이버 accessToken을 받아 사용자 정보를 검증/조회하는 구조
-     */
     try {
       console.log('[NaverLogin] 8. before server login');
 
@@ -551,24 +454,20 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
         email: userInfo.email,
       });
 
-      if (loginResponse.data?.accessToken) {
-        await saveAuthToken(loginResponse.data.accessToken);
-      }
+      await saveAuthData({
+        accessToken: loginResponse.data?.accessToken,
+        refreshToken: loginResponse.data?.refreshToken,
+        userInfo: loginResponse.data?.userInfo
+          ? {
+              ...loginResponse.data.userInfo,
+              provider: 'NAVER',
+              loginTime: Date.now(),
+              providerAccessToken: accessToken,
+            }
+          : undefined,
+      });
 
-      if (loginResponse.data?.refreshToken) {
-        await saveRefreshToken(loginResponse.data.refreshToken);
-      }
-
-      if (loginResponse.data?.userInfo) {
-        await saveUserInfo({
-          ...loginResponse.data.userInfo,
-          provider: 'NAVER',
-          loginTime: Date.now(),
-          providerAccessToken: accessToken,
-        });
-      }
-
-      // FCM 토큰 서버 등록
+      // FCM 토큰 서버 등록 (백그라운드)
       messaging()
         .getToken()
         .then(fcmToken => registerFCMToken(fcmToken))
@@ -696,40 +595,39 @@ export const signInWithApple = async (): Promise<SocialLoginResult> => {
       newUser = loginResponse.data?.newUser ?? true;
 
       if (loginResponse.data) {
-        if (loginResponse.data.accessToken) {
-          await saveAuthToken(loginResponse.data.accessToken);
-        }
-
-        if (loginResponse.data.refreshToken) {
-          await saveRefreshToken(loginResponse.data.refreshToken);
-        }
-
-        if (loginResponse.data.userInfo) {
-          await saveUserInfo({
-            ...loginResponse.data.userInfo,
-            provider: 'APPLE',
-            loginTime: Date.now(),
-            appleAuthorizationCode: authorizationCode || undefined,
-          });
-        }
+        await saveAuthData({
+          accessToken: loginResponse.data.accessToken,
+          refreshToken: loginResponse.data.refreshToken,
+          userInfo: loginResponse.data.userInfo
+            ? {
+                ...loginResponse.data.userInfo,
+                provider: 'APPLE',
+                loginTime: Date.now(),
+                appleAuthorizationCode: authorizationCode || undefined,
+              }
+            : undefined,
+        });
       } else if (loginResponse.token) {
-        await saveAuthToken(loginResponse.token);
-        if (loginResponse.refreshToken) {
-          await saveRefreshToken(loginResponse.refreshToken);
-        }
-        if (loginResponse.user) {
-          await saveUserInfo({
-            userId: parseInt(loginResponse.user.id, 10) || 0,
-            name: loginResponse.user.name,
-            email: loginResponse.user.email,
-            profileImage: loginResponse.user.profileImage,
-          });
-        }
+        await saveAuthData({
+          accessToken: loginResponse.token,
+          refreshToken: loginResponse.refreshToken,
+          userInfo: loginResponse.user
+            ? {
+                userId: parseInt(loginResponse.user.id, 10) || 0,
+                name: loginResponse.user.name,
+                email: loginResponse.user.email,
+                profileImage: loginResponse.user.profileImage,
+                provider: 'APPLE',
+                loginTime: Date.now(),
+                appleAuthorizationCode: authorizationCode || undefined,
+              }
+            : undefined,
+        });
       } else {
         console.warn('서버에서 토큰을 받지 못했습니다.');
       }
 
-      // FCM 토큰 서버 등록
+      // FCM 토큰 서버 등록 (백그라운드)
       messaging()
         .getToken()
         .then(fcmToken => registerFCMToken(fcmToken))
