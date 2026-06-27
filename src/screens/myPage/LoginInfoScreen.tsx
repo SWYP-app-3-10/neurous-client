@@ -12,12 +12,7 @@ import RightArrow from '../../assets/svg/RightArrow.svg';
 import NotificationModal from '../../components/NotificationModal';
 
 import { RouteNames } from '../../../routes';
-import {
-  clearAllAuthData,
-  getUserInfo,
-  logout,
-  withdraw,
-} from '../../services/authService';
+import { getUserInfo, logout, withdraw } from '../../services/authService';
 import { useOnboardingStore } from '../../store/onboardingStore';
 
 /**
@@ -28,41 +23,29 @@ import { useOnboardingStore } from '../../store/onboardingStore';
 const LoginInfoScreen = () => {
   const navigation = useNavigation<any>();
 
-  // 로그아웃 모달 상태
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-
-  // 서비스 탈퇴 모달 상태
   const [withdrawModalVisible, setWithdrawModalVisible] = useState(false);
 
-  // 온보딩 상태 초기화
   const resetOnboarding = useOnboardingStore(state => state.resetOnboarding);
 
-  /** 로그아웃 클릭 */
   const onPressLogout = () => {
     setLogoutModalVisible(true);
   };
 
-  /** 로그아웃 취소 */
   const onCancelLogout = () => {
     setLogoutModalVisible(false);
   };
 
-  /** 로그아웃 확인 */
   const onConfirmLogout = useCallback(async () => {
     setLogoutModalVisible(false);
 
     try {
-      // 1) 저장된 provider 조회
       const userInfo = await getUserInfo();
       const provider = userInfo?.provider;
 
-      // 2) 기존에 구현해둔 logout 사용 (소셜 로그아웃 + 로컬 정리)
       await logout(provider);
-
-      // 3) 온보딩 상태 초기화
       await resetOnboarding();
 
-      // 4) 네비게이션 스택 리셋 → 온보딩 이동
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -74,31 +57,25 @@ const LoginInfoScreen = () => {
     }
   }, [navigation, resetOnboarding]);
 
-  /** 서비스 탈퇴 클릭 */
   const onPressWithdraw = () => {
     setWithdrawModalVisible(true);
   };
 
-  /** 서비스 탈퇴 취소 */
   const onCancelWithdraw = () => {
     setWithdrawModalVisible(false);
   };
 
-  /** 서비스 탈퇴 확인 */
   const onConfirmWithdraw = useCallback(async () => {
     setWithdrawModalVisible(false);
 
     try {
-      // 0) 서버 탈퇴 + 소셜 unlink + 소셜 로그아웃 + 로컬 정리
+      // 서버 탈퇴 + 소셜 unlink + 소셜 로그아웃 + 로컬 정리
       await withdraw();
 
-      // 1) 로컬 인증/유저 데이터 초기화
-      await clearAllAuthData();
-
-      // 2) 온보딩 상태 초기화
+      // 온보딩 상태 초기화
       await resetOnboarding();
 
-      // 3) 네비게이션 스택 리셋 → 온보딩 이동
+      // 네비게이션 스택 리셋 → 온보딩 이동
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -132,7 +109,7 @@ const LoginInfoScreen = () => {
         <RightArrow color={COLORS.gray700} />
       </Pressable>
 
-      {/* 로그아웃 확인 모달 (두 줄 고정) */}
+      {/* 로그아웃 확인 모달 */}
       <NotificationModal
         visible={logoutModalVisible}
         title="정말 로그아웃하시겠어요?"
@@ -161,7 +138,7 @@ const LoginInfoScreen = () => {
         </Text>
       </NotificationModal>
 
-      {/* 서비스 탈퇴 확인 모달 (두 줄 고정) */}
+      {/* 서비스 탈퇴 확인 모달 */}
       <NotificationModal
         visible={withdrawModalVisible}
         title="정말 탈퇴하시겠어요?"
@@ -195,9 +172,6 @@ const LoginInfoScreen = () => {
 
 export default LoginInfoScreen;
 
-/* =========================
-  스타일
-========================= */
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -223,7 +197,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // 로그아웃 / 탈퇴 모달 공통 설명 텍스트 (두 줄 고정)
   modalDesc: {
     ...Caption_14R,
     color: COLORS.gray700,
