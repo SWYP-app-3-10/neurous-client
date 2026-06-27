@@ -6,7 +6,7 @@ import Level_1_tooltip from '../../assets/png/Level_1_tooltip.png';
 import Check_3D from '../../assets/png/Check_3D.png';
 import ProgressBar from '../../assets/png/ProgressBar.png';
 import Intro_CardList_IMG from '../../assets/png/Intro_CardList_IMG.png';
-import Intro_Fuction_IMG from '../../assets/png/Intro_Fuction_IMG.png';
+import Intro_Function_IMG from '../../assets/png/Intro_Function_IMG.png';
 import Intro_Search_IMG from '../../assets/png/Intro_Search_IMG.png';
 import level_2_tooltip from '../../assets/png/level2_tooltip.png';
 import level_3_tooltip from '../../assets/png/level3_tooltip.png';
@@ -97,8 +97,8 @@ export const Intro_CardList = createImageIconComponent(
   scaleWidth(330),
   scaleWidth(360),
 );
-export const Intro_Fuction = createImageIconComponent(
-  Intro_Fuction_IMG,
+export const Intro_Function = createImageIconComponent(
+  Intro_Function_IMG,
   scaleWidth(330),
   scaleWidth(360),
 );

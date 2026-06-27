@@ -26,7 +26,7 @@ import {
 } from '../../styles/typography';
 import {
   Intro_CardList,
-  Intro_Fuction,
+  Intro_Function,
   Intro_Search,
 } from '../../icons/commonIcons/simpleImages';
 import { logEvent } from '../../services/analyticsService';
@@ -57,7 +57,7 @@ const INTRO_SLIDES: IntroSlide[] = [
     description:
       '활동을 통해 경험치를 모으면 레벨이 오르고\n새로운 캐릭터를 만날 수 있어요',
     eventName: 'Next_Onboarding_Function02_Character',
-    Illustration: Intro_Fuction,
+    Illustration: Intro_Function,
   },
   {
     id: 2,
