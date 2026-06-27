@@ -266,6 +266,7 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
       '@fcm_token',
       '@fcm_token_pending',
       '@difficulty_submit_date',
+      '@alarm_enabled',
     ]);
 
     console.log('[logout] 완료');
@@ -393,6 +394,7 @@ export const withdraw = async (): Promise<void> => {
       '@fcm_token',
       '@fcm_token_pending',
       '@difficulty_submit_date',
+      '@alarm_enabled',
     ]);
 
     console.log('[withdraw] 완료');
