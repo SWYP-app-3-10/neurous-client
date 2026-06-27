@@ -5,6 +5,7 @@ import client from './client';
 import { getUserInfo } from '../services/authService';
 import { Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * FCM 토큰 등록 요청 타입
@@ -23,7 +24,7 @@ export interface NotificationItemRaw {
   title: string;
   body: string;
   displayDate: string;
-  isRead: boolean; // 서버에서 읽음 여부 제공
+  isRead: boolean;
 }
 
 /**
@@ -32,19 +33,15 @@ export interface NotificationItemRaw {
 export interface NotificationItem {
   notificationId: number;
   title: string;
-  message: string; // body를 message로 변환
-  createdAt: string; // displayDate를 createdAt으로 변환 (ISO 8601)
-  isRead: boolean; // 서버 응답값 사용
+  message: string;
+  createdAt: string;
+  isRead: boolean;
 }
 
 /**
  * FCM 디바이스 토큰을 서버에 등록
  *
- * - 앱 실행 시 발급된 FCM 토큰을 서버에 저장
- * - 서버는 이 토큰으로 백그라운드/종료 상태의 디바이스에 푸시 발송
- *
  * @param token FCM 토큰
- * @returns Promise<void>
  */
 export async function registerFCMToken(token: string): Promise<void> {
   try {
@@ -80,35 +77,51 @@ export async function registerFCMToken(token: string): Promise<void> {
 /**
  * FCM 디바이스 토큰을 서버에서 비활성화
  *
- * 로그아웃 시 호출하여 현재 계정과 FCM 토큰의 연결을 해제한다.
- * 이를 통해 로그아웃 후 해당 계정으로 푸시가 가지 않도록 한다.
+ * 로그아웃/탈퇴 시 호출하여 현재 계정과 FCM 토큰의 연결을 해제한다.
  *
- * 주의:
- * - accessToken 삭제 전에 호출해야 한다.
- * - 실패해도 로그아웃은 계속 진행한다.
+ * 성능 최적화:
+ *   cachedUserId / cachedToken을 전달하면 내부에서 getUserInfo()와
+ *   messaging().getToken()을 호출하지 않는다.
+ *   messaging().getToken()은 콜드 스타트 시 수 초가 걸리므로,
+ *   호출 측에서 AsyncStorage 캐시(@fcm_token)를 읽어 전달하는 것을 권장한다.
  *
- * @returns Promise<void>
+ * @param cachedUserId 미리 조회한 userId (생략 시 내부에서 getUserInfo 호출)
+ * @param cachedToken  미리 조회한 FCM 토큰 (생략 시 내부에서 messaging().getToken 호출)
  */
-export async function unregisterFCMToken(): Promise<void> {
+
+export async function unregisterFCMToken(
+  cachedUserId?: number,
+  cachedToken?: string,
+): Promise<void> {
   try {
-    const userInfo = await getUserInfo();
-    if (!userInfo || !userInfo.userId) {
+    // userId 확보: 캐시 → getUserInfo 폴백
+    const userId = cachedUserId ?? (await getUserInfo())?.userId;
+    if (!userId) {
       console.warn('[FCM] 사용자 정보 없음 - 토큰 해제 스킵');
       return;
     }
 
-    const token = await messaging().getToken();
+    // FCM 토큰 확보: 캐시 → AsyncStorage → messaging().getToken 폴백
+    let token = cachedToken;
+    if (!token) {
+      token = (await AsyncStorage.getItem('@fcm_token')) ?? undefined;
+    }
+    if (!token) {
+      try {
+        token = await messaging().getToken();
+      } catch {
+        console.warn('[FCM] messaging().getToken() 실패');
+      }
+    }
     if (!token) {
       console.warn('[FCM] FCM 토큰 없음 - 토큰 해제 스킵');
       return;
     }
 
-    console.log('[FCM] 토큰 서버 비활성화 시작:', {
-      userId: userInfo.userId,
-    });
+    console.log('[FCM] 토큰 서버 비활성화 시작:', { userId });
 
     const response = await client.patch(
-      `/api/notification/token/deactivate?userId=${userInfo.userId}`,
+      `/api/notification/token/deactivate?userId=${userId}`,
       { token },
     );
 
@@ -123,21 +136,14 @@ export async function unregisterFCMToken(): Promise<void> {
         data: error.response.data,
       });
     }
-    // 실패해도 throw 안 함 (로그아웃은 계속 진행)
   }
 }
 
 /**
  * 알림 수신 여부 설정 업데이트
  *
- * - 로그인 시 OS 권한 결과에 따라 호출
- * - 설정 화면에서 토글 변경 시 호출
- * - 로그아웃 시 false로 호출 (계정 전환 시 오염 방지)
- * - 실패해도 throw 안 함 (UX 흐름은 계속 진행)
- *
  * @param userId 사용자 ID
  * @param notificationStatus 알림 수신 여부
- * @returns Promise<void>
  */
 export async function updateNotificationStatus(
   userId: number,
@@ -149,7 +155,6 @@ export async function updateNotificationStatus(
       notificationStatus,
     });
 
-    // PATCH /api/user/notification?userId={userId}
     const response = await client.patch(
       `/api/user/notification?userId=${userId}`,
       { notificationStatus },
@@ -164,20 +169,13 @@ export async function updateNotificationStatus(
       console.error('[알림 수신 설정 API] 응답 상태:', error.response.status);
       console.error('[알림 수신 설정 API] 응답 데이터:', error.response.data);
     }
-    // 실패해도 throw 안 함 (UX 흐름은 계속 진행)
   }
 }
 
 /**
  * 알림 목록 조회
  *
- * - 백엔드 응답을 프론트엔드 형식으로 변환
- * - body → message
- * - displayDate → createdAt
- * - isRead 서버 응답값 그대로 사용
- *
  * @param userId 사용자 ID
- * @returns Promise<NotificationItem[]>
  */
 export async function fetchNotifications(
   userId: number,
@@ -201,7 +199,7 @@ export async function fetchNotifications(
       title: item.title,
       message: item.body,
       createdAt: item.displayDate,
-      isRead: item.isRead, // 서버 응답값 사용
+      isRead: item.isRead,
     }));
 
     return notifications;
@@ -227,11 +225,8 @@ export async function fetchNotifications(
 /**
  * 알림 읽음 처리
  *
- * 사용자가 알림을 읽었을 때 읽음 처리를 수행한다.
- *
  * @param userId 사용자 ID
  * @param notificationId 알림 ID
- * @returns Promise<void>
  */
 export async function markNotificationAsRead(
   userId: number,
