@@ -121,6 +121,53 @@ export const saveUserInfo = async (userInfo: {
   }
 };
 
+/**
+ * 인증 데이터(토큰 + 사용자 정보)를 AsyncStorage에 일괄 저장한다.
+ *
+ * 소셜 로그인 성공 후 saveAuthToken + saveRefreshToken + saveUserInfo를
+ * 순차 호출하면 setItem 3~4회가 발생하므로,
+ * multiSet 1회로 통합하여 로그인 체감 속도를 개선한다.
+ *
+ * 각 필드는 optional이므로 서버 응답에 포함된 항목만 저장된다.
+ */
+export const saveAuthData = async (data: {
+  accessToken?: string;
+  refreshToken?: string;
+  userInfo?: {
+    userId: number;
+    name?: string;
+    email?: string;
+    profileImage?: string;
+    provider?: string;
+    loginTime?: number;
+    providerAccessToken?: string;
+    appleAuthorizationCode?: string;
+  };
+}): Promise<void> => {
+  try {
+    const pairs: [string, string][] = [];
+
+    if (data.accessToken) {
+      pairs.push([AUTH_TOKEN_KEY, data.accessToken]);
+    }
+    if (data.refreshToken) {
+      pairs.push([REFRESH_TOKEN_KEY, data.refreshToken]);
+    }
+    if (data.userInfo) {
+      pairs.push([USER_INFO_KEY, JSON.stringify(data.userInfo)]);
+      if (data.userInfo.provider) {
+        pairs.push([RECENT_PROVIDER_KEY, data.userInfo.provider]);
+      }
+    }
+
+    if (pairs.length > 0) {
+      await AsyncStorage.multiSet(pairs);
+    }
+  } catch (error) {
+    console.error('인증 데이터 일괄 저장 실패:', error);
+  }
+};
+
 export const getUserInfo = async (): Promise<{
   userId: number;
   name?: string;
@@ -168,56 +215,47 @@ export const clearUserInfo = async (): Promise<void> => {
  * 로그아웃을 처리한다.
  *
  * 성능 최적화:
- *   - getUserInfo() 1회만 호출 (기존 3회 → 1회)
+ *   - getUserInfo() 1회만 호출
  *   - FCM 토큰은 AsyncStorage 캐시(@fcm_token)에서 읽음
- *     (messaging().getToken()은 콜드 스타트 시 수 초 소요)
- *   - 서버 API 3개(logoutFromServer, unregisterFCMToken, updateNotificationStatus)를
- *     Promise.allSettled로 병렬 실행 (기존 순차 → 병렬)
- *
- * 실행 순서:
- *   1. 로컬에서 userInfo + FCM 캐시 토큰 조회 (AsyncStorage만, 네트워크 없음)
- *   2. 서버 API 3개 병렬 실행 (네트워크)
- *   3. 소셜 SDK 로그아웃
- *   4. AsyncStorage 일괄 삭제
+ *   - 서버 API 3개 + 소셜 SDK 로그아웃을 Promise.allSettled로 병렬 실행
  */
 export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
   try {
-    // ── STEP 1. 로컬 데이터 조회 (1회) ───────────────────
     const userInfo = await getUserInfo();
     const resolvedProvider = provider ?? userInfo?.provider;
     const userId = userInfo?.userId;
-
-    // FCM 토큰은 AsyncStorage 캐시에서 읽음 (messaging().getToken() 회피)
     const cachedFcmToken =
       (await AsyncStorage.getItem('@fcm_token')) ?? undefined;
 
-    // ── STEP 2. 서버 API 병렬 실행 ───────────────────────
-    // 세 API는 서로 의존성이 없으므로 병렬 처리
-    // accessToken 삭제 전에 실행해야 하므로 STEP 4보다 먼저
+    // 서버 API + 소셜 로그아웃 전부 병렬 실행
+    // 서로 의존성 없음 (소셜 SDK는 자체 세션, 서버 API는 JWT 사용)
+    const tasks: Promise<any>[] = [];
+
     if (userId) {
-      await Promise.allSettled([
+      tasks.push(
         logoutFromServer(userId).catch(() =>
-          console.warn(
-            '[logout] 서버 로그아웃 실패 - 로컬 로그아웃은 계속 진행합니다.',
-          ),
+          console.warn('[logout] 서버 로그아웃 실패'),
         ),
-        unregisterFCMToken(userId, cachedFcmToken).catch(fcmError =>
-          console.warn('[logout] FCM 토큰 서버 해제 실패:', fcmError),
+        unregisterFCMToken(userId, cachedFcmToken).catch(e =>
+          console.warn('[logout] FCM 해제 실패:', e),
         ),
         updateNotificationStatus(userId, false).catch(() =>
-          console.warn(
-            '[logout] 알림 수신 설정 리셋 실패 - 로그아웃은 계속 진행합니다.',
-          ),
+          console.warn('[logout] 알림 설정 리셋 실패'),
         ),
-      ]);
+      );
     }
 
-    // ── STEP 3. 소셜 SDK 로그아웃 ────────────────────────
     if (resolvedProvider) {
-      await signOutSocial(resolvedProvider);
+      tasks.push(
+        signOutSocial(resolvedProvider).catch(e =>
+          console.warn('[logout] 소셜 로그아웃 실패:', e),
+        ),
+      );
     }
 
-    // ── STEP 4. 로컬 저장값 일괄 삭제 ────────────────────
+    await Promise.allSettled(tasks);
+
+    // 로컬 저장값 일괄 삭제
     await AsyncStorage.multiRemove([
       AUTH_TOKEN_KEY,
       REFRESH_TOKEN_KEY,
@@ -225,7 +263,6 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
       '@fcm_token',
       '@fcm_token_pending',
       '@difficulty_submit_date',
-      // RECENT_PROVIDER_KEY는 로그인 화면 툴팁 표시를 위해 유지
     ]);
 
     console.log('[logout] 완료');
@@ -252,12 +289,6 @@ export const clearAllAuthData = async (): Promise<void> => {
 // 회원 탈퇴
 // ──────────────────────────────────────────────
 
-/**
- * 회원 탈퇴를 처리한다.
- *
- * FCM 토큰 해제 시 AsyncStorage 캐시(@fcm_token)를 사용한다.
- * (messaging().getToken()은 콜드 스타트 시 수 초 소요되므로 회피)
- */
 export const withdraw = async (): Promise<void> => {
   try {
     const userInfo = await getUserInfo();
@@ -274,7 +305,6 @@ export const withdraw = async (): Promise<void> => {
     }
 
     const isApple = provider === 'APPLE';
-
     let providerAccessToken = userInfo?.providerAccessToken;
     const appleAuthorizationCode = userInfo?.appleAuthorizationCode;
 
@@ -285,14 +315,12 @@ export const withdraw = async (): Promise<void> => {
         } catch (e) {
           console.warn('[withdraw][GOOGLE] signInSilently 실패:', e);
         }
-
         const tokens = await GoogleSignin.getTokens();
         providerAccessToken = tokens?.accessToken ?? providerAccessToken;
       }
 
       if (provider === 'KAKAO') {
         const tokenInfo: any = await getKakaoAccessToken();
-
         if (typeof tokenInfo === 'string') {
           providerAccessToken = tokenInfo || providerAccessToken;
         } else {
@@ -324,14 +352,11 @@ export const withdraw = async (): Promise<void> => {
       hasAppleAuthorizationCode: !!appleAuthorizationCode,
     });
 
-    // ── STEP 1. 서버 탈퇴 + 소셜 unlink 요청 ─────────────
     const requestBody: {
       unlinkSocial: boolean;
       providerAccessToken?: string;
       appleAuthorizationCode?: string;
-    } = {
-      unlinkSocial: true,
-    };
+    } = { unlinkSocial: true };
 
     if (!isApple) {
       if (providerAccessToken) {
@@ -345,27 +370,19 @@ export const withdraw = async (): Promise<void> => {
 
     await withdrawUser(userId, requestBody);
 
-    // ── STEP 2. 소셜 SDK 로그아웃 ─────────────────────────
-    try {
-      await signOutSocial(provider);
-    } catch {
-      console.warn(
-        '[withdraw] 소셜 로그아웃 실패 - 로컬 정리는 계속 진행합니다.',
-      );
-    }
+    // 소셜 로그아웃 + FCM 해제 병렬 실행
+    const cachedFcmToken =
+      (await AsyncStorage.getItem('@fcm_token')) ?? undefined;
 
-    // ── STEP 2.5. FCM 토큰 서버에서 해제 ──────────────────
-    // AsyncStorage 캐시에서 FCM 토큰을 읽어 전달 (messaging().getToken() 회피)
-    try {
-      const cachedFcmToken =
-        (await AsyncStorage.getItem('@fcm_token')) ?? undefined;
-      await unregisterFCMToken(userId, cachedFcmToken);
-      console.log('[withdraw] FCM 토큰 서버 해제 완료');
-    } catch (fcmError) {
-      console.warn('[withdraw] FCM 토큰 서버 해제 실패:', fcmError);
-    }
+    await Promise.allSettled([
+      signOutSocial(provider).catch(() =>
+        console.warn('[withdraw] 소셜 로그아웃 실패'),
+      ),
+      unregisterFCMToken(userId, cachedFcmToken).catch(e =>
+        console.warn('[withdraw] FCM 해제 실패:', e),
+      ),
+    ]);
 
-    // ── STEP 3. 로컬 데이터 일괄 삭제 ─────────────────────
     await AsyncStorage.multiRemove([
       AUTH_TOKEN_KEY,
       REFRESH_TOKEN_KEY,
