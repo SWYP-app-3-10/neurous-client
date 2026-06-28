@@ -82,16 +82,9 @@ export const signInWithGoogle = async (): Promise<SocialLoginResult> => {
     let newUser = true;
 
     try {
-      console.log('[GoogleLogin] 8. before server login');
-
       const loginResponse = await loginWithProvider('GOOGLE', {
         accessToken: googleAccessToken,
       });
-
-      console.log(
-        '[GoogleLogin] 9. after server login:',
-        JSON.stringify(loginResponse),
-      );
 
       newUser = loginResponse.data?.newUser ?? true;
 
@@ -357,12 +350,7 @@ export const initializeNaverLogin = () => {
 
 export const signInWithNaver = async (): Promise<SocialLoginResult> => {
   try {
-    console.error('[NaverLogin] 1. start');
-
     initializeNaverLogin();
-    console.error('[NaverLogin] 2. initialized');
-
-    console.error('[NaverLogin] 3. before NaverLogin.login');
 
     const loginPromise = NaverLogin.login();
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -384,11 +372,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       }
       throw timeoutError;
     }
-
-    console.error(
-      '[NaverLogin] 4. after NaverLogin.login:',
-      JSON.stringify(result),
-    );
 
     if (!result) {
       console.log('[NaverLogin] result is empty');
@@ -419,8 +402,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       result?.accessToken ||
       result?.token;
 
-    console.error('[NaverLogin] 5. accessToken exists:', !!accessToken);
-
     if (!accessToken) {
       console.error('[NaverLogin] successResponse:', result?.successResponse);
       return {
@@ -430,14 +411,7 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
       };
     }
 
-    console.log('[NaverLogin] 6. before getProfile');
-
     const profileResult = await NaverLogin.getProfile(accessToken);
-
-    console.error(
-      '[NaverLogin] 7. after getProfile:',
-      JSON.stringify(profileResult),
-    );
 
     const userInfo = {
       id: profileResult?.response?.id || '',
@@ -447,8 +421,6 @@ export const signInWithNaver = async (): Promise<SocialLoginResult> => {
     };
 
     try {
-      console.log('[NaverLogin] 8. before server login');
-
       const loginResponse = await loginWithProvider('NAVER', {
         accessToken,
         email: userInfo.email,
@@ -670,6 +642,7 @@ export const signInWithSocial = async (
 ): Promise<SocialLoginResult> => {
   switch (provider) {
     case 'GOOGLE':
+      console.error('[GoogleLogin] before signInWithGoogle');
       return signInWithGoogle();
 
     case 'KAKAO':
