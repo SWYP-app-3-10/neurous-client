@@ -240,10 +240,11 @@ client.interceptors.response.use(
         isRefreshing = false;
         onRefreshFailure(refreshError);
 
+        // 서버가 명확히 401/403을 응답한 경우만 로그아웃 처리
+        // Network Error(!refreshError.response)는 일시적 네트워크 문제이므로 로그아웃하지 않음
         if (
           refreshError.response?.status === 401 ||
-          refreshError.response?.status === 403 ||
-          !refreshError.response
+          refreshError.response?.status === 403
         ) {
           await clearAuthAndRedirect();
         }
