@@ -22,6 +22,7 @@ import { getImageUrl } from '../utils/imageUtils';
  * @property contentImg      썸네일 이미지 URL
  * @property contentCategory 카테고리 코드 (예: "ECONOMY")
  * @property contentDate     발행일
+ * @property readingTime     예상 읽기 시간 (분)
  */
 export interface MissionContent {
   contentId: number;
@@ -29,6 +30,7 @@ export interface MissionContent {
   contentImg: string;
   contentCategory: string;
   contentDate: string;
+  readingTime: number;
 }
 
 /**
@@ -797,7 +799,7 @@ export const convertMissionContentToArticle = (
     id: index, // 임시 ID
     title: content.contentTitle,
     category: categoryMap[content.contentCategory] || content.contentCategory,
-    readTime: 'n분', // 기본값 (실제 읽기 시간 있으면 사용)
+    readTime: `${content.readingTime ?? 0}분`,
     date: content.contentDate,
     imageUrl: getImageUrl(content.contentImg), // 절대 URL로 변환
     contentId: content.contentId,
