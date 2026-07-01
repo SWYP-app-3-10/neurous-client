@@ -70,6 +70,9 @@ const ArticleDetailScreen = () => {
   /** 글을 읽은 후 돌아갈 화면 ('mission' | 'search') */
   const returnTo = route.params.returnTo;
 
+  /** 홈(미션) 화면에서 진입했는지 여부 — 서버 미션 달성 카운트 처리에 사용 */
+  const isFromHome = returnTo === 'mission';
+
   /**
    * 글 오픈 방식
    * free : 무료 열람권
@@ -130,7 +133,11 @@ const ArticleDetailScreen = () => {
           return;
         }
 
-        const response = await fetchContentDetail(userInfo.userId, articleId);
+        const response = await fetchContentDetail(
+          userInfo.userId,
+          isFromHome,
+          articleId,
+        );
         if (response.data) {
           setContentDetail(response.data);
         }
@@ -143,7 +150,7 @@ const ArticleDetailScreen = () => {
     };
 
     loadContentDetail();
-  }, [articleId]);
+  }, [articleId, isFromHome]);
 
   // ──────────────────────────────────────────────
   // Effect 2: 열린 글 토스트 메시지 표시

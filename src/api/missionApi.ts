@@ -7,7 +7,6 @@
  */
 
 import client from './client';
-import { getUserInfo } from '../services/authService';
 import { getImageUrl } from '../utils/imageUtils';
 
 // ─────────────────────────────────────────────────────────────
@@ -379,38 +378,9 @@ export const fetchMissionToday = async (
 };
 
 /**
- * 오늘의 미션 목록 조회 (기존 — 하위 호환성 유지)
- *
- * [엔드포인트] GET /api/content/today/userId={userId}
- *
- * ⚠️ fetchMissionToday로 대체 예정. 신규 개발에서는 fetchMissionToday 사용 권장.
- *
- * @returns  미션 배열 (any[])
- * @throws   유저 정보 없음 / 네트워크 오류 시 에러
- */
-export const fetchMissions = async (): Promise<any[]> => {
-  try {
-    const userInfo = await getUserInfo();
-    if (!userInfo) {
-      throw new Error('사용자 정보가 없음');
-    }
-
-    const response = await client.get<any[]>(
-      `/api/content/today/userId=${userInfo.userId}`,
-    );
-    return response.data;
-  } catch (error) {
-    console.error('미션 목록 조회 실패:', error);
-    throw error;
-  }
-};
-
-/**
  * 특정 미션 조회
  *
  * [엔드포인트] GET /missions/:missionId
- *
- * ⚠️ 현재 미사용 가능성 있음. 엔드포인트 확인 필요.
  *
  * @param missionId  조회할 미션 ID
  * @returns          미션 데이터 또는 null (에러 시 null 반환)
@@ -443,26 +413,30 @@ export const updateMissionProgress = async (
 /**
  * 글 상세 정보 조회
  *
- * [엔드포인트] GET /api/content/:contentId?userId={userId}
+ * [엔드포인트] GET /api/content/:contentId?userId={userId}&isFromHome={isFromHome}
  *
  * 응답의 imageUrl을 getImageUrl 유틸로 변환해 절대 URL로 보정함.
+ * isFromHome은 홈(미션) 화면에서 진입했는지 여부를 서버에 전달해
+ * 미션 달성 카운트 처리에 사용됨.
  *
  * @param userId     현재 로그인된 유저 ID
+ * @param isFromHome 홈(미션) 화면에서 진입했는지 여부 (기본값 false)
  * @param contentId  조회할 콘텐츠 ID
  * @returns          글 상세 데이터 (이미지 URL 보정 포함)
  * @throws           네트워크 오류 또는 서버 에러 시 에러
  */
 export const fetchContentDetail = async (
   userId: number,
+  isFromHome: boolean,
   contentId: number,
 ): Promise<ContentDetailResponse> => {
   try {
     console.log(
-      `[글 상세 API] 요청: /api/content/${contentId}?userId=${userId}`,
+      `[글 상세 API] 요청: /api/content/${contentId}?userId=${userId}&isFromHome=${isFromHome}`,
     );
 
     const response = await client.get<ContentDetailResponse>(
-      `/api/content/${contentId}?userId=${userId}`,
+      `/api/content/${contentId}?userId=${userId}&isFromHome=${isFromHome}`,
     );
 
     // 이미지 URL이 상대 경로로 오는 경우 절대 URL로 변환
