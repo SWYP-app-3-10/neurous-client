@@ -176,28 +176,6 @@ export interface LevelUpInfo {
 }
 
 /**
- * 완독 체크 응답 타입
- *
- * @property levelUpInfo  레벨업 발생 시 포함 (없으면 undefined)
- * @property completed    완독 처리 성공 여부
- * @property levelUp      레벨업 발생 여부
- */
-export interface ReadStatusResponse {
-  levelUpInfo?: LevelUpInfo;
-  completed: boolean;
-  levelUp: boolean;
-}
-
-/**
- * 완독 체크 API 응답 타입
- */
-export interface ReadStatusApiResponse {
-  status: number;
-  message: string;
-  data: ReadStatusResponse;
-}
-
-/**
  * 난이도 전송 API 응답 타입
  */
 export interface SubmitDifficultyResponse {
@@ -549,49 +527,6 @@ export const purchaseContentWithAd = async (
     console.error('[광고 구매 API] 에러:', error);
     if (error.response) {
       console.error('[광고 구매 API] 서버 응답:', {
-        status: error.response.status,
-        data: error.response.data,
-      });
-    }
-    throw error;
-  }
-};
-
-/**
- * 완독 여부 체크
- *
- * [엔드포인트] POST /api/content/:contentId/read-status?userId={userId}
- *
- * 유저가 글을 읽는 동안 주기적으로, 그리고 읽기 완료 시 호출.
- * 서버가 체류 시간과 완독 여부를 기반으로 경험치/포인트를 지급하고
- * 레벨업 여부를 응답에 포함함.
- *
- * @param userId       현재 로그인된 유저 ID
- * @param contentId    읽고 있는 콘텐츠 ID
- * @param staySeconds  현재까지의 체류 시간 (초)
- * @param isCompleted  완독 완료 여부
- * @returns            완독 처리 결과 및 레벨업 정보
- * @throws             네트워크 오류 또는 서버 에러 시 에러
- */
-export const checkReadStatus = async (
-  userId: number,
-  contentId: number,
-  staySeconds: number,
-  isCompleted: boolean,
-): Promise<ReadStatusApiResponse> => {
-  try {
-    const response = await client.post<ReadStatusApiResponse>(
-      `/api/content/${contentId}/read-status?userId=${userId}`,
-      {
-        staySeconds,
-        isCompleted,
-      },
-    );
-    return response.data;
-  } catch (error: any) {
-    console.error('[완독 체크 API] 에러:', error);
-    if (error.response) {
-      console.error('[완독 체크 API] 서버 응답:', {
         status: error.response.status,
         data: error.response.data,
       });

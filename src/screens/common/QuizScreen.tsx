@@ -60,12 +60,7 @@ import {
   checkCanSubmitDifficulty,
 } from '../../hooks/useDifficultySubmit';
 import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
-import {
-  fetchQuiz,
-  QuizResponse,
-  submitQuiz,
-  checkReadStatus,
-} from '../../api/missionApi';
+import { fetchQuiz, QuizResponse, submitQuiz } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logEvent, logScreenView } from '../../services/analyticsService';
@@ -164,9 +159,6 @@ const QuizScreen: React.FC = () => {
   /** 퀴즈 제출 중인지 여부 (버튼 연타로 인한 중복 제출 방지) */
   const isSubmittingQuizRef = useRef(false);
 
-  /** 완독 여부 체크 API를 이미 호출했는지 여부 (중복 호출 방지) */
-  const hasCheckedReadStatusRef = useRef(false);
-
   // ──────────────────────────────────────────────
   // Effect 1: 화면 상태에 따른 analytics 로그
   // ──────────────────────────────────────────────
@@ -246,15 +238,13 @@ const QuizScreen: React.FC = () => {
    *
    * 이유:
    *   - 같은 QuizScreen에서 다른 글의 퀴즈를 풀 수 있음
-   *   - 글마다 완독 체크와 제출 처리는 독립적으로 실행되어야 함
+   *   - 글마다 제출 처리는 독립적으로 실행되어야 함
    *
    * 리셋 항목:
    *   - 퀴즈 제출 진행 여부
-   *   - 완독 여부 체크 API 호출 여부
    */
   useEffect(() => {
     isSubmittingQuizRef.current = false;
-    hasCheckedReadStatusRef.current = false;
   }, [articleId]);
 
   // ──────────────────────────────────────────────
@@ -477,43 +467,7 @@ const QuizScreen: React.FC = () => {
       }
 
       // ──────────────────────────────────────────────
-      // Step 1: 퀴즈 제출 시점에 완독 체크
-      // ──────────────────────────────────────────────
-
-      /**
-       * 사용자가 퀴즈를 제출했다면 글을 읽고 퀴즈까지 진행한 것으로 판단한다.
-       *
-       * readTimeSeconds:
-       *   - 타이머 기반 읽기 시간 감지는 제거했으므로 0으로 전달
-       *
-       * isCompleted:
-       *   - 퀴즈 제출 시점이므로 true 전달
-       */
-      if (!hasCheckedReadStatusRef.current) {
-        hasCheckedReadStatusRef.current = true;
-
-        try {
-          const readStatusResponse = await checkReadStatus(
-            userInfo.userId,
-            articleId,
-            0,
-            true,
-          );
-
-          console.log(
-            '[QuizScreen] 퀴즈 제출 시 완독 체크 완료:',
-            readStatusResponse.data,
-          );
-        } catch (readStatusError) {
-          console.error(
-            '[QuizScreen] 퀴즈 제출 시 완독 체크 실패:',
-            readStatusError,
-          );
-        }
-      }
-
-      // ──────────────────────────────────────────────
-      // Step 2: 퀴즈 제출 API 호출
+      // 퀴즈 제출 API 호출
       // ──────────────────────────────────────────────
 
       const submitRequest = {
