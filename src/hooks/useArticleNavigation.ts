@@ -280,7 +280,7 @@ export const useArticleNavigation = ({
 
           showModal({
             title: '광고를 보고 포인트 받으시겠어요?',
-            description: `부족한 포인트: ${currentPoints}p`,
+            description: `부족한 포인트:${ARTICLE_READ_POINT_COST - currentPoints}p`,
             descriptionColor: COLORS.gray600,
             closeButton: true,
             children: React.createElement(ArticlePointModalContentGet),
