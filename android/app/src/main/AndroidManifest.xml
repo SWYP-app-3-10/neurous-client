@@ -18,6 +18,10 @@
     android:networkSecurityConfig="@xml/network_security_config"
     android:theme="@style/AppTheme">
     
+    <meta-data
+    android:name="com.google.firebase.messaging.default_notification_icon"
+    android:resource="@drawable/ic_notification" />
+    
     <property
       android:name="android.supports_16kb_page_size"
       android:value="true" />
