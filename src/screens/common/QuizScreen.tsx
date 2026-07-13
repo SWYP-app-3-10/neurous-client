@@ -21,9 +21,9 @@
  *   3. 퀴즈 데이터 로드 (fetchQuiz API)
  *   4. 사용자가 선택지 선택
  *   5. "다음" 버튼 클릭 → 완독 체크 API 호출 → submitQuiz API 호출
- *   6. 포인트/경험치 지급 (로컬 상태) → 리워드 팝업 표시
- *   7. 리워드 팝업 "확인" 클릭 → 정답 체크 화면으로 전환
- *   8. "완료" 버튼 클릭 → 원래 화면으로 이동 (mission 또는 search)
+ *   6. 포인트/경험치 지급 (로컬 상태) → 정답 체크 화면으로 전환
+ *   7. "완료" 버튼 클릭 → 리워드 팝업 표시
+ *   8. 리워드 팝업 "확인" 클릭 → 팝업 제거 후 원래 화면으로 이동 (mission 또는 search)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -525,31 +525,10 @@ const QuizScreen: React.FC = () => {
       }
 
       // ──────────────────────────────────────────────
-      // Step 4: 리워드 팝업 표시
+      // Step 4: 정답 체크 화면으로 전환
       // ──────────────────────────────────────────────
 
-      // 포인트 & 경험치 획득 모달 표시
-      // "확인" 클릭 시 정답 체크 화면으로 전환
-      showModal({
-        title: '포인트 & 경험치 획득!',
-        image: <Modal_IMG />,
-        titleStyle: {
-          ...Heading_20EB_Round,
-        },
-        titleDescriptionGapSize: scaleWidth(20),
-        children: React.createElement(ExperienceModalContent, {
-          point: true,
-          correct: quizResultResponse.isAnswerCorrect,
-        }),
-        primaryButton: {
-          title: '확인',
-          onPress: () => {
-            // 모달 닫기 (hideModal은 모달 컴포넌트에서 처리)
-          },
-        },
-      });
-
-      // 정답 체크 화면으로 전환
+      // 정답 체크 화면으로 전환 (리워드 팝업은 "완료" 버튼 클릭 시 표시)
       setQuizState('feedback');
     } catch (error: any) {
       console.error('[퀴즈] 제출 실패:', error);
@@ -562,17 +541,37 @@ const QuizScreen: React.FC = () => {
   // ──────────────────────────────────────────────
 
   /**
-   * "완료" 버튼 클릭 시 원래 화면으로 이동한다.
+   * "완료" 버튼 클릭 시 리워드 팝업을 표시한다.
    *
-   * 난이도 피드백 모달은 퀴즈 화면 진입 시점(Effect 4)에서 처리하므로
-   * 완료 버튼에서는 화면 이동만 수행한다.
+   * 처리 흐름:
+   *   1. 리워드 팝업 표시
+   *   2. 팝업 "확인" 클릭 → 팝업 제거 후 원래 화면으로 이동
    */
   const handleComplete = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    navigation.dispatch(createQuizCompleteNavigation(returnTo));
+    showModal({
+      title: '포인트 & 경험치 획득!',
+      image: <Modal_IMG />,
+      titleStyle: {
+        ...Heading_20EB_Round,
+      },
+      titleDescriptionGapSize: scaleWidth(20),
+      children: React.createElement(ExperienceModalContent, {
+        point: true,
+        correct: quizResult?.isAnswerCorrect ?? false,
+      }),
+      primaryButton: {
+        title: '확인',
+        onPress: () => {
+          // 모달 닫기 (hideModal은 모달 컴포넌트에서 처리)
+          // 팝업 확인 후 이전 화면으로 이동
+          navigation.dispatch(createQuizCompleteNavigation(returnTo));
+        },
+      },
+    });
   };
 
   // ──────────────────────────────────────────────
