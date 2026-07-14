@@ -45,25 +45,24 @@ type IntroSlide = {
 const INTRO_SLIDES: IntroSlide[] = [
   {
     id: 0,
-    title: '미션을 확인하고 관심 있는\n분야의 글을 읽어보세요',
+    title: '미션과 추천 글로\n읽기를 시작해보세요',
     description:
-      '관심 있는 분야의 글을 추천받고, 오늘의 미션을\n수행하며 경험치와 포인트를 모아보세요',
+      '관심 있는 분야의 글을 추천받고, 오늘의\n미션을 수행하며 읽기를 이어가 보세요.',
     eventName: 'Next_Onboarding_Function01_CardList',
     Illustration: Intro_CardList,
   },
   {
     id: 1,
-    title: '레벨업하며 성장하는\n캐릭터를 확인해보세요',
+    title: '읽을수록 성장하는\n캐릭터를 만나보세요',
     description:
-      '활동을 통해 경험치를 모으면 레벨이 오르고\n새로운 캐릭터를 만날 수 있어요',
+      '글을 읽고 경험치를 모으면 레벨이\n오르고 새로운 캐릭터를 만날 수 있어요.',
     eventName: 'Next_Onboarding_Function02_Character',
     Illustration: Intro_Function,
   },
   {
     id: 2,
-    title: '다양한 주제의 글을 탐색하며\n낯선 글에 도전해보세요',
-    description:
-      '관심 있는 주제부터 새로운 분야까지,\n다양한 글을 탐색해보세요',
+    title: '다양한 주제의 글을\n탐색해보세요',
+    description: '경제, 사회, IT/과학 등\n다양한 분야의 글을 읽어보세요.',
     eventName: 'Next_Onboarding_Function03_Explore',
     Illustration: Intro_Search,
   },
