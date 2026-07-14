@@ -402,9 +402,7 @@ const LoginScreen = () => {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.logoText}>
-          일상의 틈, 언제든 시작하는 문해력 미션
-        </Text>
+        <Text style={styles.logoText}>일상의 틈, 부담 없이 이어가는 읽기</Text>
 
         <View style={styles.buttonContainer}>
           <SocialLoginButton
