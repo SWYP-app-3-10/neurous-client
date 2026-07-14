@@ -605,7 +605,7 @@ const CharacterScreen = () => {
               activeOpacity={1}
             >
               <View style={styles.levelCriteriaLinkWrapper}>
-                <Text style={styles.levelCriteriaLink}>레벨 기준 확인하기</Text>
+                <Text style={styles.levelCriteriaLink}>성장 가이드 보기</Text>
               </View>
             </TouchableOpacity>
           </View>
