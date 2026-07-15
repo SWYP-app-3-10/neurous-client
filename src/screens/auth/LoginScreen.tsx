@@ -110,18 +110,16 @@ const LoginScreen = () => {
           const { isExistingUser } = waitingForSettingsRef.current;
           waitingForSettingsRef.current = { isWaiting: false };
 
-          // 알림 수신 설정 서버 동기화 (백그라운드 — 화면 전환 블로킹 없음)
-          getUserInfo()
-            .then(async userInfo => {
-              if (userInfo?.userId) {
-                const shouldShowModal = await checkNotiPermission();
-                await updateNotificationStatus(
-                  userInfo.userId,
-                  !shouldShowModal,
-                );
-              }
-            })
-            .catch(() => console.warn('[AppState] 알림 수신 설정 동기화 실패'));
+          // 알림 수신 설정 서버 동기화 (화면 전환 전에 완료 보장 — 먼저 화면이 사라지면 Network Error 발생)
+          try {
+            const userInfo = await getUserInfo();
+            if (userInfo?.userId) {
+              const shouldShowModal = await checkNotiPermission();
+              await updateNotificationStatus(userInfo.userId, !shouldShowModal);
+            }
+          } catch {
+            console.warn('[AppState] 알림 수신 설정 동기화 실패');
+          }
 
           if (isExistingUser) {
             await completeOnboarding();
@@ -222,19 +220,16 @@ const LoginScreen = () => {
        * 로그인 체감 속도를 개선한다.
        */
       const syncAndProceed = async () => {
-        // 서버 동기화 (백그라운드 — 화면 전환 블로킹 없음)
-        getUserInfo()
-          .then(async userInfo => {
-            if (userInfo?.userId) {
-              const shouldShowModal = await checkNotiPermission();
-              await updateNotificationStatus(userInfo.userId, !shouldShowModal);
-            }
-          })
-          .catch(() =>
-            console.warn(
-              '[handleNotificationModal] 알림 수신 설정 동기화 실패',
-            ),
-          );
+        // 알림 수신 설정 서버 동기화 (화면 전환 전에 완료 보장 — 먼저 화면이 사라지면 Network Error 발생)
+        try {
+          const userInfo = await getUserInfo();
+          if (userInfo?.userId) {
+            const shouldShowModal = await checkNotiPermission();
+            await updateNotificationStatus(userInfo.userId, !shouldShowModal);
+          }
+        } catch {
+          console.warn('[handleNotificationModal] 알림 수신 설정 동기화 실패');
+        }
 
         await proceedNext();
       };
@@ -402,7 +397,9 @@ const LoginScreen = () => {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.logoText}>일상의 틈, 부담 없이 이어가는 읽기</Text>
+        <Text style={styles.logoText}>
+          일상의 틈, 언제든 시작하는 문해력 미션
+        </Text>
 
         <View style={styles.buttonContainer}>
           <SocialLoginButton
