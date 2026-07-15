@@ -138,6 +138,22 @@ client.interceptors.request.use(
 );
 
 // ─────────────────────────────────────────────────────────────
+// Network Error 재시도
+// ─────────────────────────────────────────────────────────────
+
+/** 응답 자체를 못 받은 경우(Network Error, 타임아웃) 최대 재시도 횟수 */
+const MAX_NETWORK_RETRY = 2;
+
+/** ms만큼 대기 */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * 서버 응답을 아예 못 받은 요청인지 판별한다.
+ * (4xx/5xx처럼 서버가 응답한 에러는 재시도 대상이 아님)
+ */
+const isNoResponseError = (error: AxiosError) => !error.response;
+
+// ─────────────────────────────────────────────────────────────
 // Response Interceptor
 // ─────────────────────────────────────────────────────────────
 
@@ -163,8 +179,31 @@ client.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as
-      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | (InternalAxiosRequestConfig & {
+          _retry?: boolean;
+          _retryCount?: number;
+        })
       | undefined;
+
+    // ── Network Error / 타임아웃 재시도 ──────────────────────
+    // 서버 응답 자체를 못 받은 경우(간헐적 커넥션 실패 등) 짧은 대기 후 재시도.
+    // 4xx/5xx처럼 서버가 실제로 응답한 에러는 재시도하지 않는다.
+    if (originalRequest && isNoResponseError(error)) {
+      const retryCount = originalRequest._retryCount || 0;
+
+      if (retryCount < MAX_NETWORK_RETRY) {
+        originalRequest._retryCount = retryCount + 1;
+
+        if (__DEV__) {
+          console.warn(
+            `[네트워크 재시도] ${retryCount + 1}/${MAX_NETWORK_RETRY} - ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`,
+          );
+        }
+
+        await delay(500 * (retryCount + 1)); // 500ms, 1000ms ...
+        return client(originalRequest);
+      }
+    }
 
     // ── 401 / 403 처리 ───────────────────────────────────────
     if (
