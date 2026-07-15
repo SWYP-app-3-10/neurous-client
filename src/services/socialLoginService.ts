@@ -642,19 +642,19 @@ export const signInWithSocial = async (
 ): Promise<SocialLoginResult> => {
   switch (provider) {
     case 'GOOGLE':
-      console.error('[GoogleLogin] before signInWithGoogle');
+      console.log('[GoogleLogin] before signInWithGoogle');
       return signInWithGoogle();
 
     case 'KAKAO':
-      console.error('[KakaoLogin] before signInWithKakao');
+      console.log('[KakaoLogin] before signInWithKakao');
       return signInWithKakao();
 
     case 'NAVER':
-      console.error('[NaverLogin] before signInWithNaver');
+      console.log('[NaverLogin] before signInWithNaver');
       return signInWithNaver();
 
     case 'APPLE':
-      console.error('[AppleLogin] before signInWithApple');
+      console.log('[AppleLogin] before signInWithApple');
       return signInWithApple();
 
     default:
