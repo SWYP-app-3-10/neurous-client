@@ -26,7 +26,6 @@ import ToastModal from '../components/ToastModal';
 
 import { useExperienceStore } from '../store/experienceStore';
 import { characterKeys } from '../hooks/useCharacter';
-import { missionKeys } from '../hooks/useMissions';
 import { LevelUpModalContent } from '../components/ArticlePointModalContent';
 import { useQueryClient } from '@tanstack/react-query';
 import { Heading_24EB_Round } from '../styles/typography';
@@ -83,8 +82,8 @@ const RootNavigatorContent: React.FC<{
             routes: [{ name: RouteNames.MAIN_TAB }],
           }),
         );
-        // 온보딩 완료 후 미션 쿼리 무효화하여 자동으로 refetch되도록 함
-        queryClient.invalidateQueries({ queryKey: missionKeys.lists() });
+        // useMissions가 refetchOnMount: true라 MissionScreen 마운트 시 자동 refetch됨
+        // (중복 invalidateQueries 호출 시 마운트 시점과 겹쳐 요청이 겹치는 레이스 발생 가능하여 제거)
       } else if (!isOnboardingCompleted && prevOnboardingCompletedRef.current) {
         // 온보딩 미완료로 변경됨 (401 에러 등) → 로그인 화면으로 이동
         navigationRef.current.dispatch(
