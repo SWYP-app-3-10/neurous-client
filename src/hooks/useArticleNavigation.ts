@@ -35,6 +35,10 @@ import {
 import { getUserInfo } from '../services/authService';
 import { usePointStore } from '../store/pointStore';
 import { logEvent, logScreenView } from '../services/analyticsService';
+import {
+  trackEvent,
+  ArticleEntrySource,
+} from '../services/mixpanelService';
 
 /**
  * 아티클 읽기 후 돌아갈 화면
@@ -46,10 +50,13 @@ type ReturnTo = 'mission' | 'search';
 /**
  * useArticleNavigation 훅 옵션
  *
- * @property returnTo  아티클 읽기 완료 후 돌아갈 화면
+ * @property returnTo     아티클 읽기 완료 후 돌아갈 화면
+ * @property entrySource  진입 경로 (Mixpanel article_start의 entry_source)
+ *                        home: 홈 추천 글 / explore: 탐색 / search: 검색 결과
  */
 interface UseArticleNavigationOptions {
   returnTo: ReturnTo;
+  entrySource: ArticleEntrySource;
 }
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -70,6 +77,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
  */
 export const useArticleNavigation = ({
   returnTo,
+  entrySource,
 }: UseArticleNavigationOptions): {
   handleArticlePress: (articleId: number, isRead?: boolean) => void;
 } => {
@@ -94,7 +102,7 @@ export const useArticleNavigation = ({
    * 5-C. 포인트 부족 → 광고 시청 안내 모달 → AdLoading 이동
    */
   const handleArticlePress = useCallback(
-    async (articleId: number, isRead?: boolean) => {
+    async (articleId: number, isRead?: boolean, category?: string) => {
       // 이미 읽은 글이면 접근 권한 확인 없이 바로 이동
       if (isRead === true) {
         console.log(
@@ -104,6 +112,7 @@ export const useArticleNavigation = ({
           screen: RouteNames.READ_ARTICLE_DETAIL,
           params: {
             articleId,
+            entrySource,
           },
         });
         return;
@@ -157,6 +166,7 @@ export const useArticleNavigation = ({
               articleId,
               returnTo,
               openType: 'free',
+              entrySource,
             },
           });
 
@@ -169,6 +179,10 @@ export const useArticleNavigation = ({
           // 포인트 충분 → 포인트 사용 확인 모달
           // ───────────────────────────────────────────
           await logScreenView('Popup_Reading', undefined, true);
+          trackEvent('point_use_popup_view', {
+            article_id: articleId,
+            category,
+          });
           isProcessingRef.current = false; // 모달 표시 시점에 처리 완료 → 모달 내 버튼 클릭 허용
 
           showModal({
@@ -205,6 +219,12 @@ export const useArticleNavigation = ({
                 }
 
                 isProcessingRef.current = true;
+
+                // 포인트 사용해 글 읽기 선택
+                trackEvent('point_use_confirm', {
+                  article_id: articleId,
+                  category,
+                });
 
                 // 구매 처리 중 로딩 모달 표시
                 showModal({
@@ -248,6 +268,7 @@ export const useArticleNavigation = ({
                       articleId,
                       returnTo,
                       openType: 'point',
+                      entrySource,
                     },
                   });
                 } catch (error: any) {
@@ -276,6 +297,10 @@ export const useArticleNavigation = ({
           // 포인트 부족 → 광고 시청 안내 모달
           // ───────────────────────────────────────────
           await logScreenView('Popup_Advertisement', undefined, true);
+          trackEvent('ad_popup_view', {
+            article_id: articleId,
+            category,
+          });
           isProcessingRef.current = false; // 모달 표시 시점에 처리 완료 → 모달 내 버튼 클릭 허용
 
           showModal({
@@ -295,6 +320,7 @@ export const useArticleNavigation = ({
                   params: {
                     articleId,
                     returnTo,
+                    entrySource,
                   },
                 });
               },

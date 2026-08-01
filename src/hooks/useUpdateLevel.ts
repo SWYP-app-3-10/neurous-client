@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { getUserInfo } from '../services/authService';
 import { updateUserLevel } from '../api/userApi';
-import { LevelCategory } from '../types/interests';
+import { LevelCategory, LevelCategoryNames } from '../types/interests';
 import { MyPageData } from '../api/userApi';
+import { trackEvent } from '../services/mixpanelService';
 
 /**
  * useUpdateLevel 훅에 주입하는 props
@@ -15,6 +16,8 @@ interface UseUpdateLevelProps {
   setMyPageData: React.Dispatch<React.SetStateAction<MyPageData | null>>;
   onSuccess?: () => void;
   onError?: (error: any) => void;
+  /** 변경 전 현재 난이도 (Mixpanel difficulty_changed 이벤트용) */
+  currentLevel?: LevelCategory | null;
 }
 
 /**
@@ -32,6 +35,7 @@ export const useUpdateLevel = ({
   setMyPageData,
   onSuccess,
   onError,
+  currentLevel,
 }: UseUpdateLevelProps) => {
   /**
    * 선택된 난이도를 서버에 저장하고 로컬 상태를 동기화한다.
@@ -54,6 +58,14 @@ export const useUpdateLevel = ({
         // 서버에 난이도 변경 요청
         await updateUserLevel(userInfo.userId, level);
 
+        // Mixpanel: 난이도 실제 변경 (마이페이지에서 변경 시)
+        if (currentLevel && currentLevel !== level) {
+          trackEvent('difficulty_changed', {
+            difficulty_before: LevelCategoryNames[currentLevel],
+            difficulty_after: LevelCategoryNames[level],
+          });
+        }
+
         // API 성공 시 로컬 state 즉시 반영 (재요청 없이 UI 갱신)
         setMyPageData(prev => {
           if (prev) {
@@ -70,8 +82,8 @@ export const useUpdateLevel = ({
         onError?.(error);
       }
     },
-    // setMyPageData, onSuccess, onError가 바뀔 때만 함수 재생성
-    [setMyPageData, onSuccess, onError],
+    // setMyPageData, onSuccess, onError, currentLevel이 바뀔 때만 함수 재생성
+    [setMyPageData, onSuccess, onError, currentLevel],
   );
 
   return { handleUpdateLevel };

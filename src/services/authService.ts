@@ -22,6 +22,7 @@ import {
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAccessToken as getKakaoAccessToken } from '@react-native-seoul/kakao-login';
+import { identifyUser, resetUser } from './mixpanelService';
 
 export interface AuthStatus {
   isAuthenticated: boolean;
@@ -163,6 +164,13 @@ export const saveAuthData = async (data: {
     if (pairs.length > 0) {
       await AsyncStorage.multiSet(pairs);
     }
+
+    // 로그인 성공 → Mixpanel에 회원 식별 (실패해도 로그인 흐름에 영향 없음)
+    if (data.userInfo?.userId) {
+      identifyUser(data.userInfo.userId).catch(() =>
+        console.warn('[saveAuthData] Mixpanel identify 실패'),
+      );
+    }
   } catch (error) {
     console.error('인증 데이터 일괄 저장 실패:', error);
   }
@@ -268,6 +276,9 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
       '@difficulty_submit_date',
       '@alarm_enabled',
     ]);
+
+    // Mixpanel 사용자 식별 초기화
+    resetUser();
 
     console.log('[logout] 완료');
   } catch (error) {
@@ -396,6 +407,9 @@ export const withdraw = async (): Promise<void> => {
       '@difficulty_submit_date',
       '@alarm_enabled',
     ]);
+
+    // Mixpanel 사용자 식별 초기화
+    resetUser();
 
     console.log('[withdraw] 완료');
   } catch (error: any) {

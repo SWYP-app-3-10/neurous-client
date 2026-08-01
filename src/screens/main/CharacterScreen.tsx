@@ -82,6 +82,7 @@ import {
 } from '../../hooks/useCharacter';
 import { ActivityIndicator } from 'react-native';
 import { logEvent } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 // ──────────────────────────────────────────────
 // 상수 정의
@@ -295,6 +296,19 @@ const CharacterScreen = () => {
     const match = userGrowthInfo.levelEnum.match(/LEVEL_(\d+)/);
     return match ? parseInt(match[1], 10) : 1;
   }, [userGrowthInfo?.levelEnum]);
+
+  /**
+   * Mixpanel: '나의 레벨' 화면 진입 (탭 포커스 시 1회)
+   *
+   * currentLevel useMemo 이후에 선언해야 TDZ 문제 없이 레벨 값을 참조할 수 있다.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      trackEvent('character_growth_view', {
+        character_level: currentLevel,
+      });
+    }, [currentLevel]),
+  );
 
   /** 현재 경험치 */
   const currentExp = userGrowthInfo?.currentExp ?? 0;

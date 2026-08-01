@@ -31,6 +31,7 @@ import { AD_REWARD_POINTS } from '../../config/rewards';
 import { purchaseContentWithAd } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import { REWARDED_AD_UNIT_ID } from '../../config/adConfig';
+import { trackEvent } from '../../services/mixpanelService';
 
 type NavigationProp = NativeStackNavigationProp<FullScreenStackParamList>;
 
@@ -50,6 +51,10 @@ const AdLoadingScreen = () => {
   /** 글을 읽은 후 돌아갈 화면 ('mission' | 'search' 등) */
   const returnTo = (route.params as FullScreenStackParamList['ad-loading'])
     ?.returnTo;
+
+  /** 진입 경로 (Mixpanel article_start용, ArticleDetail로 전달) */
+  const entrySource = (route.params as FullScreenStackParamList['ad-loading'])
+    ?.entrySource;
 
   // ──────────────────────────────────────────────
   // 리워드 광고 훅
@@ -260,8 +265,13 @@ const AdLoadingScreen = () => {
     if (hasEarnedReward && !hasAddedPointsRef.current) {
       hasAddedPointsRef.current = true;
       addPoints(AD_REWARD_POINTS);
+
+      // Mixpanel: 광고 시청 완료
+      trackEvent('ad_watch_complete', {
+        article_id: articleId,
+      });
     }
-  }, [hasEarnedReward, addPoints]);
+  }, [hasEarnedReward, addPoints, articleId]);
 
   // ──────────────────────────────────────────────
   // Effect 6: 콘텐츠 구매 API 호출
@@ -321,6 +331,7 @@ const AdLoadingScreen = () => {
             articleId,
             returnTo,
             openType: 'ad',
+            entrySource,
           });
         } catch (purchaseError: any) {
           console.error('[AdLoadingScreen] 광고 구매 에러:', purchaseError);
@@ -335,7 +346,15 @@ const AdLoadingScreen = () => {
     };
 
     handlePurchase();
-  }, [hasEarnedReward, isClosed, isAdShowing, articleId, navigation, returnTo]);
+  }, [
+    hasEarnedReward,
+    isClosed,
+    isAdShowing,
+    articleId,
+    navigation,
+    returnTo,
+    entrySource,
+  ]);
 
   // ──────────────────────────────────────────────
   // Effect 7: 광고 중간 이탈 처리

@@ -13,6 +13,7 @@ import {
   MissionContent,
 } from '../api/missionApi';
 import { getUserInfo } from '../services/authService';
+import { trackEvent } from '../services/mixpanelService';
 
 // ─────────────────────────────────────────────────────────────
 // Query Keys
@@ -59,6 +60,16 @@ export const missionKeys = {
  * [refetch 설정]
  * refetchOnMount: true — 화면 진입 시마다 최신 미션 상태 반영
  */
+/**
+ * 세션 내 미션 완료 상태 추적 맵 (Mixpanel mission_complete 감지용)
+ *
+ * key: missionType, value: isCompleted
+ * 이전 조회에서 미완료였던 미션이 완료로 바뀐 순간을 감지해 이벤트를 보낸다.
+ * 첫 조회는 기준값 저장만 하고 이벤트를 보내지 않는다
+ * (이전 세션에서 이미 완료된 미션의 중복 전송 방지).
+ */
+const missionCompletionMap = new Map<string, boolean>();
+
 export const useMissions = () => {
   return useQuery<{ missions: any[]; contents: MissionContent[] }, Error>({
     queryKey: missionKeys.lists(),
@@ -69,6 +80,17 @@ export const useMissions = () => {
       }
 
       const response = await fetchMissionToday(userInfo.userId);
+
+      // Mixpanel: 미완료 → 완료로 바뀐 미션 감지
+      (response.data.missions || []).forEach(mission => {
+        const prev = missionCompletionMap.get(mission.missionType);
+        if (prev === false && mission.isCompleted) {
+          trackEvent('mission_complete', {
+            mission_type: mission.missionType?.toLowerCase(),
+          });
+        }
+        missionCompletionMap.set(mission.missionType, mission.isCompleted);
+      });
 
       // 서버 응답의 missions 배열을 화면용 형태로 변환
       const missions = response.data.missions

@@ -47,6 +47,9 @@ import { FullScreenStackRouteProp } from '../../navigation/types';
 import { RouteNames } from '../../../routes';
 import { fetchReadContentDetail, ReadContentDetail } from '../../api/userApi';
 import { getUserInfo } from '../../services/authService';
+import { trackEvent } from '../../services/mixpanelService';
+import { useOnboardingStore } from '../../store/onboardingStore';
+import { LevelCategoryNames } from '../../types/interests';
 
 // ──────────────────────────────────────────────
 // 상수 정의
@@ -147,6 +150,17 @@ const ReadArticleDetailScreen = () => {
         );
         if (response.data) {
           setContentDetail(response.data);
+
+          // Mixpanel: 콘텐츠 상세 페이지 진입 (읽은 글)
+          const userDifficulty = useOnboardingStore.getState().difficulty;
+          trackEvent('article_start', {
+            article_id: contentId,
+            category: response.data.content?.categoryName,
+            difficulty: userDifficulty
+              ? LevelCategoryNames[userDifficulty]
+              : null,
+            entry_source: route.params?.entrySource,
+          });
         }
       } catch (err: any) {
         console.error('[읽은 글 상세] 로드 실패:', err);

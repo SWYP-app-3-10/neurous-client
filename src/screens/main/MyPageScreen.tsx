@@ -85,6 +85,7 @@ import {
   convertMyPageContentsToReadArticles,
 } from '../../utils/myPageUtils';
 import { logEvent, logScreenView } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -184,6 +185,7 @@ const MyPageScreen = () => {
    */
   const { handleUpdateLevel } = useUpdateLevel({
     setMyPageData,
+    currentLevel: myPageData?.level ?? null,
     onSuccess: () => {
       hideModal();
       showToastModal({
@@ -217,6 +219,9 @@ const MyPageScreen = () => {
   useFocusEffect(
     useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+
+      // Mixpanel: 마이페이지 탭 진입 (진입 시 1회)
+      trackEvent('my_page_view');
     }, []),
   );
 
@@ -472,6 +477,7 @@ const MyPageScreen = () => {
                       screen: RouteNames.READ_ARTICLE_DETAIL,
                       params: {
                         articleId,
+                        entrySource: 'my_page',
                       },
                     });
                 }}

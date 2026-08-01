@@ -1,5 +1,5 @@
 // CriteriaCheckScreen.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import Header from '../../../components/Header';
 import { COLORS, BORDER_RADIUS, scaleWidth } from '../../../styles/global';
 import { Body_16SB, Heading_16B } from '../../../styles/typography';
 import { logEvent } from '../../../services/analyticsService';
+import { trackEvent } from '../../../services/mixpanelService';
 
 /** 상단 세그먼트 탭 키 */
 type TabKey = 'LEVEL' | 'POINT';
@@ -26,6 +27,17 @@ type TabKey = 'LEVEL' | 'POINT';
 const CriteriaCheckScreen = () => {
   /** 현재 선택된 탭 상태 */
   const [tab, setTab] = useState<TabKey>('LEVEL');
+
+  /**
+   * Mixpanel: 성장 가이드 화면 진입 (탭 변경 시에도 발생)
+   *
+   * tab 값 매핑: LEVEL → level (레벨 가이드), POINT → xp_point (경험치·포인트 가이드)
+   */
+  useEffect(() => {
+    trackEvent('growth_guide_view', {
+      tab: tab === 'LEVEL' ? 'level' : 'xp_point',
+    });
+  }, [tab]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

@@ -6,6 +6,8 @@ import { queryClient } from './src/config/queryClient';
 import { useOnboardingStore } from './src/store/onboardingStore';
 import { Platform, StatusBar } from 'react-native';
 import { usePushNotification } from './src/hooks/usePushNotification';
+import { initMixpanel } from './src/services/mixpanelService';
+import { getUserInfo } from './src/services/authService';
 
 const App = () => {
   const loadOnboardingStatus = useOnboardingStore(
@@ -44,6 +46,13 @@ const App = () => {
     const initializeAppData = async () => {
       try {
         await Promise.all([loadOnboardingStatus()]);
+
+        // Mixpanel 초기화 (이미 로그인된 경우 회원 ID로 identify)
+        // 실패해도 앱 실행에 영향 없도록 await하지 않음
+        getUserInfo()
+          .then(userInfo => initMixpanel(userInfo?.userId))
+          .catch(e => console.warn('Mixpanel 초기화 실패:', e));
+
         setIsInitialized(true);
       } catch (error) {
         console.error('앱 초기화 중 오류:', error);

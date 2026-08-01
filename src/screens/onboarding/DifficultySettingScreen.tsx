@@ -31,7 +31,7 @@ import {
   useCompleteOnboarding,
   useOnboardingStore,
 } from '../../store/onboardingStore';
-import { LevelCategory } from '../../types/interests';
+import { LevelCategory, LevelCategoryNames } from '../../types/interests';
 import { ProgressBar } from '../../components';
 import {
   Body_15M,
@@ -48,6 +48,7 @@ import { getUserInfo } from '../../services/authService';
 import { updateUserLevel } from '../../api/userApi';
 import { useDifficultyInfo } from '../../hooks/useDifficultyInfo';
 import { logEvent, logScreenView } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 const DifficultySettingScreen = () => {
   // ──────────────────────────────────────────────
@@ -160,6 +161,11 @@ const DifficultySettingScreen = () => {
     console.log('[난이도 업데이트] API 호출 시작');
     await updateUserLevel(userInfo.userId, selectedDifficulty);
     console.log('[난이도 업데이트] API 호출 성공');
+
+    // Mixpanel: 온보딩 난이도 최초 선택
+    trackEvent('difficulty_selected', {
+      difficulty: LevelCategoryNames[selectedDifficulty],
+    });
 
     // 온보딩 완료 처리
     await completeOnboarding();

@@ -74,6 +74,7 @@ import { useExperienceStore } from '../../store/experienceStore';
 import IconButton from '../../components/IconButton';
 import { AlarmIcon, Modal_IMG } from '../../icons';
 import { logEvent, logScreenView } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 // ──────────────────────────────────────────────
 // 상수 정의
@@ -166,7 +167,10 @@ const MissionScreen = () => {
   // ──────────────────────────────────────────────
 
   /** 아티클 클릭 핸들러 (글 읽기 화면으로 이동) */
-  const { handleArticlePress } = useArticleNavigation({ returnTo: 'mission' });
+  const { handleArticlePress } = useArticleNavigation({
+    returnTo: 'mission',
+    entrySource: 'home',
+  });
 
   const showModal = useShowModal();
   const showToastModal = useShowToastModal();
@@ -530,6 +534,14 @@ const MissionScreen = () => {
           addPoints(DAILY_ATTENDANCE_POINT);
           addExperience(DAILY_ATTENDANCE_EXPERIENCE);
 
+          // Mixpanel: 보상 팝업 노출 (데일리 출석)
+          trackEvent('reward_popup_view', {
+            reward_type: 'xp_point',
+            reward_source: 'daily_attendance',
+            xp_amount: DAILY_ATTENDANCE_EXPERIENCE,
+            point_amount: DAILY_ATTENDANCE_POINT,
+          });
+
           // 출석 체크 모달 표시
           showModal({
             title: '포인트 & 경험치 획득!',
@@ -685,7 +697,11 @@ const MissionScreen = () => {
                   key={article.id}
                   article={article}
                   onPress={() => {
-                    handleArticlePress(article.contentId);
+                    handleArticlePress(
+                      article.contentId,
+                      undefined,
+                      article.category,
+                    );
 
                     // analytics 이벤트 로그 (처음 9개 카드만)
                     if (index < 9) {

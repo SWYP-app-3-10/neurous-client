@@ -35,6 +35,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LevelUpInfo } from '../api/missionApi';
 import { logScreenView } from '../services/analyticsService';
 import { isScreenMapped } from '../services/analyticsService';
+import { trackEvent } from '../services/mixpanelService';
 
 const Stack = createNativeStackNavigator();
 
@@ -126,6 +127,16 @@ const RootNavigatorContent: React.FC<{
 
           hasCheckedPendingLevelUpRef.current = true;
 
+          // "LEVEL_2" 형식에서 숫자 추출 (Mixpanel 이벤트 및 모달 표시에 공용)
+          const levelUpMatch = levelUpInfo.levelCode?.match(/LEVEL_(\d+)/);
+          const levelAfter = levelUpMatch ? parseInt(levelUpMatch[1], 10) : 0;
+
+          // Mixpanel: 레벨업 팝업 노출
+          trackEvent('level_up_popup_view', {
+            level_before: levelAfter > 0 ? levelAfter - 1 : null,
+            level_after: levelAfter > 0 ? levelAfter : null,
+          });
+
           // 레벨업 모달 표시
           showModal({
             title: levelUpInfo.title || '축하해요! 레벨 업!',
@@ -138,15 +149,17 @@ const RootNavigatorContent: React.FC<{
               levelUpInfo.message || '조금씩 생각이 자라나고 있어요.',
             descriptionColor: COLORS.gray700,
             children: React.createElement(LevelUpModalContent, {
-              newLevel: (() => {
-                // "LEVEL_2" 형식에서 숫자 추출
-                const match = levelUpInfo.levelCode?.match(/LEVEL_(\d+)/);
-                return match ? parseInt(match[1], 10) : 0;
-              })(),
+              newLevel: levelAfter,
             }),
             primaryButton: {
               title: '확인',
               onPress: async () => {
+                // Mixpanel: 레벨업 팝업 확인 버튼 클릭
+                trackEvent('level_up_popup_confirm', {
+                  level_before: levelAfter > 0 ? levelAfter - 1 : null,
+                  level_after: levelAfter > 0 ? levelAfter : null,
+                });
+
                 // 레벨업 정보 삭제
                 await AsyncStorage.removeItem('@pending_level_up');
                 hasCheckedPendingLevelUpRef.current = false;

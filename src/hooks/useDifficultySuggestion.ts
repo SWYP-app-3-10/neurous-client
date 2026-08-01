@@ -10,11 +10,12 @@
 
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { LevelCategory } from '../types/interests';
+import { LevelCategory, LevelCategoryNames } from '../types/interests';
 import { clearDifficultyFeedbackHistory } from '../services/difficultyFeedbackService';
 import { updateUserLevel } from '../api/userApi';
 import { getUserInfo } from '../services/authService';
 import { useOnboardingStore } from '../store/onboardingStore';
+import { trackEvent } from '../services/mixpanelService';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -69,6 +70,17 @@ export function useDifficultySuggestion(): UseDifficultySuggestionReturn {
         );
         await updateUserLevel(userInfo.userId, suggestedLevel);
         console.log('[DifficultySuggestion] 난이도 업데이트 성공');
+
+        // Mixpanel: 난이도 실제 변경 (추천 수락 → 변경 성공 시 함께 발생)
+        const difficultyBefore = useOnboardingStore.getState().difficulty;
+        if (difficultyBefore !== suggestedLevel) {
+          trackEvent('difficulty_changed', {
+            difficulty_before: difficultyBefore
+              ? LevelCategoryNames[difficultyBefore]
+              : null,
+            difficulty_after: LevelCategoryNames[suggestedLevel],
+          });
+        }
 
         //3. Zustand store 업데이트
         // onboardingStore.difficulty 변경

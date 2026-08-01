@@ -15,6 +15,7 @@ import { getImageUrl } from '../../utils/imageUtils';
 
 import { useExploreContents } from '../../hooks/useExploreContents';
 import { useArticleNavigation } from '../../hooks/useArticleNavigation';
+import { trackEvent } from '../../services/mixpanelService';
 
 type Props = {
   keyword: string;
@@ -35,7 +36,10 @@ export default function SearchLiveResultOverlay({
   const trimmed = keyword.trim();
 
   // 기사 클릭 시 상세 이동(포인트/구매/모달/네비게이션 로직 포함)
-  const { handleArticlePress } = useArticleNavigation({ returnTo: 'search' });
+  const { handleArticlePress } = useArticleNavigation({
+    returnTo: 'search',
+    entrySource: 'search',
+  });
 
   // explore "전체" 데이터 조회(무한 스크롤)
   const {
@@ -135,7 +139,14 @@ export default function SearchLiveResultOverlay({
                 // 상세 페이지 이동(로직은 useArticleNavigation 내부)
                 const contentId = Number(item.id);
                 if (Number.isNaN(contentId)) return;
-                handleArticlePress(contentId);
+
+                // 검색 결과에서 글 선택
+                trackEvent('search_result_click', {
+                  article_id: contentId,
+                  category: item.category,
+                });
+
+                handleArticlePress(contentId, item.read, item.category);
               }}
             />
           )}

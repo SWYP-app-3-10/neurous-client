@@ -21,6 +21,7 @@ import {
 import type { NewsItems } from '../../data/mock/searchData';
 import { useArticleNavigation } from '../../hooks/useArticleNavigation';
 import { logEvent } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 type Props = NativeStackScreenProps<
   FullScreenStackParamList,
@@ -38,7 +39,10 @@ export default function SearchInputScreen({ navigation }: Props) {
   const [searchRecord, setSearchRecord] = useState<SearchRecord[]>([]);
 
   // 기사 상세 화면 이동 공통 훅
-  const { handleArticlePress } = useArticleNavigation({ returnTo: 'search' });
+  const { handleArticlePress } = useArticleNavigation({
+    returnTo: 'search',
+    entrySource: 'search',
+  });
 
   // string[] 형태의 최근 검색어를 화면에서 사용하는 타입으로 변환
   const convertToSearchRecords = (keywords: string[]): SearchRecord[] =>
@@ -112,7 +116,14 @@ export default function SearchInputScreen({ navigation }: Props) {
       if (Number.isNaN(parsed)) return;
 
       await recordSearch(text.trim());
-      handleArticlePress(parsed);
+
+      // 검색 결과에서 글 선택
+      trackEvent('search_result_click', {
+        article_id: parsed,
+        category: item.category,
+      });
+
+      handleArticlePress(parsed, item.read, item.category);
     },
     [handleArticlePress, recordSearch, text],
   );

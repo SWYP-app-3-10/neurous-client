@@ -44,6 +44,9 @@ import { fetchContentDetail, ContentDetail } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import ArticleContent from '../../components/ArticleContent';
 import { logEvent } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
+import { useOnboardingStore } from '../../store/onboardingStore';
+import { LevelCategoryNames } from '../../types/interests';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -140,6 +143,17 @@ const ArticleDetailScreen = () => {
         );
         if (response.data) {
           setContentDetail(response.data);
+
+          // Mixpanel: 콘텐츠 상세 페이지 진입
+          const userDifficulty = useOnboardingStore.getState().difficulty;
+          trackEvent('article_start', {
+            article_id: articleId,
+            category: response.data.categoryName,
+            difficulty: userDifficulty
+              ? LevelCategoryNames[userDifficulty]
+              : null,
+            entry_source: route.params.entrySource,
+          });
         }
       } catch (err: any) {
         console.error('[글 상세] 로드 실패:', err);

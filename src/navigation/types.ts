@@ -239,19 +239,23 @@ export type FullScreenStackParamList = {
    * @param articleId - 표시할 글 ID (필수)
    * @param returnTo - 글을 읽은 후 돌아갈 화면 ('mission' | 'search', 선택)
    * @param openType - 글 열기 유형 ('free' | 'ad' | 'point', 선택)
+   * @param entrySource - 진입 경로 (Mixpanel article_start용, 선택)
    */
   [RouteNames.ARTICLE_DETAIL]: {
     articleId: number;
     returnTo?: 'mission' | 'search';
     openType?: 'free' | 'ad' | 'point';
+    entrySource?: 'home' | 'explore' | 'search' | 'my_page';
   };
 
   /**
    * 읽은 글 상세 화면 (마이페이지 > 읽은 글 목록에서 클릭 시)
    * @param articleId - 표시할 글 ID (필수)
+   * @param entrySource - 진입 경로 (Mixpanel article_start용, 선택)
    */
   [RouteNames.READ_ARTICLE_DETAIL]: {
     articleId: number;
+    entrySource?: 'home' | 'explore' | 'search' | 'my_page';
   };
 
   /**
@@ -272,6 +276,7 @@ export type FullScreenStackParamList = {
   [RouteNames.AD_LOADING]: {
     articleId: number;
     returnTo?: 'mission' | 'search';
+    entrySource?: 'home' | 'explore' | 'search' | 'my_page';
   };
 
   // ────── 검색 관련 화면 ──────

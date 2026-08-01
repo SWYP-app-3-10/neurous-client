@@ -70,8 +70,9 @@ import { useDifficultyFeedbackCheck } from '../../hooks/useDifficultyFeedbackChe
 import { useDifficultySuggestion } from '../../hooks/useDifficultySuggestion';
 import { saveDifficultyFeedback } from '../../services/difficultyFeedbackService';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { LevelCategory } from '../../types/interests';
+import { LevelCategory, LevelCategoryNames } from '../../types/interests';
 import LevelSuggestionModal from '../../components/LevelSuggestionModal';
+import { trackEvent } from '../../services/mixpanelService';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -131,6 +132,12 @@ const QuizScreen: React.FC = () => {
   const [quizResult, setQuizResult] = useState<{
     correctChoiceNo: number;
     isAnswerCorrect: boolean;
+  } | null>(null);
+
+  /** 퀴즈 제출로 획득한 보상 (리워드 팝업 Mixpanel 이벤트용) */
+  const [earnedReward, setEarnedReward] = useState<{
+    point: number;
+    exp: number;
   } | null>(null);
 
   // ──────────────────────────────────────────────
@@ -220,6 +227,16 @@ const QuizScreen: React.FC = () => {
             choices: response.data.choices,
           });
           setQuizData(response.data);
+
+          // Mixpanel: 퀴즈 화면 진입
+          const userDifficulty = useOnboardingStore.getState().difficulty;
+          trackEvent('quiz_enter', {
+            article_id: articleId,
+            category: response.data.quizCategory,
+            difficulty: userDifficulty
+              ? LevelCategoryNames[userDifficulty]
+              : null,
+          });
         }
       } catch (err: any) {
         console.error('[퀴즈] 로드 실패:', err);
@@ -333,6 +350,16 @@ const QuizScreen: React.FC = () => {
                       ? '조금 더 어려운 글도 읽어볼까요?'
                       : '조금 더 편하게 읽어볼까요?';
 
+                  // Mixpanel: 난이도 변경 제안 팝업 노출
+                  const difficultyBefore =
+                    useOnboardingStore.getState().difficulty;
+                  trackEvent('difficulty_recommendation_view', {
+                    current_difficulty: difficultyBefore
+                      ? LevelCategoryNames[difficultyBefore]
+                      : null,
+                    recommended_difficulty: LevelCategoryNames[suggestedLevel],
+                  });
+
                   showModal({
                     title: suggestionTitle,
                     titleStyle: {
@@ -347,6 +374,15 @@ const QuizScreen: React.FC = () => {
 
                       onAccept: async () => {
                         logEvent('Accept_Level_Suggestion');
+
+                        // Mixpanel: 난이도 변경 제안 수락
+                        trackEvent('difficulty_recommendation_accepted', {
+                          difficulty_before: difficultyBefore
+                            ? LevelCategoryNames[difficultyBefore]
+                            : null,
+                          difficulty_after: LevelCategoryNames[suggestedLevel],
+                        });
+
                         await handleAcceptSuggestion(suggestedLevel);
                         hideModal();
                         showToastModal({
@@ -363,6 +399,16 @@ const QuizScreen: React.FC = () => {
 
                       onDecline: async () => {
                         logEvent('Decline_Level_Suggestion');
+
+                        // Mixpanel: 난이도 변경 제안 거절
+                        trackEvent('difficulty_recommendation_dismissed', {
+                          current_difficulty: difficultyBefore
+                            ? LevelCategoryNames[difficultyBefore]
+                            : null,
+                          recommended_difficulty:
+                            LevelCategoryNames[suggestedLevel],
+                        });
+
                         await handleDeclineSuggestion();
                         hideModal();
                       },
@@ -513,6 +559,12 @@ const QuizScreen: React.FC = () => {
       if (rewardResponse) {
         addPoints(rewardResponse.earnedPoint);
         addExperience(rewardResponse.earnedExp);
+
+        // 리워드 팝업 Mixpanel 이벤트용으로 보상 내역 저장
+        setEarnedReward({
+          point: rewardResponse.earnedPoint,
+          exp: rewardResponse.earnedExp,
+        });
       }
 
       // 레벨업 정보가 있으면 AsyncStorage에 저장
@@ -527,6 +579,19 @@ const QuizScreen: React.FC = () => {
       // ──────────────────────────────────────────────
       // Step 4: 정답 체크 화면으로 전환
       // ──────────────────────────────────────────────
+
+      // Mixpanel: 퀴즈 완료 (정답 여부와 관계없이 결과 화면 이동 시 발생)
+      {
+        const userDifficulty = useOnboardingStore.getState().difficulty;
+        trackEvent('quiz_complete', {
+          article_id: articleId,
+          category: quizData.quizCategory,
+          difficulty: userDifficulty
+            ? LevelCategoryNames[userDifficulty]
+            : null,
+          is_correct: quizResultResponse?.isAnswerCorrect ?? false,
+        });
+      }
 
       // 정답 체크 화면으로 전환 (리워드 팝업은 "완료" 버튼 클릭 시 표시)
       setQuizState('feedback');
@@ -551,6 +616,23 @@ const QuizScreen: React.FC = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
+
+    // Mixpanel: 보상 팝업 노출 (퀴즈 정답/오답 보상)
+    trackEvent('reward_popup_view', {
+      article_id: articleId,
+      category: quizData?.quizCategory,
+      reward_type:
+        earnedReward && earnedReward.exp > 0 && earnedReward.point > 0
+          ? 'xp_point'
+          : earnedReward && earnedReward.exp > 0
+            ? 'xp'
+            : 'point',
+      reward_source: quizResult?.isAnswerCorrect
+        ? 'quiz_correct'
+        : 'quiz_wrong',
+      xp_amount: earnedReward?.exp ?? 0,
+      point_amount: earnedReward?.point ?? 0,
+    });
 
     showModal({
       title: '포인트 & 경험치 획득!',

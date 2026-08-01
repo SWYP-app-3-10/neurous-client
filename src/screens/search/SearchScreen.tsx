@@ -125,7 +125,10 @@ export default function SearchScreen() {
   }, [data]);
 
   // 기사 클릭 시 상세로 이동(포인트/구매/모달 등 포함된 네비게이션 처리)
-  const { handleArticlePress } = useArticleNavigation({ returnTo: 'search' });
+  const { handleArticlePress } = useArticleNavigation({
+    returnTo: 'search',
+    entrySource: 'explore',
+  });
 
   // 오른쪽 검색 아이콘 클릭 시 검색 입력 화면으로 이동
   const goToSearchInput = () => {
@@ -201,7 +204,7 @@ export default function SearchScreen() {
               <SearchResultItem
                 item={item}
                 onPress={() => {
-                  handleArticlePress(Number(item.id), item.read);
+                  handleArticlePress(Number(item.id), item.read, item.category);
                   logEvent('ContectsList_Explore');
                 }}
               />

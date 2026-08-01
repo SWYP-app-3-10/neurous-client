@@ -48,10 +48,16 @@ import {
   ThirdIcon,
 } from '../../icons/commonIcons/commonIcons';
 import Header from '../../components/Header';
-import { Interest, INTERESTS, InterestCategory } from '../../types/interests';
+import {
+  Interest,
+  INTERESTS,
+  InterestCategory,
+  InterestCategoryNames,
+} from '../../types/interests';
 import { updateUserInterests } from '../../api/userApi';
 import { getUserInfo } from '../../services/authService';
 import { logEvent, logScreenView } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 // ──────────────────────────────────────────────
 // 상수 정의
@@ -447,6 +453,13 @@ const InterestsScreen = () => {
       }
 
       await updateUserInterests(userInfo.userId, interestsArray);
+
+      // Mixpanel: 관심분야 선택 (온보딩 최초 선택 / 마이페이지 변경 동일 이벤트)
+      trackEvent('interest_selected', {
+        interests: interestsArray.map(
+          category => InterestCategoryNames[category] || category,
+        ),
+      });
     } catch (error) {
       console.error('[관심분야 업데이트] 서버 업데이트 실패:', error);
       Alert.alert(
