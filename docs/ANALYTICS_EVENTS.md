@@ -59,7 +59,7 @@
 | `weekly_attendance` | 위클리 출석 보상 (일요일 데일리 출석 시 합산 지급) | ✅ (팝업은 데일리와 합산 노출, 이벤트는 별도 전송) |
 | `ad_reward` | 광고 시청 보상 | ✅ (`ad_watch_complete`로 별도 추적) |
 | `mission_complete` | 미션 완료 보상 | ✅ |
-| `article_read` | 글 읽기 자체에 대한 보상 | ❌ 미구현 — 해당 보상 팝업 UI가 앱에 없음. 별도 브랜치에서 논의 예정 |
+| `article_read` | 글 읽기 자체에 대한 보상 (경험치만, 화면 진입=완독으로 간주) | ✅ (`ArticleDetailScreen.tsx`, 포인트 없이 경험치만 지급) |
 
 ### 참고
 
