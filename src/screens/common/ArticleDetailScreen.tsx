@@ -6,17 +6,20 @@
  * 주요 기능:
  *   1. 글 내용 표시 (API로 조회)
  *   2. 광고를 통해 열린 글인 경우 토스트 메시지 표시
- *   3. 퀴즈 화면으로 이동
+ *   3. 글 읽기 보상 지급 (경험치만, 화면 진입=완독으로 간주)
+ *   4. 퀴즈 화면으로 이동
  *
- * 변경된 보상 처리 방식:
- *   - 기존: 글 상세 화면에서 완독/경험치 처리
- *   - 변경: QuizScreen에서 퀴즈 제출 성공 시 경험치 지급
+ * 보상 처리 방식:
+ *   - 글 읽기 보상: 이 화면에서 fetchContentDetail 성공 시 즉시 지급 (경험치만, 포인트 없음)
+ *     * fetchContentDetail 호출 자체가 서버의 "완독 처리"를 겸하고 있어서
+ *       (마이페이지 읽은 글 목록에 퀴즈 미응시 글도 표시되는 이유), 별도 서버 API 없이
+ *       이 시점에 클라이언트에서 보상만 로컬로 지급한다.
+ *     * AsyncStorage에 글 ID별로 지급 여부를 기록해 중복 지급 방지
+ *   - 퀴즈 보상: QuizScreen에서 퀴즈 제출 성공 시 별도로 지급 (이 화면과 무관, 그대로 유지)
  *
  * 제거된 기능:
  *   - 난이도별 읽기 시간 타이머
  *   - 읽기 시간 감지
- *   - 경험치 지급 모달
- *   - 글 상세 화면의 완독 체크 API 호출
  *   - 타이머 기반 완독 처리
  *   - 화면 포커스 기반 타이머 제어
  */
@@ -32,14 +35,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
-import { Body_16M } from '../../styles/typography';
+import { Body_16M, Heading_20EB_Round } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import Spacer from '../../components/Spacer';
 import { RouteNames } from '../../../routes';
 import { FullScreenStackParamList } from '../../navigation/types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useShowToastModal } from '../../store/modalStore';
+import { useShowToastModal, useShowModal } from '../../store/modalStore';
 import { fetchContentDetail, ContentDetail } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import ArticleContent from '../../components/ArticleContent';
@@ -47,6 +50,11 @@ import { logEvent } from '../../services/analyticsService';
 import { trackEvent } from '../../services/mixpanelService';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { LevelCategoryNames } from '../../types/interests';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useExperienceStore } from '../../store/experienceStore';
+import { ExperienceModalContent } from '../../components/ArticlePointModalContent';
+import { Modal_IMG } from '../../icons';
+import { ARTICLE_READ_EXPERIENCE } from '../../config/rewards';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -62,6 +70,8 @@ const ArticleDetailScreen = () => {
   const route = useRoute<ArticleDetailRouteProp>();
   const navigation = useNavigation<NavigationProp>();
   const showToastModal = useShowToastModal();
+  const showModal = useShowModal();
+  const { addExperience } = useExperienceStore();
 
   // ──────────────────────────────────────────────
   // Route Params (타입 안전)
@@ -83,6 +93,9 @@ const ArticleDetailScreen = () => {
    * point : 포인트 사용 열람
    */
   const openType = route.params.openType;
+
+  /** 진입 경로 (Mixpanel article_start의 entry_source) */
+  const entrySource = route.params.entrySource;
 
   // ──────────────────────────────────────────────
   // State
@@ -152,8 +165,54 @@ const ArticleDetailScreen = () => {
             difficulty: userDifficulty
               ? LevelCategoryNames[userDifficulty]
               : null,
-            entry_source: route.params.entrySource,
+            entry_source: entrySource,
           });
+
+          // ──────────────────────────────────────────────
+          // 글 읽기 보상 지급 (경험치만, 화면 진입=완독으로 간주)
+          // ──────────────────────────────────────────────
+          //
+          // fetchContentDetail 호출 자체가 서버의 완독 처리를 겸하고 있어서
+          // (마이페이지 읽은 글 목록에 퀴즈 미응시 글도 표시됨), 별도 서버 API 없이
+          // 이 화면에서 클라이언트가 보상만 로컬로 지급한다.
+          //
+          // 같은 글은 평생 한 번만 지급되도록 AsyncStorage에 기록해 dedup 처리
+          // (서버의 isRead 플래그가 클라이언트 목록에 아직 반영되지 않은 상태에서
+          //  재진입해도 중복 지급되지 않도록)
+          const readRewardKey = `@article_read_reward_${articleId}`;
+          const alreadyRewarded = await AsyncStorage.getItem(readRewardKey);
+
+          if (!alreadyRewarded) {
+            await AsyncStorage.setItem(readRewardKey, 'true');
+
+            addExperience(ARTICLE_READ_EXPERIENCE);
+
+            // Mixpanel: 보상 팝업 노출 (글 읽기)
+            trackEvent('reward_popup_view', {
+              article_id: articleId,
+              category: response.data.categoryName,
+              reward_type: 'xp',
+              reward_source: 'article_read',
+              xp_amount: ARTICLE_READ_EXPERIENCE,
+              point_amount: 0,
+            });
+
+            // 글 읽기 보상 팝업 표시 (경험치만, 포인트 없음)
+            // 시안 지시대로 배경 터치로는 닫히지 않도록 처리 (확인 버튼으로만 닫힘)
+            showModal({
+              title: '경험치 획득!',
+              image: <Modal_IMG />,
+              titleStyle: {
+                ...Heading_20EB_Round,
+              },
+              titleDescriptionGapSize: scaleWidth(20),
+              closeOnBackdropPress: false,
+              children: React.createElement(ExperienceModalContent, {
+                articleRead: true,
+              }),
+              primaryButton: { title: '확인', onPress: () => {} },
+            });
+          }
         }
       } catch (err: any) {
         console.error('[글 상세] 로드 실패:', err);
@@ -164,7 +223,7 @@ const ArticleDetailScreen = () => {
     };
 
     loadContentDetail();
-  }, [articleId, isFromHome]);
+  }, [articleId, isFromHome, entrySource, addExperience, showModal]);
 
   // ──────────────────────────────────────────────
   // Effect 2: 열린 글 토스트 메시지 표시
