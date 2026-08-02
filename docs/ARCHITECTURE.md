@@ -293,6 +293,143 @@ flowchart TD
 
 <br />
 
+## 4. 보상(Reward) 시스템 — 서버 값 vs 로컬 값
+
+포인트/경험치가 여러 화면(퀴즈, 출석, 광고, 글 읽기)에서 지급되면서 "이 숫자가 서버에서 온 건지 프론트에서 만든 건지" 헷갈리기 쉬워서 별도로 정리한다.
+
+### 4-1. 보상 트리거 → 지급 → 화면 반영 전체 흐름도
+
+6가지 보상 트리거가 각각 서버값을 쓰는지 로컬 상수를 쓰는지, 그리고 그 값이 어디로 흘러가는지를 하나의 흐름도로 정리한다.
+
+```mermaid
+flowchart TD
+    QuizSubmit(["퀴즈 제출"]) --> QuizAPI["submitQuiz API 호출<br/>✅ API 목적 자체가 '정답 제출 + 보상 계산'<br/>→ 서버가 확실히 반영"]
+    QuizAPI --> QuizServerValue["서버 응답<br/>rewardResponse.earnedPoint/earnedExp"]
+    QuizServerValue --> QuizPopup["퀴즈 결과 팝업<br/>⚠️ 표시 텍스트는 로컬 상수<br/>(QUIZ_CORRECT/INCORRECT_*)"]
+
+    DailyEntry(["앱 실행 (일일 첫 진입)"]) --> DailyCheck{"AsyncStorage<br/>오늘 이미 출석?"}
+    DailyCheck -- No --> DailyLocal["❌ API 호출 자체가 없음<br/>로컬 상수만 지급<br/>DAILY_ATTENDANCE_POINT/EXP<br/>→ 서버는 존재를 모름"]
+    DailyCheck -- No --> SundayCheck{"오늘 일요일?"}
+    SundayCheck -- Yes --> WeeklyLocal["❌ API 호출 자체가 없음<br/>위클리 보상 합산<br/>WEEKLY_ATTENDANCE_POINT/EXP<br/>→ 서버는 존재를 모름"]
+    DailyCheck -- Yes --> DailySkip["보상 없음 (중복 방지)"]
+
+    AdWatch(["광고 시청 완료"]) --> AdAPI["purchaseContentWithAd API 호출<br/>⚠️ API 목적은 '콘텐츠 열람권 부여'<br/>포인트도 같이 크레딧하는지는<br/>서버 스펙 미확인"]
+    AdAPI --> AdLocal["클라이언트는 일단<br/>로컬 상수로 지급<br/>AD_REWARD_POINTS"]
+
+    ArticleEnter(["글 상세 화면 진입"]) --> ContentAPI["fetchContentDetail API 호출<br/>⚠️ API 목적은 '콘텐츠 조회 + 완독 기록'<br/>(isRead만 기록, 보상 로직 없음)<br/>→ 서버는 '읽음'만 알고 경험치는 모름"]
+    ContentAPI --> ArticleDedup{"AsyncStorage<br/>이 글 이미 보상 지급?"}
+    ArticleDedup -- No --> ArticleLocal["로컬 상수 지급<br/>ARTICLE_READ_EXPERIENCE"]
+    ArticleDedup -- Yes --> ArticleSkip["보상 없음 (중복 방지)"]
+
+    PointPurchase(["포인트로 글 구매"]) --> PurchaseAPI["purchaseContentWithPoint API 호출<br/>✅ API 목적 자체가 '포인트 차감 트랜잭션'<br/>→ 서버가 확실히 반영"]
+    PurchaseAPI --> PurchaseServer["서버에서 포인트 차감<br/>⚠️ 로컬 pointStore는 그대로<br/>(반대 방향 미동기화)"]
+
+    QuizServerValue --> LocalStore
+    DailyLocal --> LocalStore
+    WeeklyLocal --> LocalStore
+    AdLocal --> LocalStore
+    ArticleLocal --> LocalStore
+
+    LocalStore["experienceStore / pointStore<br/>(Zustand, addExperience/addPoints)"]
+
+    LocalStore -->|"experience 증가 감지"| RootNav["RootNavigator<br/>→ characterData refetch<br/>→ 레벨업 체크"]
+    LocalStore -->|"fallback 값으로만 사용"| ArticleNavFallback["useArticleNavigation<br/>currentPoints fallback"]
+
+    RootNav --> ServerRefetch["GET /api/characters/me<br/>재조회"]
+    PurchaseServer -.->|"다음 CharacterScreen<br/>진입 시에만 반영"| ServerRefetch
+
+    ServerRefetch --> CharacterScreen["CharacterScreen<br/>('나의 레벨' 화면)<br/>유저가 보는 실제 수치<br/>= userGrowthInfo.currentExp/currentPoint"]
+
+    style QuizAPI fill:#e8f5e9
+    style QuizServerValue fill:#e8f5e9
+    style PurchaseAPI fill:#e8f5e9
+    style PurchaseServer fill:#e8f5e9
+    style ServerRefetch fill:#e8f5e9
+    style CharacterScreen fill:#e8f5e9
+    style DailyLocal fill:#fff3e0
+    style WeeklyLocal fill:#fff3e0
+    style AdLocal fill:#fff3e0
+    style ArticleLocal fill:#fff3e0
+    style LocalStore fill:#fff3e0
+    style AdAPI fill:#fce4ec
+    style ContentAPI fill:#fce4ec
+    style QuizPopup fill:#ffe0e0
+```
+
+🟢 초록(서버 값) · 🟠 주황(로컬 상수, 서버 미반영) · 🔴 빨강(표시값과 실제 지급값이 다를 수 있는 지점)
+
+**읽는 법**: 왼쪽의 6개 시작점(퀴즈 제출/일일 출석/광고 시청/글 진입/포인트 구매)이 각각 어떤 방식으로 보상을 만들어내는지 보여준다. 서버 API를 호출해도 그 응답값을 실제로 쓰는 건 퀴즈뿐이고, 나머지는 API를 호출하더라도(광고, 포인트 구매) 보상액 자체는 로컬 상수이거나 서버 차감이 로컬에 반영되지 않는다. 결국 모든 로컬 지급은 `LocalStore`로 모이지만, 유저가 실제로 보는 `CharacterScreen`은 이 store를 거치지 않고 서버를 직접 재조회한 값만 보여준다 — 그래서 로컬 지급은 "유저 체감상 즉시 받은 것처럼 보이지만, 서버 기준 실제 수치와는 별개"라는 점이 이 흐름도의 핵심이다.
+
+### 4-2. 보상 종류별 지급 방식 (요약 표)
+
+| 보상 | 실제 지급값 출처 | 지급 방식 | 관련 파일 |
+| --- | --- | --- | --- |
+| 퀴즈 정답/오답 | **서버** — `submitQuiz` 응답의 `rewardResponse.earnedPoint`/`earnedExp` | `addPoints(서버값)` / `addExperience(서버값)` | `QuizScreen.tsx` |
+| 퀴즈 팝업에 **표시되는 텍스트** | ⚠️ 로컬 고정값 (`QUIZ_CORRECT_EXPERIENCE` 등) — 실제 지급된 서버값과 다를 수 있음 | `ExperienceModalContent`가 상수를 그대로 렌더링 | `ArticlePointModalContent.tsx` |
+| 데일리 출석 | 로컬 상수 (`DAILY_ATTENDANCE_POINT`/`EXPERIENCE`) — 서버 API 호출 없음 | AsyncStorage로 하루 1회 dedup 후 로컬 지급 | `MissionScreen.tsx` |
+| 위클리 출석 | 로컬 상수 (`WEEKLY_ATTENDANCE_POINT`/`EXPERIENCE`) — 서버 API 호출 없음 | 일요일 데일리 출석과 같은 시점에 합산 지급 | `MissionScreen.tsx` |
+| 광고 시청 | 로컬 상수 (`AD_REWARD_POINTS`) — `purchaseContentWithAd` API는 별도 호출되지만 지급액은 로컬 상수 | 광고 시청 완료 시 로컬 지급 | `AdLoadingScreen.tsx` |
+| 글 읽기 | 로컬 상수 (`ARTICLE_READ_EXPERIENCE`) — 서버 API 호출 없음 (완독 처리는 `fetchContentDetail` 호출 자체가 겸함) | AsyncStorage로 글 ID당 1회 dedup 후 로컬 지급 | `ArticleDetailScreen.tsx` |
+| 포인트로 글 열람 (비용 차감) | ⚠️ 서버만 차감 — `purchaseContentWithPoint` 성공해도 로컬 `pointStore`는 차감되지 않음 (미동기화) | - | `useArticleNavigation.ts` |
+
+### 4-3. 알아둘 점
+
+- **로컬 지급(출석/광고/글 읽기)은 서버가 실제로 아는 값이 아니다.** 클라이언트가 "이만큼 준 걸로 치자"하고 흉내 내는 것에 가깝다. 유저가 캐릭터 탭에서 실제 경험치/포인트를 확인하면 서버가 카운트한 적 없는 값이라 반영되지 않을 수 있다.
+- **정확한 지급을 보장하려면 서버 API가 필요하다.** 현재는 퀴즈만 서버 왕복으로 정확한 값을 받고, 나머지는 전부 프론트 추정치다.
+- **퀴즈 팝업 표시값과 실제 지급값이 다를 수 있다.** 팝업은 `QUIZ_CORRECT_EXPERIENCE`(25) 같은 로컬 상수를 그대로 보여주지만, 실제로 store에 더해지는 값은 서버가 응답한 `rewardResponse.earnedExp`다. 서버 리워드 정책이 바뀌면 팝업 표시값도 함께 업데이트해야 한다.
+- **포인트 구매(글 열람) 차감이 로컬에 반영되지 않는다.** 서버는 포인트를 차감하지만 `pointStore`는 그대로라, 다음 서버 재조회 전까지 로컬 fallback 값이 실제보다 높게 남아있을 수 있다.
+
+### 4-4. 출석 보상 지급 vs 서버 출석 기록 조회 — 서로 무관한 두 트랙
+
+**데일리/위클리 출석 "보상 지급"과, CharacterScreen에 보이는 "주간 출석 기록(요일별 체크)"은 완전히 다른 시스템이다.** 하나는 순수 로컬, 하나는 서버 조회이며 둘은 서로 데이터를 주고받지 않는다.
+
+```mermaid
+flowchart TD
+    subgraph Client["클라이언트 (MissionScreen) — 보상 지급 트랙"]
+        Start(["앱 실행 / MissionScreen 마운트"]) --> GetNow["now = new Date()<br/>today = getLocalDateKey(now)"]
+        GetNow --> ReadStorage["AsyncStorage.getItem<br/>('@daily_mission_entry')"]
+        ReadStorage --> Compare{"오늘 이미<br/>출석함?"}
+        Compare -- Yes --> Skip["보상 없음"]
+        Compare -- No --> SaveToday["AsyncStorage.setItem<br/>('@daily_mission_entry', today)"]
+        SaveToday --> IsSunday{"오늘 일요일?"}
+        IsSunday -- No --> DailyLocal["로컬 상수 지급<br/>DAILY_ATTENDANCE_POINT/EXP<br/>addPoints / addExperience"]
+        IsSunday -- Yes --> WeeklyLocal["로컬 상수 합산 지급<br/>DAILY + WEEKLY_ATTENDANCE_POINT/EXP<br/>addPoints / addExperience"]
+        DailyLocal --> Modal["showModal<br/>(포인트/경험치 획득 팝업)"]
+        WeeklyLocal --> Modal
+        DailyLocal --> Mixpanel1["trackEvent('reward_popup_view')"]
+        WeeklyLocal --> Mixpanel2["trackEvent('reward_popup_view') x2<br/>(daily + weekly)"]
+    end
+
+    NoAPI(["❌ 이 트랙에는<br/>서버로 보내는 API 호출이<br/>단 한 줄도 없음"])
+    SaveToday -.->|"출석 사실은<br/>서버로 전송 안 됨"| NoAPI
+
+    subgraph Server["서버 — 출석 기록 트랙 (완전히 별개)"]
+        AnyActivity(["유저의 그날 서버 인증 활동<br/>(어떤 API든 호출 시 서버가<br/>자체적으로 '출석'으로 판단·기록<br/>— 클라이언트는 관여 안 함)"]) --> ServerCompute["서버가 요일별 출석 여부<br/>자체 계산/저장<br/>(WeeklyAttendance: mon~sun boolean)"]
+    end
+
+    subgraph CharScreen["클라이언트 (CharacterScreen) — 조회 트랙"]
+        Focus(["CharacterScreen 진입/포커스"]) --> FetchAPI["GET /api/characters/me<br/>fetchCharacterMe()"]
+        FetchAPI --> Convert["convertWeeklyAttendanceToAttendanceData()<br/>{day:'월', attended:true} 등으로 변환"]
+        Convert --> Render["'주간 출석 기록' UI<br/>요일별 원형 체크 표시"]
+    end
+
+    ServerCompute --> FetchAPI
+
+    style DailyLocal fill:#fff3e0
+    style WeeklyLocal fill:#fff3e0
+    style NoAPI fill:#ffe0e0
+    style ServerCompute fill:#e8f5e9
+    style FetchAPI fill:#e8f5e9
+    style Render fill:#e8f5e9
+```
+
+- **보상 지급 트랙 (`MissionScreen.tsx`)**: `AsyncStorage` 키 `@daily_mission_entry`로 "오늘 이미 출석했는가"만 로컬 체크하고, 통과하면 로컬 상수를 `addPoints`/`addExperience`로 바로 반영한다. 서버에 "오늘 출석했다"를 알리는 API 호출은 코드 전체에 존재하지 않는다 (`client.post`/`patch` + attendance/출석 키워드로 전수 검색해도 0건).
+- **출석 기록 조회 트랙 (`CharacterScreen.tsx`)**: 요일별 체크 원(`주간 출석 기록`)은 `GET /api/characters/me` (`fetchCharacterMe`, `src/api/characterApi.ts:384-399`)의 응답 중 `attendance` 필드(`WeeklyAttendance`: `monday~sunday` boolean, `characterApi.ts:118-126`)를 그대로 그려주는 것이다. 이 값은 서버가 자체적으로 계산해서 내려주며, 클라이언트가 별도로 "기록"시키는 write API는 존재하지 않는다.
+- **서버가 정확히 무엇을 근거로 출석을 판단하는지는 코드로 확인 불가.** 그날 다른 API를 하나라도 호출하면 출석 처리되는 것인지, 별도 로그인/세션 체크인지는 백엔드 스펙 확인이 필요하다.
+- **결론**: 유저가 실제로 받는 포인트/경험치(로컬)와 CharacterScreen에 보이는 "출석 기록"(서버)은 서로 다른 기준으로 독립적으로 움직인다. 둘을 같은 하나의 "출석 시스템"으로 오해하지 않도록 주의.
+
+<br />
+
 ## 아키텍처 특징 요약
 
 ### 계층 분리 (Layered Architecture)
