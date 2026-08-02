@@ -35,10 +35,7 @@ import {
 import { getUserInfo } from '../services/authService';
 import { usePointStore } from '../store/pointStore';
 import { logEvent, logScreenView } from '../services/analyticsService';
-import {
-  trackEvent,
-  ArticleEntrySource,
-} from '../services/mixpanelService';
+import { trackEvent, ArticleEntrySource } from '../services/mixpanelService';
 
 /**
  * 아티클 읽기 후 돌아갈 화면
@@ -79,7 +76,11 @@ export const useArticleNavigation = ({
   returnTo,
   entrySource,
 }: UseArticleNavigationOptions): {
-  handleArticlePress: (articleId: number, isRead?: boolean) => void;
+  handleArticlePress: (
+    articleId: number,
+    isRead?: boolean,
+    category?: string,
+  ) => void;
 } => {
   const navigation = useNavigation<NavigationProp>();
   const showModal = useShowModal();
@@ -333,7 +334,7 @@ export const useArticleNavigation = ({
         Alert.alert('오류', '글 접근 권한을 확인하는 중 오류가 발생했습니다.');
       }
     },
-    [showModal, hideModal, navigation, returnTo, storePoints],
+    [showModal, hideModal, navigation, returnTo, entrySource, storePoints],
   );
 
   return { handleArticlePress };
