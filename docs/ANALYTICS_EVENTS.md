@@ -1,19 +1,70 @@
 # Analytics 이벤트 목록
 
-이 문서는 앱 내에서 사용되는 모든 Firebase Analytics 이벤트를 정리한 문서입니다.
+이 문서는 앱 내에서 사용되는 Firebase Analytics 이벤트와 Mixpanel 이벤트를 정리한 문서입니다.
+
+앱은 두 개의 분석 도구를 병행 사용합니다.
+
+| 도구 | 서비스 파일 | 용도 |
+| --- | --- | --- |
+| **Firebase Analytics** | `src/services/analyticsService.ts` (`logEvent`, `logScreenView`) | 화면 조회·버튼 클릭 등 세밀한 UI 이벤트 트래킹 |
+| **Mixpanel** | `src/services/mixpanelService.ts` (`trackEvent`) | 디자인팀 정의 이벤트 명세 기반 퍼널/리텐션 분석 |
 
 ## 목차
 
-1. [화면 조회 이벤트 (Screen View)](#화면-조회-이벤트-screen-view)
-2. [백버튼 이벤트 (Back Button)](#백버튼-이벤트-back-button)
-3. [네비게이션 이벤트 (Navigation)](#네비게이션-이벤트-navigation)
-4. [온보딩 이벤트 (Onboarding)](#온보딩-이벤트-onboarding)
-5. [퀴즈 이벤트 (Quiz)](#퀴즈-이벤트-quiz)
-6. [검색 이벤트 (Search)](#검색-이벤트-search)
-7. [마이페이지 이벤트 (My Page)](#마이페이지-이벤트-my-page)
-8. [캐릭터 이벤트 (Character)](#캐릭터-이벤트-character)
-9. [로그인 이벤트 (Login)](#로그인-이벤트-login)
-10. [기타 이벤트 (Others)](#기타-이벤트-others)
+1. [Mixpanel 이벤트](#mixpanel-이벤트)
+2. [화면 조회 이벤트 (Screen View)](#화면-조회-이벤트-screen-view)
+3. [백버튼 이벤트 (Back Button)](#백버튼-이벤트-back-button)
+4. [네비게이션 이벤트 (Navigation)](#네비게이션-이벤트-navigation)
+5. [온보딩 이벤트 (Onboarding)](#온보딩-이벤트-onboarding)
+6. [퀴즈 이벤트 (Quiz)](#퀴즈-이벤트-quiz)
+7. [검색 이벤트 (Search)](#검색-이벤트-search)
+8. [마이페이지 이벤트 (My Page)](#마이페이지-이벤트-my-page)
+9. [캐릭터 이벤트 (Character)](#캐릭터-이벤트-character)
+10. [로그인 이벤트 (Login)](#로그인-이벤트-login)
+11. [기타 이벤트 (Others)](#기타-이벤트-others)
+
+---
+
+## Mixpanel 이벤트
+
+디자인팀 이벤트 명세(Update v1 Analytics Event Tracking)를 기반으로 구현된 21개 이벤트입니다. `trackEvent(eventName, properties)` 호출 시 `user_id`(서버 발급 회원 ID)와 `session_id`(앱 실행마다 생성)가 모든 이벤트에 자동으로 첨부됩니다.
+
+`IS_PRODUCTION`이 `false`면 Mixpanel로 전송되지 않고 콘솔에 `[Mixpanel - Dev] Event: ...` 형태로만 로그됩니다.
+
+| 이벤트 | 설명 | 주요 property | 파일 경로 |
+| --- | --- | --- | --- |
+| `article_start` | 콘텐츠 상세 페이지 진입 | `article_id`, `category`, `difficulty`, `entry_source`(home/explore/search/my_page) | `ArticleDetailScreen.tsx`, `ReadArticleDetailScreen.tsx` |
+| `quiz_enter` | 퀴즈 화면 진입 | `article_id`, `category`, `difficulty` | `QuizScreen.tsx` |
+| `quiz_complete` | 퀴즈 완료 (정답 여부 무관) | `is_correct` | `QuizScreen.tsx` |
+| `reward_popup_view` | 보상 팝업 노출 | `reward_type`, `reward_source`, `xp_amount`, `point_amount` | `QuizScreen.tsx`, `MissionScreen.tsx`, `AdLoadingScreen.tsx` |
+| `level_up_popup_view` / `level_up_popup_confirm` | 레벨업 팝업 노출/확인 | `level_before`, `level_after` | `RootNavigator.tsx` |
+| `character_growth_view` | '나의 레벨' 화면 진입 | `character_level` | `CharacterScreen.tsx` |
+| `growth_guide_view` | 성장 가이드 화면 진입 | `tab`(level/xp_point) | `CriteriaCheckScreen.tsx` |
+| `interest_selected` | 관심분야 선택(최초/변경 동일) | `interests` | `InterestsScreen.tsx` |
+| `difficulty_selected` | 온보딩 난이도 최초 선택 | `difficulty` | `DifficultySettingScreen.tsx` |
+| `difficulty_changed` | 난이도 변경 | `difficulty_before`, `difficulty_after` | `useUpdateLevel.ts`, `useDifficultySuggestion.ts` |
+| `difficulty_recommendation_view/accepted/dismissed` | 난이도 추천 팝업 노출/수락/거절 | `current_difficulty`, `recommended_difficulty` | `QuizScreen.tsx` |
+| `mission_complete` | 미션 완료 (미완료→완료 전환 시) | `mission_type` | `useMissions.ts` |
+| `point_use_popup_view` / `point_use_confirm` | 포인트 사용 팝업 노출/사용 | `article_id`, `category` | `useArticleNavigation.ts` |
+| `ad_popup_view` / `ad_watch_complete` | 광고 팝업 노출 / 시청 완료 | `article_id`, `category` | `useArticleNavigation.ts`, `AdLoadingScreen.tsx` |
+| `search_result_click` | 검색 결과에서 글 선택 | `article_id`, `category` | `SearchScreen.tsx` 외 검색 화면 3곳 |
+| `my_page_view` | 마이페이지 탭 진입 | - | `MyPageScreen.tsx` |
+
+### reward_source 값
+
+| 값 | 의미 | 구현 여부 |
+| --- | --- | --- |
+| `quiz_correct` / `quiz_wrong` | 퀴즈 정답/오답 보상 | ✅ |
+| `daily_attendance` | 데일리 출석 보상 | ✅ |
+| `weekly_attendance` | 위클리 출석 보상 (일요일 데일리 출석 시 합산 지급) | ✅ (팝업은 데일리와 합산 노출, 이벤트는 별도 전송) |
+| `ad_reward` | 광고 시청 보상 | ✅ (`ad_watch_complete`로 별도 추적) |
+| `mission_complete` | 미션 완료 보상 | ✅ |
+| `article_read` | 글 읽기 자체에 대한 보상 | ❌ 미구현 — 해당 보상 팝업 UI가 앱에 없음. 별도 브랜치에서 논의 예정 |
+
+### 참고
+
+- Mixpanel Project Token은 `src/services/mixpanelService.ts`에 하드코딩되어 있습니다 (비밀키 아님, 클라이언트 노출 전제로 설계된 값).
+- 이벤트 이름/속성 원본 명세는 디자인팀이 md 파일로 전달했으며, `article_id`는 명세 예시(`"article_12345"` 문자열)와 달리 실제로는 서버 contentId 그대로 **숫자**로 전송됩니다.
 
 ---
 

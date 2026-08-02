@@ -26,7 +26,7 @@
 | **Ads**            | `react-native-google-mobile-ads` (AdMob)                                  |
 | **UI**             | `react-native-svg`, `react-native-linear-gradient`, `lottie-react-native` |
 | **Etc**            | `react-native-permissions`, `dayjs`, `patch-package`                      |
-| **Analytics**      | Firebase Analytics, Amplitude                                             |
+| **Analytics**      | Firebase Analytics, Mixpanel                                              |
 | **Backend**        | Spring Boot (REST API + SSE)                                              |
 
 <br />
@@ -125,6 +125,7 @@ src/
 - 콘텐츠 접근 3분기 (무료 열람 / 포인트 사용 / 광고 시청)
 - 포인트·경험치·캐릭터 성장 시스템
 - 미션 시스템 (일일 미션, 기사 읽기)
+- 출석 보상 (데일리 출석 + 일요일 위클리 출석 합산 지급)
 - 알림 시스템 (SSE 포그라운드 + FCM 백그라운드/종료)
 - 검색 (카테고리별 기사 검색, 실시간 결과)
 - 마이페이지 (프로필, 관심분야, 레벨, 읽은 글 목록)
@@ -199,13 +200,15 @@ fix(client): 소셜 로그인 API에 stale 토큰 첨부되는 문제 수정
 
 ## 문서
 
-| 문서                                                   | 내용                                                           |
-| ------------------------------------------------------ | -------------------------------------------------------------- |
-| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)       | 아키텍처 다이어그램, Sequence Diagram, Request Flow            |
-| [`docs/AUTH_FLOW.md`](./docs/AUTH_FLOW.md)             | 소셜 로그인, Firebase Auth, JWT, Axios Interceptor             |
-| [`docs/NOTIFICATION.md`](./docs/NOTIFICATION.md)       | SSE, FCM, 알림 권한, 토큰 등록/해제                            |
-| [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md) | Google/Kakao/Naver 로그인, iOS Archive, Node, CocoaPods 문제   |
-| [`docs/RELEASE.md`](./docs/RELEASE.md)                 | Play Console, App Signing, versionCode, ProGuard, Firebase SHA |
+| 문서                                                           | 내용                                                             |
+| -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [`docs/technical-overview.md`](./docs/technical-overview.md)   | 스택 + 아키텍처 + 주요 플로우 + 트러블슈팅 요약 (포트폴리오용 통합 문서) |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)               | 아키텍처 다이어그램, Sequence Diagram, Request Flow              |
+| [`docs/AUTH_FLOW.md`](./docs/AUTH_FLOW.md)                     | 소셜 로그인, Firebase Auth, JWT, Axios Interceptor               |
+| [`docs/NOTIFICATION.md`](./docs/NOTIFICATION.md)               | SSE, FCM, 알림 권한, 토큰 등록/해제                              |
+| [`docs/ANALYTICS_EVENTS.md`](./docs/ANALYTICS_EVENTS.md)       | Firebase Analytics / Mixpanel 이벤트 전체 목록                   |
+| [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md)         | Google/Kakao/Naver 로그인, iOS Archive, Node, CocoaPods 문제     |
+| [`docs/RELEASE.md`](./docs/RELEASE.md)                         | Play Console, App Signing, versionCode, ProGuard, Firebase SHA  |
 
 <br />
 

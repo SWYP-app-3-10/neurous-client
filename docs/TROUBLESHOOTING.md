@@ -69,6 +69,14 @@
 - **원인**: `onMomentumScrollEnd`는 스크롤이 완전히 멈춘 뒤에 호출되므로, 이미지는 이미 다음 슬라이드로 넘어간 상태에서 텍스트 fade 전환이 뒤늦게 발생
 - **해결**: `onScroll` + `scrollEventThrottle={16}`으로 실시간 스크롤 offset 추적, 절반 지점(`Math.round(offsetX / width)` 변경 시점)에서 미리 fade 트리거. 다음 버튼(`scrollToIndex`) 이동 시에는 `isProgrammaticScrollRef` 플래그로 `onScroll` 트리거 무시
 
+### 위클리 출석 보상 판별 UTC/로컬 타임존 불일치
+
+- **증상**: 위클리 출석(일요일 데일리 출석 시 보상 합산) 판별 로직 추가 중, 출석 dedup 날짜 키와 요일 판별 기준이 서로 달라 자정~오전 9시(KST) 사이 경계 케이스에서 오작동 가능성 발견
+- **원인**: 출석 체크의 "오늘" 날짜 키를 `new Date().toISOString().split('T')[0]`(UTC 기준)으로 만들고, 요일 판별은 `new Date().getDay()`(로컬 기준)로 계산 — 한국(UTC+9)에서는 자정~오전 9시 사이 UTC 날짜와 로컬 날짜가 하루 어긋남
+- **해결**: `src/utils/dateUtils.ts`에 `getLocalDateKey()` 추가, 하나의 `Date` 인스턴스로 날짜 키와 요일을 모두 로컬 기준으로 통일해서 계산
+- **수정 파일**: `src/utils/dateUtils.ts`, `src/screens/main/MissionScreen.tsx`
+- **교훈**: 날짜 문자열 키(`toISOString`)와 요일/시간 계산(`getDay`, `getHours` 등)을 같은 로직 안에서 섞어 쓸 때는 반드시 기준(UTC vs 로컬)을 통일해야 함. 마이페이지 날짜 오표시(위 항목)와 같은 계열의 버그
+
 <br />
 
 ## iOS 빌드 / 설정
@@ -90,6 +98,26 @@
 - **증상**: `pod install` 중 특정 라이브러리(PromisesObjC)에서 CPU 0%로 멈춤
 - **원인**: Git LFS 미설치
 - **해결**: Git LFS 설치 후 캐시 삭제 및 재설치
+
+<br />
+
+## 패키지 / 패치
+
+### lottie-react-native 패치 파일에 빌드 산출물이 섞여 patch-package 실패
+
+- **증상**: `npm install` 시 `patch-package` 단계에서 `lottie-react-native` 패치 적용 실패 (`Failed to apply patch`). 재생성(`npx patch-package lottie-react-native`) 시도 시 `Filename too long` 에러로 실패
+- **원인**: 과거 안드로이드 빌드가 완료된 상태의 `node_modules/lottie-react-native`에서 패치를 생성해서, `android/build/`, `android/.gradle/` 같은 빌드 캐시 폴더(수백 개의 `.dex`/`.class` 바이너리)까지 패치 diff에 통째로 포함됨. Windows 경로 길이 제한(260자)에 걸려 재생성도 실패
+- **해결**:
+  1. `node_modules/lottie-react-native/android/build`, `android/.gradle` 폴더를 삭제 (gradle이 빌드 시 자동 재생성하므로 안전)
+  2. `npx patch-package lottie-react-native`로 패치 재생성 — 실제 소스 수정 2개 파일(`LottieAnimationViewManagerImpl.kt`, `LottieAnimationViewPropertyManager.kt`)만 남는지 diff 개수로 확인 (`Select-String -Path patches\lottie-react-native+7.3.5.patch -Pattern "^diff --git" | Measure-Object` 등으로 카운트, 정상은 2개)
+- **교훈**: 안드로이드/iOS 빌드를 한 번이라도 실행한 `node_modules`에서 `patch-package <패키지명>`을 실행하기 전에는 해당 패키지의 `android/build`, `android/.gradle`, `ios/build` 등 빌드 산출물 폴더를 먼저 정리할 것
+
+### Mixpanel 추가 후 안드로이드 빌드 시 Maven/Gradle 저장소 연결 실패
+
+- **증상**: `gradlew.bat app:installDebug` 실행 시 `:mixpanel-react-native:compileDebugJavaWithJavac`에서 `kotlinx-coroutines-core-jvm` 등의 의존성을 `repo.maven.apache.org` / `plugins.gradle.org`에서 받아오지 못하고 `Connection timed out` 또는 `알려진 호스트가 없습니다`(DNS 조회 실패)로 실패
+- **원인**: 브라우저(curl)는 성공하는데 Gradle(JVM)만 실패하는 패턴 — 회사 SSL 검사 프록시가 원인인 경우가 많지만, 개인 PC에서도 재현됨. 정확한 원인은 특정되지 않았고 일시적 네트워크/DNS 불안정으로 추정
+- **해결**: `ipconfig /flushdns` 후 재시도, 그래도 실패 시 `android/gradle.properties`의 `org.gradle.jvmargs`에 `-Djava.net.preferIPv4Stack=true` 추가. 최종적으로는 에뮬레이터 와이파이를 실기기 USB 연결로 바꾼 뒤 해결됨 (에뮬레이터 NAT 네트워크 불안정이 원인이었을 가능성)
+- **교훈**: 회사 보안 소프트웨어가 없는 환경에서도 Gradle 의존성 다운로드가 curl과 다르게 실패할 수 있음. 재현 시 DNS 캐시 초기화 → IPv4 강제 → 네트워크 환경(에뮬레이터 NAT vs 실기기 USB vs 다른 와이파이) 교체 순으로 시도
 
 <br />
 

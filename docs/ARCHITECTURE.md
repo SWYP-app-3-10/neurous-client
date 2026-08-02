@@ -30,7 +30,7 @@ graph TB
 
     subgraph ServiceLayer["SERVICES (서비스 계층)"]
         AuthSvc["인증<br/>authService<br/>authStorageService<br/>socialLoginService"]
-        EtcSvc["기타<br/>onboardingService<br/>analyticsService"]
+        EtcSvc["기타<br/>onboardingService<br/>analyticsService<br/>mixpanelService"]
     end
 
     subgraph APILayer["API (데이터 접근 계층)"]
@@ -41,7 +41,7 @@ graph TB
     subgraph External["외부 연동"]
         Storage["📦 AsyncStorage<br/>@auth_token<br/>@refresh_token<br/>@user_info<br/>@onboarding_completed"]
         Backend["🖥️ Backend<br/>Spring Boot API<br/>RESTful · SSE"]
-        ThirdParty["🌐 Third Party<br/>Firebase Auth · Analytics<br/>FCM · AdMob · Amplitude<br/>━━━━━━━━━━━━<br/>Kakao · Naver<br/>Google · Apple"]
+        ThirdParty["🌐 Third Party<br/>Firebase Auth · Analytics<br/>FCM · AdMob · Mixpanel<br/>━━━━━━━━━━━━<br/>Kakao · Naver<br/>Google · Apple"]
     end
 
     App --> Screens
@@ -193,6 +193,48 @@ sequenceDiagram
     Hook-->>Screen: 결과 표시
 ```
 
+### 2-5. 출석 체크 및 보상 플로우 (데일리 + 위클리 합산)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Screen as MissionScreen
+    participant Storage as AsyncStorage
+    participant Store as pointStore / experienceStore
+    participant Modal as modalStore
+    participant Mixpanel as mixpanelService
+
+    User->>Screen: 앱 실행 / 홈 탭 진입
+    Screen->>Storage: getItem(DAILY_MISSION_ENTRY_KEY)
+    Storage-->>Screen: 마지막 출석일
+
+    alt 오늘 이미 출석함 (로컬 날짜 기준 동일)
+        Screen->>Screen: 아무 동작 없음
+    else 오늘 첫 진입
+        Screen->>Storage: setItem(DAILY_MISSION_ENTRY_KEY, 오늘 날짜)
+        Screen->>Screen: getLocalDateKey()로 오늘 날짜, getDay()로 요일 계산<br/>(둘 다 로컬 기준 Date 하나로 통일)
+
+        alt 평일 (일요일 아님)
+            Screen->>Store: addPoints(DAILY_POINT) / addExperience(DAILY_EXP)
+            Screen->>Mixpanel: reward_popup_view (reward_source: daily_attendance)
+            Screen->>Modal: showModal (데일리 보상 팝업)
+        else 일요일 (위클리 출석 완료)
+            Screen->>Store: addPoints(DAILY+WEEKLY) / addExperience(DAILY+WEEKLY)
+            Screen->>Mixpanel: reward_popup_view (reward_source: daily_attendance)
+            Screen->>Mixpanel: reward_popup_view (reward_source: weekly_attendance)
+            Screen->>Modal: showModal (데일리+위클리 합산 보상 팝업, weekly=true)
+        end
+    end
+
+    Modal-->>User: 보상 팝업 노출
+```
+
+**설계 메모**
+
+- 위클리 출석은 서버 API 없이 클라이언트에서 요일(일요일)만으로 판단하며, 항상 그날의 데일리 출석과 같은 시점에 합산 지급된다. 별도의 위클리 전용 dedup 키가 없는 이유는 `DAILY_MISSION_ENTRY_KEY`의 하루 1회 체크가 이미 위클리 중복 지급도 막아주기 때문
+- 팝업은 하나로 합쳐서 보여주지만(`ExperienceModalContent`의 `weekly` prop), Mixpanel 분석 이벤트는 `daily_attendance` / `weekly_attendance` 두 건으로 나눠서 전송한다 (소스별 집계를 위해)
+- 날짜 판단은 반드시 로컬(기기) 기준으로 통일해야 한다. `Date.toISOString()`(UTC)과 `Date.getDay()`(로컬)를 섞어 쓰면 한국시간 자정~오전 9시 사이 요일 판별이 어긋나는 버그가 있었다 (`src/utils/dateUtils.ts`의 `getLocalDateKey()` 참고)
+
 <br />
 
 ## 3. 주요 요청 흐름도 (Request Processing Flow)
@@ -242,7 +284,7 @@ flowchart TD
     StoreCheck -- No --> Render
 
     UpdateStore --> Render[UI 렌더링]
-    Render --> Analytics["Analytics 로깅<br/>Amplitude · Firebase"]
+    Render --> Analytics["Analytics 로깅<br/>Firebase · Mixpanel"]
     Analytics --> Done([완료])
 
     ErrorHandle --> Done
