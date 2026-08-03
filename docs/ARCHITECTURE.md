@@ -174,23 +174,25 @@ sequenceDiagram
 sequenceDiagram
     actor User
     participant Screen as QuizScreen
-    participant Hook as useQuizButton
     participant API
     participant Backend
     participant Store as pointStore / experienceStore
-    participant Storage as AsyncStorage
 
-    User->>Screen: 퀴즈 풀기 → QuizScreen 이동
-    Screen->>Hook: useQuizButton
-    User->>Screen: 답안 제출
-    Screen->>Hook: submitAnswer
-    Hook->>API: submitQuizAnswer
-    API->>Backend: POST /quiz/submit
-    Backend-->>API: 정답 여부 + 보상
-    API-->>Hook: QuizResult
-    Hook->>Store: addPoints / addExperience
-    Store->>Storage: 로컬 상태 동기화
-    Hook-->>Screen: 결과 표시
+    User->>+Screen: 퀴즈 풀기 → QuizScreen 이동
+    Screen->>+API: fetchQuiz(userId, contentId)
+    API->>+Backend: GET /api/quiz/{contentId}?userId=
+    Backend-->>-API: 퀴즈 문항 + 선택지
+    API-->>-Screen: QuizResponse
+    Screen-->>-User: 문항/선택지 표시
+
+    User->>+Screen: 답안 선택 후 "다음" 클릭
+    Screen->>+API: submitQuiz(userId, { quizId, selectedNo, readContentId })
+    API->>+Backend: POST /api/quiz/submit?userId=
+    Backend-->>-API: quizResultResponse + rewardResponse<br/>(earnedPoint, earnedExp) + userLevelInformation
+    API-->>-Screen: response.data
+    Screen->>+Store: addPoints(rewardResponse.earnedPoint)<br/>addExperience(rewardResponse.earnedExp)
+    Store-->>-Screen: 반영 완료
+    Screen-->>-User: 정답/오답 팝업<br/>(팝업 텍스트는 로컬 상수 — 실제 지급은 서버값, 4-3 참고)
 ```
 
 ### 2-5. 출석 체크 및 보상 플로우 (데일리 + 위클리 합산)
@@ -203,30 +205,42 @@ sequenceDiagram
     participant Store as pointStore / experienceStore
     participant Modal as modalStore
     participant Mixpanel as mixpanelService
+    participant Backend
 
-    User->>Screen: 앱 실행 / 홈 탭 진입
-    Screen->>Storage: getItem(DAILY_MISSION_ENTRY_KEY)
-    Storage-->>Screen: 마지막 출석일
+    User->>+Screen: 앱 실행 / 홈 탭 진입
+    Screen->>+Storage: getItem(DAILY_MISSION_ENTRY_KEY)
+    Storage-->>-Screen: 마지막 출석일
 
     alt 오늘 이미 출석함 (로컬 날짜 기준 동일)
         Screen->>Screen: 아무 동작 없음
     else 오늘 첫 진입
-        Screen->>Storage: setItem(DAILY_MISSION_ENTRY_KEY, 오늘 날짜)
+        Screen->>+Storage: setItem(DAILY_MISSION_ENTRY_KEY, 오늘 날짜)
+        Storage-->>-Screen: 완료
         Screen->>Screen: getLocalDateKey()로 오늘 날짜, getDay()로 요일 계산<br/>(둘 다 로컬 기준 Date 하나로 통일)
 
+        Note over Screen,Backend: ⚠️ 이 지점에는 서버로 보내는 API 호출이 없다.<br/>출석 사실 자체는 서버에 전달되지 않는다.
+
         alt 평일 (일요일 아님)
-            Screen->>Store: addPoints(DAILY_POINT) / addExperience(DAILY_EXP)
-            Screen->>Mixpanel: reward_popup_view (reward_source: daily_attendance)
-            Screen->>Modal: showModal (데일리 보상 팝업)
+            Screen->>+Store: addPoints(DAILY_POINT) / addExperience(DAILY_EXP)
+            Store-->>-Screen: 반영 완료
+            Screen->>+Mixpanel: reward_popup_view (reward_source: daily_attendance)
+            Mixpanel-->>-Screen: 완료
+            Screen->>+Modal: showModal (데일리 보상 팝업)
+            Modal-->>-User: 보상 팝업 노출
         else 일요일 (위클리 출석 완료)
-            Screen->>Store: addPoints(DAILY+WEEKLY) / addExperience(DAILY+WEEKLY)
-            Screen->>Mixpanel: reward_popup_view (reward_source: daily_attendance)
-            Screen->>Mixpanel: reward_popup_view (reward_source: weekly_attendance)
-            Screen->>Modal: showModal (데일리+위클리 합산 보상 팝업, weekly=true)
+            Screen->>+Store: addPoints(DAILY+WEEKLY) / addExperience(DAILY+WEEKLY)
+            Store-->>-Screen: 반영 완료
+            Screen->>+Mixpanel: reward_popup_view (reward_source: daily_attendance)
+            Mixpanel-->>-Screen: 완료
+            Screen->>+Mixpanel: reward_popup_view (reward_source: weekly_attendance)
+            Mixpanel-->>-Screen: 완료
+            Screen->>+Modal: showModal (데일리+위클리 합산 보상 팝업, weekly=true)
+            Modal-->>-User: 보상 팝업 노출
         end
     end
 
-    Modal-->>User: 보상 팝업 노출
+    Note over Backend: 서버의 "주간 출석 기록"(CharacterScreen에 표시)은<br/>이 플로우와 무관하게 별도로 계산된다.<br/>클라이언트가 출석을 알리는 write API는 없고,<br/>서버가 그날의 다른 인증 활동을 근거로 자체 판단한다.
+    Screen-->>-User: (참고) 이후 CharacterScreen 진입 시<br/>GET /api/characters/me로 서버 판단 출석 기록을 별도 조회 (4-4 참고)
 ```
 
 **설계 메모**
@@ -234,6 +248,72 @@ sequenceDiagram
 - 위클리 출석은 서버 API 없이 클라이언트에서 요일(일요일)만으로 판단하며, 항상 그날의 데일리 출석과 같은 시점에 합산 지급된다. 별도의 위클리 전용 dedup 키가 없는 이유는 `DAILY_MISSION_ENTRY_KEY`의 하루 1회 체크가 이미 위클리 중복 지급도 막아주기 때문
 - 팝업은 하나로 합쳐서 보여주지만(`ExperienceModalContent`의 `weekly` prop), Mixpanel 분석 이벤트는 `daily_attendance` / `weekly_attendance` 두 건으로 나눠서 전송한다 (소스별 집계를 위해)
 - 날짜 판단은 반드시 로컬(기기) 기준으로 통일해야 한다. `Date.toISOString()`(UTC)과 `Date.getDay()`(로컬)를 섞어 쓰면 한국시간 자정~오전 9시 사이 요일 판별이 어긋나는 버그가 있었다 (`src/utils/dateUtils.ts`의 `getLocalDateKey()` 참고)
+- 이 플로우 전체에 백엔드 호출이 없다는 것 자체가 중요한 특징이다. 서버가 보여주는 "주간 출석 기록"은 이 로컬 보상 지급과 완전히 별개의 시스템이며, 서버에 출석을 기록시키는 write API는 코드 전체에 존재하지 않는다 (4-4 참고)
+
+### 2-6. 글 읽기 보상 플로우 (퀴즈 이어풀기 시 합산)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Screen as ArticleDetailScreen
+    participant API
+    participant Backend
+    participant Storage as AsyncStorage
+    participant Store as experienceStore
+    participant Modal as modalStore
+    participant Mixpanel as mixpanelService
+    participant Quiz as QuizScreen
+
+    User->>+Screen: 기사 상세 화면 진입
+    Screen->>+API: fetchContentDetail(userId, contentId, isFromHome)
+    API->>+Backend: GET /api/content/{contentId}?userId=&isFromHome=
+    Backend-->>-API: 글 본문 데이터<br/>(서버는 이 호출 자체로 "완독"을 함께 기록,<br/>보상 계산은 하지 않음)
+    API-->>-Screen: ContentDetail
+    Screen-->>-User: 본문 표시 (article_start 트래킹만, 보상은 아직 없음)
+
+    alt 퀴즈 풀기 버튼 클릭
+        User->>+Screen: "퀴즈 풀기" 클릭
+        Screen->>Screen: wentToQuizRef = true
+        Screen->>+Storage: getItem(@article_read_reward_{articleId})
+        Storage-->>-Screen: 미지급 상태
+        Screen->>+Storage: setItem(..., true)
+        Storage-->>-Screen: 완료
+        Screen->>+Store: addExperience(5) — 팝업 없이 조용히 반영
+        Store-->>-Screen: 반영 완료
+        Screen->>+Quiz: navigate (push, 이 화면은 언마운트 안 됨)
+        deactivate Screen
+        User->>Quiz: 답안 선택 후 "다음" 클릭
+        Quiz->>+API: submitQuiz(userId, { quizId, selectedNo, readContentId })
+        API->>+Backend: POST /api/quiz/submit?userId=
+        Backend-->>-API: rewardResponse (earnedPoint, earnedExp)
+        API-->>-Quiz: response.data
+        Quiz->>+Store: addPoints(서버값) / addExperience(서버값)
+        Store-->>-Quiz: 반영 완료<br/>(최종 경험치 = 서버 퀴즈 보상 + 조용히 더한 5xp)
+        Quiz-->>-User: 정답/오답 팝업 (25XP/15XP, 5xp 포함된 합산값)
+    else 퀴즈로 이어지지 않고 이탈 (뒤로가기 등)
+        User->>+Screen: 화면 이탈 (뒤로가기 / 다른 화면 이동)
+        Screen->>Screen: useFocusEffect cleanup 실행<br/>(blur 감지, wentToQuizRef === false 확인)
+        Screen->>+Storage: getItem(@article_read_reward_{articleId})
+        Storage-->>-Screen: 미지급 상태
+        Screen->>+Storage: setItem(..., true)
+        Storage-->>-Screen: 완료
+        Screen->>+Store: addExperience(5)
+        Store-->>-Screen: 반영 완료
+        Screen->>+Mixpanel: reward_popup_view (reward_source: article_read)
+        Mixpanel-->>-Screen: 완료
+        Screen->>+Modal: showModal (경험치 획득 팝업, articleRead=true)
+        Modal-->>-User: 경험치 획득 팝업 노출 (5XP)
+        deactivate Screen
+    end
+```
+
+**설계 메모**
+
+- React Navigation 스택 구조상 퀴즈로 `push`해도 `ArticleDetailScreen`은 언마운트되지 않고 blur만 되므로, 일반 `useEffect`의 unmount cleanup이 아니라 `useFocusEffect`의 cleanup으로 이탈을 감지한다. 뒤로가기(pop)와 퀴즈 이동(push) 둘 다 blur를 거치므로 한 cleanup으로 두 경우를 모두 처리할 수 있다.
+- `wentToQuizRef`로 두 경로를 나눈다: 퀴즈로 이동한 경우는 팝업 없이 store에만 조용히 반영하고(퀴즈 결과 팝업이 합산값을 보여주므로), 이어지지 않은 이탈은 자체 팝업으로 5xp를 보여준다.
+- 이 플로우에는 백엔드 호출이 두 곳 있다: 화면 진입 시 `fetchContentDetail`(완독 기록은 겸하지만 보상 계산은 하지 않음)과, 퀴즈 경로에서만 발생하는 `submitQuiz`(실제 보상값을 서버가 계산). 글 읽기 5xp 자체는 두 호출 중 어디에도 실려가지 않고 클라이언트에서만 계산된다.
+- dedup 키(`@article_read_reward_{articleId}`)는 두 경로가 공유한다 — 글 하나당 평생 한 번만 지급.
+- 퀴즈 경로의 최종 지급액(서버값 + 로컬 5xp)과 QuizScreen 팝업에 표시되는 고정 텍스트(25XP/15XP)는 별개의 값이다. 팝업 텍스트는 `QUIZ_CORRECT_EXPERIENCE` 같은 로컬 상수를 그대로 보여줄 뿐, 실제 서버 보상액과 정확히 일치한다는 보장은 없다 (4-3 참고). 서버가 정답 보상으로 정확히 20xp를 주는지 등은 백엔드 확인이 필요하다.
 
 <br />
 
