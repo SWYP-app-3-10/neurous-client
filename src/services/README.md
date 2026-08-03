@@ -21,7 +21,7 @@
 
 ### 책임
 - AsyncStorage에 토큰/유저 정보 저장·조회·삭제
-- 로그아웃 시 서버 로그아웃 → 소셜 로그아웃 → 로컬 삭제 순서 처리
+- 로그아웃 시 인증 필요 서버 API 완료 대기 → 소셜 로그아웃 → 로컬 삭제 순서 처리
 - 회원 탈퇴 시 소셜 unlink + 서버 탈퇴 + 로컬 삭제
 
 ### AsyncStorage 키 구조
@@ -37,16 +37,21 @@
 ```
 1. getUserInfo()로 userId, provider 파악
      ↓
-2. logoutFromServer(userId) — 서버에 로그아웃 요청
-   (실패해도 계속 진행 — 서버 문제로 앱이 막히면 안 됨)
+2. 인증이 필요한 서버 API를 await Promise.allSettled로 완료 대기
+   - logoutFromServer(userId)         — 서버 로그아웃
+   - unregisterFCMToken(userId, ...)  — FCM 토큰 비활성화
+   - updateNotificationStatus(userId, false) — 알림 설정 리셋
+   (개별 실패해도 계속 진행 — 서버 문제로 앱이 막히면 안 됨)
      ↓
-3. signOutSocial(provider) — 소셜 SDK 로그아웃
+3. signOutSocial(provider) — 소셜 SDK 로그아웃 (fire-and-forget)
      ↓
 4. AsyncStorage.multiRemove([토큰들]) — 로컬 데이터 삭제
 ```
 
-> 💡 **핵심 설계:** 서버 로그아웃이 실패해도 로컬 로그아웃은 반드시 진행됨
-> 사용자가 앱에 갇히는 상황을 방지!
+> 💡 **핵심 설계:**
+> - 서버 API가 실패해도 로컬 로그아웃은 반드시 진행됨 (사용자가 앱에 갇히는 상황 방지)
+> - 2번의 API들은 `Authorization` 헤더가 필요하므로 **반드시 4번(로컬 토큰 삭제)보다 먼저 완료를 기다려야** 함. 순서를 지키지 않고 fire-and-forget으로 쏘면, Axios 요청 인터셉터가 토큰을 헤더에 첨부하기 전에 토큰이 삭제되어 401이 발생할 수 있음 (레이스 컨디션 — 과거 실제 발생했던 버그).
+> - `signOutSocial`(3번)은 백엔드 토큰과 무관한 로컬 세션 정리라 계속 fire-and-forget으로 둬도 안전함.
 
 ### `withdraw()` 흐름 (회원탈퇴)
 
@@ -55,12 +60,16 @@
      ↓
 2. 소셜별로 최신 token 재획득 시도 (Google: signInSilently → getTokens)
      ↓
-3. withdrawUser(userId, { unlinkSocial: true, providerAccessToken }) — 서버 탈퇴
+3. withdrawUser(userId, { unlinkSocial: true, providerAccessToken }) — 서버 탈퇴 (await)
      ↓
-4. signOutSocial(provider) — 소셜 SDK 로그아웃
+4. unregisterFCMToken(userId, ...) — FCM 토큰 비활성화 (await, 로컬 토큰 삭제 전 완료 대기)
      ↓
-5. AsyncStorage.multiRemove([토큰들])
+5. signOutSocial(provider) — 소셜 SDK 로그아웃 (fire-and-forget)
+     ↓
+6. AsyncStorage.multiRemove([토큰들])
 ```
+
+> 4번도 `logout()`과 동일한 이유로 로컬 토큰 삭제 전에 완료를 기다립니다.
 
 ---
 

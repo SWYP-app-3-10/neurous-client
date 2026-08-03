@@ -93,6 +93,36 @@ sequenceDiagram
     end
 ```
 
+#### 로그아웃 플로우 (참고)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Screen
+    participant AuthSvc as authService.logout()
+    participant API as authApi / notificationApi
+    participant Social as socialLoginService
+    participant Storage as AsyncStorage
+
+    User->>Screen: 로그아웃 선택
+    Screen->>AuthSvc: logout()
+    AuthSvc->>Storage: getUserInfo() / @fcm_token 조회
+
+    rect rgb(240, 245, 255)
+        Note over AuthSvc,API: 인증 필요 서버 API — await Promise.allSettled로 완료 대기
+        AuthSvc->>API: logoutFromServer(userId)
+        AuthSvc->>API: unregisterFCMToken(userId, token)
+        AuthSvc->>API: updateNotificationStatus(userId, false)
+        API-->>AuthSvc: 완료 (개별 실패해도 계속 진행)
+    end
+
+    AuthSvc-->>Social: signOutSocial(provider) — fire-and-forget
+    AuthSvc->>Storage: multiRemove([토큰들]) — 위 API 완료 후에만 실행
+    AuthSvc-->>Screen: 로그아웃 완료 → 로그인 화면 이동
+```
+
+> ⚠️ **순서 주의**: 인증 필요 API(위 rect 영역)를 로컬 토큰 삭제보다 먼저 완료해야 함. 순서가 뒤바뀌면 요청 인터셉터가 토큰을 헤더에 붙이기 전에 토큰이 삭제되어 401이 발생함 (`docs/AUTH_FLOW.md`의 "로그아웃 순서 보장", `docs/TROUBLESHOOTING.md`의 "네이버/구글 로그아웃·탈퇴 시 401" 참고).
+
 ### 2-2. 메인 기능 플로우 (미션 조회 + 토큰 재발급)
 
 ```mermaid

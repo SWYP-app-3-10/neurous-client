@@ -147,12 +147,18 @@ retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
 
 ## 로그인/로그아웃 성능 최적화 (Fire-and-forget)
 
-로그인/로그아웃 체감 속도를 높이기 위해, 응답을 기다릴 필요가 없는 부가 작업들은 `await` 없이 백그라운드로 흘려보내고 있습니다. 화면 전환이나 로컬 상태 정리는 이 작업들의 완료를 기다리지 않습니다.
+로그인/로그아웃 체감 속도를 높이기 위해, 응답을 기다릴 필요가 없는 부가 작업들은 `await` 없이 백그라운드로 흘려보내고 있습니다. 단, **`Authorization` 헤더가 필요한(인증 필요) 서버 API는 로컬 토큰 삭제보다 먼저 완료되어야 하므로 fire-and-forget 대상에서 제외**합니다 (아래 "로그아웃 순서 보장" 참고).
 
-- **로그아웃** (`src/services/authService.ts:233-288`): 서버 로그아웃 API, FCM 토큰 해제, 알림 상태 초기화, 소셜 SDK sign-out을 `tasks` 배열에 담아 `Promise.allSettled(tasks)`를 **await 없이** 실행한 뒤, 곧바로 `AsyncStorage.multiRemove(...)`와 `resetUser()`를 진행합니다. 즉 로컬 로그아웃 처리(토큰 삭제, 화면 전환)는 서버 응답을 기다리지 않고 즉시 이루어집니다. `withdraw()`(회원 탈퇴)에서도 `withdrawUser` 호출 자체는 await하지만, 그 이후의 `signOutSocial`/`unregisterFCMToken`은 동일하게 fire-and-forget입니다 (`authService.ts:388-399`).
+- **로그아웃** (`src/services/authService.ts:239-288`): 서버 로그아웃 API, FCM 토큰 해제, 알림 상태 초기화는 `await Promise.allSettled([...])`로 완료를 기다린 뒤에 `AsyncStorage.multiRemove(...)`와 `resetUser()`를 진행합니다. 소셜 SDK sign-out(`signOutSocial`)만 백엔드 토큰과 무관하므로 계속 await 없이(fire-and-forget) 실행합니다. `withdraw()`(회원 탈퇴)에서도 `withdrawUser` 호출은 await하고, 이어서 `unregisterFCMToken`도 await로 완료를 기다린 뒤 로컬 토큰을 삭제합니다. `signOutSocial`만 fire-and-forget입니다 (`authService.ts:388-401`).
 - **로그인 후 부가 작업**: `saveAuthData`에서 Mixpanel `identifyUser(...)` 호출이 `.catch()`만 붙은 채 await 없이 실행됩니다 (`authService.ts:168-173`). `socialLoginService.ts`의 각 제공자별 로그인 흐름에서도 FCM 토큰 등록(`messaging().getToken().then(...).catch(...)`)이 await 없이 실행되어, 로그인 자체는 FCM 등록 완료를 기다리지 않고 반환됩니다 (예: `socialLoginService.ts:126-132, 276-283, 442-449, 602-609`).
 
 **주의**: 이 부가 작업들이 실패해도 로그인/로그아웃 자체의 성공 여부에는 영향을 주지 않습니다. 대신 실패는 `.catch()`로 로깅만 되고 사용자에게 노출되지 않으므로, FCM 미등록이나 Mixpanel 미식별 같은 문제는 별도 모니터링이 없으면 알아차리기 어렵습니다.
+
+### 로그아웃 순서 보장 (401 레이스 컨디션 방지)
+
+과거에는 로그아웃 API, FCM 토큰 해제, 알림 설정 API까지 전부 fire-and-forget으로 쏘고 곧바로 `AsyncStorage.multiRemove`로 로컬 토큰을 지웠습니다. 그런데 `client.ts`의 요청 인터셉터는 매 요청마다 `await getAuthToken()`으로 AsyncStorage에서 토큰을 **비동기로 다시 조회**하기 때문에, 이 조회가 끝나기 전에 토큰이 먼저 삭제되면 `Authorization` 헤더 없이 요청이 나가 401이 발생하는 레이스 컨디션이 있었습니다 (네이버/구글 로그아웃·탈퇴 시 401 에러로 실제 발생).
+
+현재는 인증이 필요한 서버 API(로그아웃, FCM 해제, 알림 설정)를 `await`로 완료를 기다린 뒤에 로컬 토큰을 삭제하도록 순서를 보장합니다. 백엔드 토큰과 무관한 소셜 SDK 로그아웃(`signOutSocial`)만 계속 fire-and-forget으로 둡니다.
 
 <br />
 

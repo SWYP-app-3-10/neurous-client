@@ -50,6 +50,14 @@
 - **해결**: `/api/auth/refresh`와 동일하게 `/api/auth/login/` 경로도 Authorization 헤더 제외 대상에 추가
 - **수정 파일**: `src/api/client.ts`
 
+### 네이버/구글 로그아웃·탈퇴 시 401 (로그아웃 API, FCM 해제, 알림 설정 전부 실패)
+
+- **증상**: 로그아웃/회원탈퇴 시 `POST /api/auth/logout`, `PATCH /api/notification/token/deactivate`, `PATCH /api/user/notification`이 전부 401 반환. 콘솔 로그상 `[logout] 완료`가 이 API 응답들보다 먼저 출력됨
+- **원인**: `authService.logout()`이 위 서버 API들을 `Promise.allSettled(tasks)`로 **await 없이(fire-and-forget)** 실행한 직후 곧바로 `AsyncStorage.multiRemove`로 토큰을 삭제. `client.ts`의 요청 인터셉터는 매 요청마다 `await getAuthToken()`으로 AsyncStorage에서 토큰을 비동기로 다시 읽는데, 이 조회가 끝나기 전에 토큰이 먼저 삭제되면 `Authorization` 헤더 없이 요청이 나가 서버가 401을 반환하는 레이스 컨디션이었음. `withdraw()`의 `unregisterFCMToken` 호출도 동일한 구조로 영향받음
+- **해결**: `logoutFromServer` / `unregisterFCMToken` / `updateNotificationStatus`를 `await`로 완료를 기다린 뒤에 `AsyncStorage.multiRemove`를 호출하도록 순서 변경. 백엔드 토큰과 무관한 `signOutSocial`(소셜 SDK 로그아웃)만 계속 fire-and-forget으로 유지
+- **수정 파일**: `src/services/authService.ts` (`logout()`, `withdraw()`)
+- **관련 문서**: `docs/AUTH_FLOW.md`의 "로그아웃 순서 보장" 절
+
 <br />
 
 ## UI / UX
