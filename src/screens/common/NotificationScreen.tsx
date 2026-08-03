@@ -11,6 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Header from '../../components/Header';
+import Spacer from '../../components/Spacer';
+import { NoNotificationsIcon } from '../../icons';
 import { COLORS, scaleWidth } from '../../styles/global';
 import { Body_16M } from '../../styles/typography';
 
@@ -132,9 +134,14 @@ const NotificationScreen = () => {
         data={notifications}
         keyExtractor={item => String(item.notificationId)}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          notifications.length === 0 && styles.listContentEmpty,
+        ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <NoNotificationsIcon />
+            <Spacer num={16} />
             <Text style={styles.emptyText}>아직 도착한 알림이 없어요</Text>
           </View>
         }
@@ -163,6 +170,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
   },
   row: {
     paddingHorizontal: 20,
@@ -228,7 +238,8 @@ const styles = StyleSheet.create({
   },
   // 빈 목록
   emptyContainer: {
-    paddingVertical: scaleWidth(60),
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   emptyText: {

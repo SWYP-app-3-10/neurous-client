@@ -30,6 +30,7 @@ import BottomModalCheck from '../../assets/svg/bottomModalCheck.svg';
 import Note from '../../assets/svg/note.svg';
 import Clock from '../../assets/svg/clock.svg';
 import NoArticles from '../../assets/svg/noArticles.svg';
+import NoNotifications from '../../assets/svg/noNotifications.svg';
 import Search_tab from '../../assets/svg/search_tab.svg';
 import View from '../../assets/svg/View.svg';
 import P_Icon from '../../assets/svg/P_Icon.svg';
@@ -103,4 +104,9 @@ export const NoArticlesIcon = createRectangleIconComponent(
   NoArticles,
   scaleWidth(64),
   scaleWidth(62),
+);
+export const NoNotificationsIcon = createRectangleIconComponent(
+  NoNotifications,
+  scaleWidth(76),
+  scaleWidth(76),
 );
