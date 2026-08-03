@@ -225,10 +225,16 @@ export const clearUserInfo = async (): Promise<void> => {
  * 성능 최적화:
  *   - getUserInfo() 1회만 호출
  *   - FCM 토큰은 AsyncStorage 캐시(@fcm_token)에서 읽음
- *   - 서버 API 3개 + 소셜 SDK 로그아웃을 fire-and-forget으로 실행
- *     (요청 발사 후 응답을 기다리지 않음 — Axios 인터셉터가 요청 시점에
- *      이미 토큰을 헤더에 첨부했으므로, 이후 AsyncStorage를 삭제해도
- *      이미 날아간 요청에는 영향 없음)
+ *
+ * 순서 보장 (중요):
+ *   인증이 필요한 서버 API(로그아웃/FCM 해제/알림 설정)는 Authorization
+ *   헤더가 필요하다. Axios 요청 인터셉터가 AsyncStorage에서 토큰을 다시
+ *   읽는 동작은 비동기이므로, 이 요청들을 fire-and-forget으로 쏘고 곧바로
+ *   로컬 토큰을 지우면 인터셉터가 토큰을 읽기 전에 이미 삭제되어 401이
+ *   발생할 수 있다 (레이스 컨디션). 그래서 이 서버 API들은 await로 완료를
+ *   기다린 뒤에 로컬 토큰을 삭제한다.
+ *   반면 소셜 SDK 로그아웃(signOutSocial)은 백엔드 토큰과 무관한 로컬
+ *   세션 정리이므로 계속 fire-and-forget으로 처리한다.
  */
 export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
   try {
@@ -238,11 +244,9 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
     const cachedFcmToken =
       (await AsyncStorage.getItem('@fcm_token')) ?? undefined;
 
-    // 서버 API + 소셜 로그아웃: fire-and-forget (발사만 하고 응답 안 기다림)
-    const tasks: Promise<any>[] = [];
-
+    // 인증이 필요한 서버 API: 로컬 토큰 삭제 전에 반드시 완료를 기다린다
     if (userId) {
-      tasks.push(
+      await Promise.allSettled([
         logoutFromServer(userId).catch(() =>
           console.warn('[logout] 서버 로그아웃 실패'),
         ),
@@ -252,19 +256,15 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
         updateNotificationStatus(userId, false).catch(() =>
           console.warn('[logout] 알림 설정 리셋 실패'),
         ),
-      );
+      ]);
     }
 
+    // 소셜 SDK 로그아웃: 백엔드 토큰과 무관 → 계속 fire-and-forget
     if (resolvedProvider) {
-      tasks.push(
-        signOutSocial(resolvedProvider).catch(e =>
-          console.warn('[logout] 소셜 로그아웃 실패:', e),
-        ),
+      signOutSocial(resolvedProvider).catch(e =>
+        console.warn('[logout] 소셜 로그아웃 실패:', e),
       );
     }
-
-    // await 없이 발사 — 응답을 기다리지 않고 즉시 로컬 정리로 진행
-    Promise.allSettled(tasks);
 
     // 로컬 저장값 일괄 삭제
     await AsyncStorage.multiRemove([
@@ -385,18 +385,18 @@ export const withdraw = async (): Promise<void> => {
 
     await withdrawUser(userId, requestBody);
 
-    // 소셜 로그아웃 + FCM 해제: fire-and-forget
+    // FCM 해제: Authorization 헤더가 필요하므로 로컬 토큰 삭제 전에 완료를 기다린다
     const cachedFcmToken =
       (await AsyncStorage.getItem('@fcm_token')) ?? undefined;
 
-    Promise.allSettled([
-      signOutSocial(provider).catch(() =>
-        console.warn('[withdraw] 소셜 로그아웃 실패'),
-      ),
-      unregisterFCMToken(userId, cachedFcmToken).catch(e =>
-        console.warn('[withdraw] FCM 해제 실패:', e),
-      ),
-    ]);
+    await unregisterFCMToken(userId, cachedFcmToken).catch(e =>
+      console.warn('[withdraw] FCM 해제 실패:', e),
+    );
+
+    // 소셜 SDK 로그아웃: 백엔드 토큰과 무관 → 계속 fire-and-forget
+    signOutSocial(provider).catch(() =>
+      console.warn('[withdraw] 소셜 로그아웃 실패'),
+    );
 
     await AsyncStorage.multiRemove([
       AUTH_TOKEN_KEY,
