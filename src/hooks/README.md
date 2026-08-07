@@ -56,16 +56,22 @@ const { data: reward } = useCharacterReward();
 const { data: me } = useCharacterMe();
 ```
 
-| 훅 | staleTime | gcTime | 설명 |
-|----|----------|--------|------|
-| `useCharacterData` | 5분 | 10분 | 캐릭터 기본 정보 |
-| `useCharacterReward` | 5분 | 10분 | 리워드 정보 |
-| `useCharacterMe` | 5분 | 10분 | 성장·출석·미션 통합 |
+| 훅 | staleTime | gcTime | refetchOnMount | 설명 |
+|----|----------|--------|----------------|------|
+| `useCharacterData` | 5분 | 10분 | `always` | 캐릭터 기본 정보 |
+| `useCharacterReward` | 5분 | 10분 | - | 리워드 정보 |
+| `useCharacterMe` | 5분 | 10분 | `always` | 성장·출석·미션 통합 |
 
 > 💡 **staleTime vs gcTime**
 > - `staleTime`: 이 시간 동안은 캐시를 "신선하다"고 봄 → 서버 재요청 안 함
 > - `gcTime`: 이 시간 후 캐시를 메모리에서 제거
 > - 비유: staleTime = 우유 유통기한 / gcTime = 냉장고에서 꺼내는 시간
+
+> 💡 **refetchOnMount: 'always'는 왜 필요한가요?**
+> `useCharacterData`/`useCharacterMe`는 캐릭터 탭 진입 시(`useFocusEffect`) 수동으로 `refetch()`를 호출하지만,
+> 마운트 타이밍과 겹치면 이 호출이 누락될 수 있어요. `refetchOnMount: 'always'`를 함께 걸어두면
+> staleTime과 무관하게 화면이 마운트될 때마다 서버에서 다시 받아오므로 이중 안전장치가 됩니다.
+> (홈 탭의 `useMissions`도 동일한 이유로 `refetchOnMount: true`를 사용 중)
 
 ---
 
