@@ -155,20 +155,8 @@ const CharacterScreen = () => {
    * 응답 데이터:
    *   - nextLevelExp: 다음 레벨까지 필요한 총 경험치
    */
-  const {
-    data: characterData,
-    refetch: refetchCharacterData,
-    isLoading: characterDataLoading,
-  } = useCharacterData();
-
-  // 개발 모드에서 characterData 로딩 상태 로깅
-  if (__DEV__) {
-    console.log('[CharacterScreen] characterData 상태:', {
-      characterData,
-      characterDataLoading,
-      hasNextLevelExp: !!characterData?.nextLevelExp,
-    });
-  }
+  const { data: characterData, refetch: refetchCharacterData } =
+    useCharacterData();
 
   // ──────────────────────────────────────────────
   // Effect: 탭 포커스 시 스크롤 최상단 이동 및 데이터 갱신
@@ -336,24 +324,10 @@ const CharacterScreen = () => {
    *   - Infinity 또는 NaN: 기본값 100
    */
   const nextLevelExp = useMemo(() => {
-    console.log('[CharacterScreen] characterData 전체:', characterData);
-
     // API에서 받은 다음 레벨 경험치 사용
     if (characterData?.nextLevelExp) {
-      console.log(
-        '[CharacterScreen] nextLevelExp from API:',
-        characterData.nextLevelExp,
-      );
       return characterData.nextLevelExp;
     }
-
-    console.log(
-      '[CharacterScreen] characterData?.nextLevelExp 없음, fallback 계산 사용',
-      {
-        characterData,
-        hasNextLevelExp: !!characterData?.nextLevelExp,
-      },
-    );
 
     // API 데이터가 없으면 progressPercent를 기반으로 계산
     if (progressPercent === 100) {
@@ -418,14 +392,18 @@ const CharacterScreen = () => {
    * 경험치 진행률 퍼센트 값
    *
    * 우선순위:
-   *   1. API에서 받은 progressPercent 사용
-   *   2. progressPercent가 없으면 직접 계산
+   *   1. API에서 받은 progressPercent 사용 (0~100, 0도 유효한 값)
+   *   2. progressPercent가 null/undefined일 때만 직접 계산 (방어용, 실제로는 거의 발생하지 않음)
    *
-   * 계산식:
+   * 계산식(fallback):
    *   progressPercent = (currentExp / nextLevelExp) * 100
+   *
+   * 주의: `||` 대신 `??`를 사용해야 한다.
+   * 레벨업 직후처럼 progressPercent가 정확히 0인 정상 케이스를 `||`가 falsy로 취급해
+   * 무관한 계산식(fallback) 값으로 덮어써서 프로그래스바가 실제 진행률과 다르게 채워지는 버그가 있었음.
    */
   const progressPercentageValue = useMemo(
-    () => progressPercent || Math.round((currentExp / nextLevelExp) * 100),
+    () => progressPercent ?? Math.round((currentExp / nextLevelExp) * 100),
     [currentExp, nextLevelExp, progressPercent],
   );
 
@@ -437,11 +415,10 @@ const CharacterScreen = () => {
    *
    * 기본값: Lv1 (레벨이 범위를 벗어날 때)
    */
-  const lottieSource = useMemo(() => {
-    const src = LOTTIE_BY_LEVEL[currentLevel] ?? LOTTIE_BY_LEVEL[1];
-    console.log('[Lottie] source level =', currentLevel);
-    return src;
-  }, [currentLevel]);
+  const lottieSource = useMemo(
+    () => LOTTIE_BY_LEVEL[currentLevel] ?? LOTTIE_BY_LEVEL[1],
+    [currentLevel],
+  );
 
   // ──────────────────────────────────────────────
   // 로딩 및 에러 상태
