@@ -195,7 +195,11 @@ const RootNavigatorContent: React.FC<{
     const previousExp = lastCheckedExpRef.current;
     if (experience !== previousExp && experience > previousExp) {
       // 경험치가 증가했을 때만 refetch
-      queryClient.invalidateQueries({ queryKey: characterKeys.data() });
+      // characterKeys.all로 무효화해야 레벨/경험치 정보(data)뿐 아니라
+      // 출석·진행률 바가 참조하는 characterKeys.me() 캐시도 함께 갱신된다.
+      // (data()만 무효화하면 me()는 캐릭터 탭의 focus refetch에만 의존하게 되어
+      //  탭 재진입 없이는 출석/진행률이 최신 상태로 반영되지 않는 문제가 있었음)
+      queryClient.invalidateQueries({ queryKey: characterKeys.all });
       // ref 리셋 직접 호출 - useEffect 의존성 재실행 없이도 즉시 체크
       hasCheckedPendingLevelUpRef.current = false;
       checkPendingLevelUp();
