@@ -107,6 +107,13 @@
 - **해결**: `||` → `??`로 변경해 0을 유효한 값으로 인정, 서버 `progressPercent`를 항상 신뢰하도록 수정 (fallback은 값이 정말 없을 때만 대비용으로 유지). 겸사겸사 같은 파일에 남아있던 개발용 `console.log`/`__DEV__` 디버그 로그 제거
 - **수정 파일**: `src/screens/main/CharacterScreen.tsx`
 
+### 캐릭터 탭 첫 진입 시 출석/진행률 미갱신
+
+- **증상**: 퀴즈/아티클 등으로 경험치가 오른 뒤 캐릭터 탭에 처음 들어가면 출석 기록·진행률 바가 갱신 전 상태로 보임. 다른 탭에 갔다가 캐릭터 탭으로 돌아오면 그제서야 정상 반영됨
+- **원인**: `RootNavigator`가 로컬 경험치(`experience`) 증가를 감지해 캐릭터 쿼리를 무효화(`invalidateQueries`)할 때 대상이 `characterKeys.data()`뿐이었음. 정작 출석·진행률이 담긴 `characterKeys.me()` 캐시는 앱 전체 어디서도 무효화되지 않아, `CharacterScreen`의 `useFocusEffect` 강제 refetch 한 번에만 전적으로 의존하는 구조 → 마운트 타이밍과 겹치면 첫 포커스에서 최신 데이터를 받아오지 못함
+- **해결**: `RootNavigator`의 무효화 대상을 `characterKeys.data()` → `characterKeys.all`로 확장(`data`/`me`/`reward` 전체 무효화). 추가로 `useCharacterMe`/`useCharacterData`에 `refetchOnMount: 'always'`를 붙여(`useMissions`와 동일한 패턴) 화면 마운트 시 캐시 신선도와 무관하게 항상 서버 재조회하도록 이중 안전장치를 둠
+- **수정 파일**: `src/navigation/RootNavigator.tsx`, `src/hooks/useCharacter.ts`
+
 <br />
 
 ## iOS 빌드 / 설정
