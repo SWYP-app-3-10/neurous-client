@@ -100,6 +100,13 @@
 - **해결**: 하단 플로팅 버튼 컨테이너를 퀴즈 섹션과 동일하게 `{quiz && (...)}` 조건으로 감싸 퀴즈를 푼 글에서만 노출. 버튼이 없을 때는 `ScrollView`의 하단 패딩도 버튼 높이만큼 빼서 불필요한 공백이 남지 않도록 조정
 - **수정 파일**: `src/screens/common/ReadArticleDetailScreen.tsx`
 
+### 캐릭터 화면 진행률 0%일 때 프로그래스바 오표시
+
+- **증상**: 레벨업 직후 등 다음 레벨 진행률이 정확히 0%일 때, 캐릭터 화면 프로그래스바가 실제 진행 상황과 맞지 않게 채워짐
+- **원인**: `progressPercentageValue` 계산에 `progressPercent || fallback`을 사용. `||`는 0을 falsy로 취급해서, 서버가 내려준 정상적인 0%(`progressPercent`)를 무시하고 `Math.round((currentExp / nextLevelExp) * 100)` fallback 계산식으로 덮어씀. 이 fallback은 계정 전체 누적 경험치(`currentExp`)와 레벨 기준 누적 경험치(`nextLevelExp`)를 그대로 나눈 값이라 "현재 레벨 내 진행률"과는 의미가 다름 → 0%여야 할 때 엉뚱하게 더 채워진 값이 표시됨
+- **해결**: `||` → `??`로 변경해 0을 유효한 값으로 인정, 서버 `progressPercent`를 항상 신뢰하도록 수정 (fallback은 값이 정말 없을 때만 대비용으로 유지). 겸사겸사 같은 파일에 남아있던 개발용 `console.log`/`__DEV__` 디버그 로그 제거
+- **수정 파일**: `src/screens/main/CharacterScreen.tsx`
+
 <br />
 
 ## iOS 빌드 / 설정
