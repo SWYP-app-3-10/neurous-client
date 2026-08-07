@@ -6,9 +6,14 @@
  *
  * 주요 기능:
  *   1. 읽은 글 내용 표시 (API로 조회)
- *   2. 풀었던 퀴즈와 정답/오답 피드백 표시
- *   3. 스크롤에 따라 "퀴즈 보기" / "맨 위로" 버튼 자동 전환
+ *   2. 풀었던 퀴즈와 정답/오답 피드백 표시 (퀴즈를 푼 글에서만)
+ *   3. 스크롤에 따라 "퀴즈 보기" / "맨 위로" 버튼 자동 전환 (퀴즈를 푼 글에서만)
  *   4. 플로팅 버튼으로 퀴즈 섹션으로 빠르게 이동
+ *
+ * 주의:
+ *   - 읽기만 하고 퀴즈를 안 푼 글은 API 응답의 quiz가 undefined이며,
+ *     이 경우 퀴즈 섹션과 하단 플로팅 버튼을 모두 렌더링하지 않는다
+ *     (이동할 퀴즈 섹션이 없는데 "퀴즈 보기" 버튼만 떠 있는 문제 방지).
  *
  * ArticleDetailScreen과의 차이점:
  *   - ArticleDetailScreen: 처음 읽는 글 (경험치 획득, 퀴즈 풀기)
@@ -267,13 +272,17 @@ const ReadArticleDetailScreen = () => {
    * 계산식:
    *   paddingBottom = BUTTON_WRAPPER_HEIGHT + safeAreaBottom
    *
+   * 퀴즈를 풀지 않은 글(quiz === undefined)은 플로팅 버튼 자체를 렌더링하지 않으므로,
+   * 버튼 높이만큼의 여백 없이 Safe Area 여백만 적용한다 (불필요한 하단 공백 방지).
+   *
    * useMemo를 사용하는 이유:
-   *   - safeAreaBottom이 변경될 때만 재계산
+   *   - safeAreaBottom·quiz 여부가 변경될 때만 재계산
    *   - 불필요한 스타일 재생성 방지
    */
   const contentPaddingBottom = useMemo(
-    () => scaleWidth(BUTTON_WRAPPER_HEIGHT) + safeAreaBottom,
-    [safeAreaBottom],
+    () =>
+      quiz ? scaleWidth(BUTTON_WRAPPER_HEIGHT) + safeAreaBottom : safeAreaBottom,
+    [safeAreaBottom, quiz],
   );
 
   // ──────────────────────────────────────────────
@@ -339,31 +348,38 @@ const ReadArticleDetailScreen = () => {
         )}
       </ScrollView>
 
-      {/* 하단 플로팅 버튼 컨테이너 */}
-      <View
-        style={[
-          styles.fixedButtonContainer,
-          { paddingBottom: safeAreaBottom }, // Safe Area 대응
-        ]}
-      >
-        <View style={styles.buttonWrapper}>
-          {/* 그라디언트 배경 (버튼 아래 콘텐츠를 자연스럽게 가림) */}
-          <LinearGradient
-            colors={[COLORS.white, COLORS.transparent]} // 하얀색 → 투명
-            start={{ x: 0, y: 1 }} // 하단에서 시작
-            end={{ x: 0, y: 0 }} // 상단으로 페이드
-            style={styles.overlayBackdrop}
-          />
+      {/*
+        하단 플로팅 버튼 컨테이너
+        - 퀴즈를 푼 글(quiz 존재)에서만 표시한다.
+        - 읽기만 하고 퀴즈를 안 푼 글은 스크롤로 이동할 퀴즈 섹션 자체가 없으므로
+          "퀴즈 보기" 버튼을 눌러도 아무 동작을 하지 않는 문제가 있었음 → 버튼을 숨김 처리
+      */}
+      {quiz && (
+        <View
+          style={[
+            styles.fixedButtonContainer,
+            { paddingBottom: safeAreaBottom }, // Safe Area 대응
+          ]}
+        >
+          <View style={styles.buttonWrapper}>
+            {/* 그라디언트 배경 (버튼 아래 콘텐츠를 자연스럽게 가림) */}
+            <LinearGradient
+              colors={[COLORS.white, COLORS.transparent]} // 하얀색 → 투명
+              start={{ x: 0, y: 1 }} // 하단에서 시작
+              end={{ x: 0, y: 0 }} // 상단으로 페이드
+              style={styles.overlayBackdrop}
+            />
 
-          {/* 플로팅 버튼 */}
-          <Button
-            title={buttonTitle} // "퀴즈 보기" 또는 "맨 위로"
-            onPress={handleButtonPress}
-            variant="primary"
-            style={styles.fixedButton}
-          />
+            {/* 플로팅 버튼 */}
+            <Button
+              title={buttonTitle} // "퀴즈 보기" 또는 "맨 위로"
+              onPress={handleButtonPress}
+              variant="primary"
+              style={styles.fixedButton}
+            />
+          </View>
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
