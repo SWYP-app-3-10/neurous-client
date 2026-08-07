@@ -63,6 +63,10 @@ export const useCharacterData = () => {
     queryFn: fetchCharacterData,
     staleTime: 1000 * 60 * 5, // 5분간 fresh 상태 유지
     gcTime: 1000 * 60 * 10, // 10분간 캐시 유지
+    // 화면 마운트 시 캐시 신선도와 무관하게 항상 서버에서 다시 조회한다.
+    // (useMissions와 동일한 패턴) 캐릭터 탭 첫 진입 시 focus refetch 타이밍과
+    // 겹쳐 갱신이 누락되는 문제를 막기 위한 이중 안전장치.
+    refetchOnMount: 'always',
   });
 };
 
@@ -97,6 +101,10 @@ export const useCharacterMe = () => {
     queryFn: fetchCharacterMe,
     staleTime: 1000 * 60 * 5, // 5분간 fresh 상태 유지
     gcTime: 1000 * 60 * 10, // 10분간 캐시 유지
+    // 화면 마운트 시 캐시 신선도와 무관하게 항상 서버에서 다시 조회한다.
+    // (useMissions와 동일한 패턴) 캐릭터 탭 첫 진입 시 출석/진행률 바가
+    // 갱신 전 상태로 보이던 문제의 재발 방지용 안전장치.
+    refetchOnMount: 'always',
   });
 };
 
