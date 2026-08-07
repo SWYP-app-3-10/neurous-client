@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Modal,
   Animated,
   Dimensions,
   StyleProp,
@@ -82,12 +81,23 @@ const ToastModal: React.FC<ToastModalProps> = ({
     new Animated.Value(position === 'center' ? 0.8 : 1),
   ).current;
 
+  /**
+   * 실제 DOM(뷰) 렌더 여부
+   *
+   * - RN <Modal>을 쓰지 않고 화면 트리 안에 절대 위치 오버레이로 토스트를 그리기 때문에,
+   *   visible이 false가 되어도 사라지는 애니메이션(fade-out)이 끝날 때까지는 렌더를 유지해야
+   *   자연스럽게 사라진다. 애니메이션이 끝나면 isMounted를 false로 바꿔 언마운트한다.
+   */
+  const [isMounted, setIsMounted] = useState(visible);
+
   const hideToast = useCallback(() => {
     onClose?.();
   }, [onClose]);
 
   useEffect(() => {
     if (visible) {
+      setIsMounted(true);
+
       // 나타나는 애니메이션
       const animations: Animated.CompositeAnimation[] = [
         Animated.timing(fadeAnim, {
@@ -125,7 +135,7 @@ const ToastModal: React.FC<ToastModalProps> = ({
 
       return () => clearTimeout(timer);
     } else {
-      // 사라지는 애니메이션
+      // 사라지는 애니메이션 → 끝나면 언마운트
       const animations: Animated.CompositeAnimation[] = [
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -152,7 +162,9 @@ const ToastModal: React.FC<ToastModalProps> = ({
         );
       }
 
-      Animated.parallel(animations).start();
+      Animated.parallel(animations).start(() => {
+        setIsMounted(false);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, duration, hideToast, position]);
@@ -189,15 +201,23 @@ const ToastModal: React.FC<ToastModalProps> = ({
     },
   ];
 
+  // 사라지는 애니메이션까지 끝나면 아예 렌더하지 않는다 (터치 영역 자체를 없앰)
+  if (!isMounted) {
+    return null;
+  }
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={hideToast}
-    >
+    // RN <Modal> 대신 화면 트리 안에 절대 위치 오버레이로 렌더링한다.
+    // <Modal>은 별도의 네이티브 오버레이라서 pointerEvents="box-none"을 줘도
+    // 뒤쪽 화면(스크롤 등)으로 터치가 전달되지 않는 문제가 있었다.
+    // 절대 위치 View + pointerEvents 조합으로 바꾸면 토스트 노출 중에도
+    // 뒤쪽 화면을 그대로 스크롤/터치할 수 있다.
+    <View style={styles.overlay} pointerEvents="box-none">
       <View style={containerStyle} pointerEvents="box-none">
-        <Animated.View style={[toastBoxStyle, animatedStyle]}>
+        <Animated.View
+          style={[toastBoxStyle, animatedStyle]}
+          pointerEvents="none"
+        >
           {icon}
           <Text
             style={[
@@ -210,11 +230,19 @@ const ToastModal: React.FC<ToastModalProps> = ({
           </Text>
         </Animated.View>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // 화면 전체를 덮는 절대 위치 오버레이 (RN <Modal> 대체)
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   containerBottom: {
     flex: 1,
     justifyContent: 'flex-end',
