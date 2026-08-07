@@ -90,6 +90,8 @@ const TYPOGRAPHY = StyleSheet.create({
   Caption_14R: createTextStyle(14, 400, 135, 0),
   Caption_12SB: createTextStyle(12, 600, 150, 0),
   Caption_12M: createTextStyle(12, 500, 150, 0),
+  // 피그마 디자인 토큰 "Caption/11M" 대응 (AI 뱃지 등 초소형 라벨용)
+  Caption_11M: createTextStyle(11, 500, 150, 0),
 });
 
 export const Heading_24EB_Round = TYPOGRAPHY.Heading_24EB_Round;
@@ -109,3 +111,4 @@ export const Body_15M = TYPOGRAPHY.Body_15M;
 export const Caption_14R = TYPOGRAPHY.Caption_14R;
 export const Caption_12SB = TYPOGRAPHY.Caption_12SB;
 export const Caption_12M = TYPOGRAPHY.Caption_12M;
+export const Caption_11M = TYPOGRAPHY.Caption_11M;
