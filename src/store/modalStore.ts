@@ -105,7 +105,7 @@ interface ToastModalState {
   paddingHorizontal?: number;
   paddingVertical?: number;
   messageStyle?: StyleProp<TextStyle>;
-  /** safe area bottom에 더할 오프셋 (기본: scaleWidth(20)) */
+  /** safe area bottom에 더할 오프셋 (기본: scaleWidth(52), Figma 공통 간격 기준) */
   bottomOffset?: number;
   onClose?: () => void; // 토스트 닫힐 때 실행할 콜백
 }
