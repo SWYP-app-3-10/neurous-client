@@ -279,6 +279,15 @@ export type FullScreenStackParamList = {
     entrySource?: 'home' | 'explore' | 'search' | 'my_page';
   };
 
+  // ────── [내부 테스트] 스토어 스크린샷용 mock 화면 ──────
+  // 파라미터가 필요 없음: 내용이 src/data/mock/mockArticleQuiz.ts에 고정되어 있음
+
+  /** [내부 테스트] 목 아티클 상세 화면 (스크린샷용) */
+  [RouteNames.MOCK_ARTICLE_DETAIL]: undefined;
+
+  /** [내부 테스트] 목 퀴즈 화면 (스크린샷용) */
+  [RouteNames.MOCK_QUIZ]: undefined;
+
   // ────── 검색 관련 화면 ──────
 
   /** 검색어 입력 화면 (검색 탭 > 검색창 클릭 시) */

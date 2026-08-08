@@ -23,6 +23,8 @@ import ArticleDetailScreen from '../screens/common/ArticleDetailScreen';
 import ReadArticleDetailScreen from '../screens/common/ReadArticleDetailScreen';
 import QuizScreen from '../screens/common/QuizScreen';
 import AdLoadingScreen from '../screens/common/AdLoadingScreen';
+import MockArticleDetailScreen from '../screens/common/MockArticleDetailScreen';
+import MockQuizScreen from '../screens/common/MockQuizScreen';
 
 import SettingScreen from '../screens/myPage/SettingScreen';
 import LoginInfoScreen from '../screens/myPage/LoginInfoScreen';
@@ -78,6 +80,20 @@ const FullScreenStackNavigator = () => {
 
       {/* 광고 로딩 화면 (잠긴 글을 광고로 열 때) */}
       <Stack.Screen name={RouteNames.AD_LOADING} component={AdLoadingScreen} />
+
+      {/* ──────────────────────────────────────────────
+          [내부 테스트] 스토어 스크린샷용 mock 화면
+          IS_INTERNAL_TEST 빌드의 홈/탐색 리스트 맨 위 mock 카드에서만 진입 가능
+      ────────────────────────────────────────────── */}
+
+      {/* 목 아티클 상세 화면 (스크린샷용) */}
+      <Stack.Screen
+        name={RouteNames.MOCK_ARTICLE_DETAIL}
+        component={MockArticleDetailScreen}
+      />
+
+      {/* 목 퀴즈 화면 (스크린샷용) */}
+      <Stack.Screen name={RouteNames.MOCK_QUIZ} component={MockQuizScreen} />
 
       {/* ──────────────────────────────────────────────
           검색 탭 서브 화면

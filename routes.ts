@@ -98,6 +98,16 @@ export const RouteNames = {
   /** 광고 로딩 화면 */
   AD_LOADING: 'ad-loading' as const,
 
+  // ────── [내부 테스트] 스토어 스크린샷용 mock 화면 ──────
+  // IS_INTERNAL_TEST 빌드에서 홈/탐색 리스트 맨 위 mock 카드 클릭 시에만 진입 가능.
+  // 실서비스 배포 빌드에는 노출되지 않는다. (src/config/env.ts 참고)
+
+  /** [내부 테스트] 목 아티클 상세 화면 (스크린샷용) */
+  MOCK_ARTICLE_DETAIL: 'mock-article-detail' as const,
+
+  /** [내부 테스트] 목 퀴즈 화면 (스크린샷용) */
+  MOCK_QUIZ: 'mock-quiz' as const,
+
   // ────── 검색 관련 ──────
   /** 검색어 입력 화면 */
   SEARCH_INPUT: 'search-input' as const,

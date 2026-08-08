@@ -46,6 +46,20 @@ import { useExploreContents } from '../../hooks/useExploreContents';
 import { logEvent } from '../../services/analyticsService';
 import { getImageUrl } from '../../utils/imageUtils';
 
+// [내부 테스트] 스토어 스크린샷용 mock 카드 관련
+import { IS_INTERNAL_TEST } from '../../config/env';
+import {
+  MOCK_ARTICLE_QUIZ,
+  MOCK_ARTICLE_THUMBNAIL_DATA_URI,
+} from '../../data/mock/mockArticleQuiz';
+
+/**
+ * [내부 테스트] 탐색 리스트 맨 위에 노출할 mock 카드의 고정 id
+ * 이 id를 가진 아이템을 클릭하면 실제 접근 권한 확인(useArticleNavigation)을
+ * 거치지 않고 MockArticleDetailScreen으로 바로 이동한다.
+ */
+const MOCK_ARTICLE_ITEM_ID = 'mock-article';
+
 // 버튼 터치 영역 확대
 const HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
@@ -124,6 +138,32 @@ export default function SearchScreen() {
     }));
   }, [data]);
 
+  /**
+   * [내부 테스트] 스토어 스크린샷용 mock 카드를 실제 서버 데이터 맨 위에 덧붙인다.
+   * IS_INTERNAL_TEST 빌드에서만 노출되며, 실서비스 배포 빌드에는 표시되지 않는다.
+   */
+  const listDataWithMock: NewsItems[] = useMemo(() => {
+    if (!IS_INTERNAL_TEST) {
+      return visibleData;
+    }
+
+    const mockItem: NewsItems = {
+      id: MOCK_ARTICLE_ITEM_ID,
+      category: MOCK_ARTICLE_QUIZ.categoryName as any,
+      title: MOCK_ARTICLE_QUIZ.title,
+      subtitle: '',
+      readTime: '3분',
+      // SearchResultItem은 Image를 {uri: imageUrl} 형태로만 그리므로
+      // 로컬 require 에셋 대신 base64 data URI를 사용해야 썸네일이 보인다
+      imageUrl: MOCK_ARTICLE_THUMBNAIL_DATA_URI,
+      content: '',
+      hits: MOCK_ARTICLE_QUIZ.hits,
+      read: false,
+    };
+
+    return [mockItem, ...visibleData];
+  }, [visibleData]);
+
   // 기사 클릭 시 상세로 이동(포인트/구매/모달 등 포함된 네비게이션 처리)
   const { handleArticlePress } = useArticleNavigation({
     returnTo: 'search',
@@ -198,12 +238,20 @@ export default function SearchScreen() {
           <FlatList
             ref={flatListRef}
             style={styles.list}
-            data={visibleData}
+            data={listDataWithMock}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
               <SearchResultItem
                 item={item}
                 onPress={() => {
+                  // [내부 테스트] mock 카드는 접근 권한 확인 없이 바로 목 상세 화면으로 이동
+                  if (item.id === MOCK_ARTICLE_ITEM_ID) {
+                    navigation.navigate(RouteNames.FULL_SCREEN_STACK, {
+                      screen: RouteNames.MOCK_ARTICLE_DETAIL,
+                    });
+                    return;
+                  }
+
                   handleArticlePress(Number(item.id), item.read, item.category);
                   logEvent('ContectsList_Explore');
                 }}
