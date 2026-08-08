@@ -524,7 +524,7 @@ const InterestsScreen = () => {
 
         {/* 서브타이틀 */}
         <Text style={[Body_15M, { color: COLORS.gray600 }]}>
-          미션 화면에서 나의 관심분야 글을 확인할 수 있어요
+          홈 화면에서 나의 관심분야 글을 확인할 수 있어요
         </Text>
         <Spacer num={52} />
 
