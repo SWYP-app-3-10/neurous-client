@@ -28,6 +28,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useOnboardingStore } from '../store/onboardingStore';
 import { IS_PRODUCTION } from '../config/env';
 import { DEV_URL, PROD_URL } from '../config/api';
+import {
+  showNetworkErrorToast,
+  showGeneralErrorToast,
+} from '../utils/errorToast';
 
 // ─────────────────────────────────────────────────────────────
 // Axios 인스턴스
@@ -152,6 +156,17 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * (4xx/5xx처럼 서버가 응답한 에러는 재시도 대상이 아님)
  */
 const isNoResponseError = (error: AxiosError) => !error.response;
+
+/**
+ * 로그인/토큰 재발급 엔드포인트인지 판별한다.
+ *
+ * 이 두 엔드포인트는 이미 자체적인 사용자 피드백(로그인 실패 Alert,
+ * 재발급 실패 시 로그아웃 처리)을 갖고 있으므로, 아래 공통 에러 토스트를
+ * 중복으로 띄우지 않기 위해 제외 대상으로 둔다.
+ */
+const isAuthEndpoint = (url?: string) =>
+  !!url &&
+  (url.includes('/api/auth/login/') || url.includes('/api/auth/refresh'));
 
 // ─────────────────────────────────────────────────────────────
 // Response Interceptor
@@ -296,7 +311,19 @@ client.interceptors.response.use(
       }
     }
 
-    // ── 그 외 에러 ───────────────────────────────────────────
+    // ── 그 외 에러 → 공통 에러 토스트 ─────────────────────────
+    // 여기까지 내려오는 에러는 (1) 네트워크 재시도를 모두 소진했거나
+    // (2) 401/403이 아닌 그 외 상태 코드(400/404/409/500 등)로 처리가
+    // 끝난 경우다. 로그인/재발급 엔드포인트는 이미 자체 UI(Alert,
+    // 로그아웃 처리)가 있으므로 중복 노출을 막기 위해 제외한다.
+    if (!isAuthEndpoint(originalRequest?.url)) {
+      if (isNoResponseError(error)) {
+        showNetworkErrorToast(); // A. 네트워크 오류
+      } else {
+        showGeneralErrorToast(); // B. 일반 오류 (원인 특정이 어려운 나머지 실패)
+      }
+    }
+
     if (__DEV__) {
       const fullUrl = originalRequest
         ? `${originalRequest.baseURL}${originalRequest.url}`
