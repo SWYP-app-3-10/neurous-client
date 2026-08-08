@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.gray200,
     borderRadius: BORDER_RADIUS[30],
-    width: scaleWidth(113),
+    width: scaleWidth(103),
     height: scaleWidth(30),
   },
   levelCriteriaLink: {
