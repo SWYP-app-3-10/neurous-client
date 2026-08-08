@@ -114,6 +114,24 @@
 - **해결**: `RootNavigator`의 무효화 대상을 `characterKeys.data()` → `characterKeys.all`로 확장(`data`/`me`/`reward` 전체 무효화). 추가로 `useCharacterMe`/`useCharacterData`에 `refetchOnMount: 'always'`를 붙여(`useMissions`와 동일한 패턴) 화면 마운트 시 캐시 신선도와 무관하게 항상 서버 재조회하도록 이중 안전장치를 둠
 - **수정 파일**: `src/navigation/RootNavigator.tsx`, `src/hooks/useCharacter.ts`
 
+### 로그인 화면 문구를 코드에서 수정해도 반영되지 않음
+
+- **증상**: `LoginScreen`의 태그라인 문구를 코드에서 수정해도 실제 기기에는 계속 이전 문구가 표시됨. Metro 캐시 초기화(`--reset-cache`), 앱 완전 삭제 후 재설치, `gradlew clean` 포함 완전 클린 빌드까지 해도 재현됨
+- **원인**: 서로 다른 두 문제가 겹쳐 있었음
+  1. 화면 배경으로 쓰이던 `login.png`가 로고 워드마크와 태그라인 문구를 하나로 합쳐 래스터화한 이미지였음. 화면에 실제로 보이는 문구는 이 이미지 픽셀에 박혀있던 옛 문구였고, 코드 수정과는 무관하게 항상 그대로 표시됨
+  2. 별도로 렌더링되던 라이브 `<Text>` 태그라인은 이미 새 문구로 정상 반영되어 있었지만, `logoText` 스타일의 글자색이 배경색과 동일한 `COLORS.puple.main`으로 지정되어 있어 보라 배경 위 보라 글씨가 되어 애초에 눈에 보이지 않는 상태였음
+- **해결**: 배경 PNG에서 로고 워드마크만 분리한 투명배경 이미지(`logo_Neurous.png`)로 교체하고, 태그라인은 라이브 `<Text>` 컴포넌트만으로 렌더링. 텍스트 색상을 흰색(`COLORS.white`)으로 수정
+- **수정 파일**: `src/screens/auth/LoginScreen.tsx`, `src/icons/commonIcons/simpleImages.tsx`
+- **교훈**: 문구 수정이 반영되지 않을 때 캐시/빌드 문제로 단정하기 전에, 배경·썸네일 이미지에 텍스트가 래스터로 박혀있지 않은지부터 확인할 것. 또한 "텍스트가 안 보이는" 증상은 렌더링 자체가 안 되는 경우와, 렌더링은 되지만 색상이 배경과 같아 안 보이는 경우를 구분해서 확인해야 함
+
+### 문의하기 화면에서 키보드가 입력 필드를 가림
+
+- **증상**: 마이페이지 > 설정 > 문의하기 화면에서 텍스트 입력 시 키보드가 화면을 덮어도 스크롤되지 않아 입력 중인 글자를 볼 수 없음 (안드로이드)
+- **원인**: `KeyboardAvoidingView`는 이미 적용되어 있었으나 `behavior`가 iOS는 `'padding'`으로 지정된 반면 안드로이드는 `undefined`로 되어있어 안드로이드에서는 사실상 아무 동작도 하지 않았음
+- **해결**: 안드로이드에도 `behavior`를 `'height'`로 지정
+- **수정 파일**: `src/screens/myPage/InquiryScreen.tsx`
+- **참고**: 프로젝트 내 `KeyboardAvoidingView`를 사용하는 화면은 현재 이 화면이 유일함. 추후 입력 화면 추가 시 `behavior: Platform.OS === 'ios' ? 'padding' : 'height'` 패턴을 기본으로 사용할 것
+
 <br />
 
 ## iOS 빌드 / 설정
