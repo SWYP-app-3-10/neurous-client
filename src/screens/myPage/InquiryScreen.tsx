@@ -65,9 +65,11 @@ const InquiryScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {/* 버그 수정: 안드로이드에서 behavior가 undefined라 키보드가 올라와도 화면이 안 밀렸음.
+          height로 지정해 안드로이드에서도 키보드 높이만큼 뷰가 줄어들어 ScrollView가 스크롤되도록 함 */}
       <KeyboardAvoidingView
         style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.headerWrap}>
           <Header title="" />
