@@ -21,7 +21,9 @@
 import React from 'react';
 import { useModalStore } from '../store/modalStore';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
+import { Body_16M } from '../styles/typography';
 import { InfoIcon } from '../icons';
+import { ICON_SIZES } from '../icons/config/iconSizes';
 
 /** A. 네트워크 오류 토스트 문구 */
 const NETWORK_ERROR_MESSAGE = '네트워크 상태를 확인한 후\n다시 시도해주세요';
@@ -33,21 +35,29 @@ const GENERAL_ERROR_MESSAGE =
 /**
  * 에러 토스트 공통 스타일
  *
- * gray800 배경 + gray800Stroke 1px 테두리는 기존에 ArticleDetailScreen의
- * 토스트에서 이미 쓰이던 "Toast Popup" 조합(styles/global.ts 참고)을
- * 그대로 재사용한 것 — 앱 전체 에러 토스트의 기준 스타일로 삼는다.
+ * width 353, marginHorizontal 20
+ * padding 18(상하) 20(좌우), radius 16, gap 12, background gray800
+ * 테두리 없음
+ * bottomOffset은 따로 지정하지 않고 ToastModal 공통 기본값(52)을 그대로 따름
  */
 const ERROR_TOAST_STYLE = {
-  icon: React.createElement(InfoIcon, { color: COLORS.white }),
+  icon: React.createElement(InfoIcon, {
+    color: COLORS.white,
+    width: ICON_SIZES.XL, // scaleWidth(24)
+    height: ICON_SIZES.XL,
+  }),
   position: 'bottom' as const,
   backgroundColor: COLORS.gray800,
-  borderColor: COLORS.gray800Stroke,
-  borderWidth: 1,
   marginHorizontal: scaleWidth(20),
   paddingHorizontal: scaleWidth(20),
-  paddingVertical: scaleWidth(14),
+  paddingVertical: scaleWidth(18),
   borderRadius: BORDER_RADIUS[16],
   duration: 2500,
+  messageStyle: {
+    ...Body_16M,
+    color: COLORS.white,
+    textAlign: 'left' as const,
+  },
 };
 
 /**
