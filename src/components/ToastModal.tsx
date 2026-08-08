@@ -57,7 +57,9 @@ const ToastModal: React.FC<ToastModalProps> = ({
 }) => {
   const { bottom } = useSafeAreaInsets();
   const { width: SCREEN_WIDTH } = Dimensions.get('window');
-  const bottomGap = bottomOffset ?? scaleWidth(20);
+  // 화면 하단(safe area 제외)과 토스트 하단 사이 기본 간격: 52
+  // 52 외의 값으로 변경 시 호출부에서 bottomOffset 사용해 직접 지정 가능
+  const bottomGap = bottomOffset ?? scaleWidth(52);
   const hasContentPadding =
     paddingHorizontal !== undefined || paddingVertical !== undefined;
 
