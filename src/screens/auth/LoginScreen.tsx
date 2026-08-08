@@ -242,7 +242,7 @@ const LoginScreen = () => {
           showModal({
             title: '알림을 받으시겠어요?',
             description:
-              '하루 두 번 알림으로/n읽기를 잊지 않고 이어갈 수 있어요!ㄴ',
+              '하루 두 번 알림으로\n읽기를 잊지 않고 이어갈 수 있어요!',
             descriptionColor: COLORS.gray600,
             primaryButton: {
               title: '알림 받을래요',
