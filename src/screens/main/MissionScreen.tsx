@@ -658,13 +658,12 @@ const MissionScreen = () => {
           <View style={missionScreenStyles.headerLeft}>
             <Text style={missionScreenStyles.headerTitle}>오늘의 미션</Text>
             <Text style={missionScreenStyles.headerDescription}>
-              오늘의 미션을 통해 새로운 지식을 탐험하고{'\n'}문해력을
-              키워보세요!
+              오늘의 미션으로 부담 없이 첫 읽기를 시작해보세요.
             </Text>
           </View>
         </View>
 
-        <Spacer num={38} />
+        <Spacer num={24} />
 
         {/* ────── 미션 캐러셀 ────── */}
         {hasMissions ? (
