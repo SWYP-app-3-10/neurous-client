@@ -19,7 +19,7 @@ import level2 from '../../assets/png/level2.png';
 import level3 from '../../assets/png/level3.png';
 import level4 from '../../assets/png/level4.png';
 import level5 from '../../assets/png/level5.png';
-import login from '../../assets/png/login.png';
+import logo_Neurous from '../../assets/png/logo_Neurous.png';
 
 export const Tooltip_RecentIcon = createImageIconComponent(
   Tooltip_Recent,
@@ -112,8 +112,11 @@ export const Modal_IMG = createImageIconComponent(
   scaleWidth(259.46),
   scaleWidth(152.62),
 );
-export const LoginBackground = createImageIconComponent(
-  login,
-  scaleWidth(393),
-  scaleWidth(852),
+// 로그인 화면 상단 "Neurous" 로고 워드마크
+// 기존에는 배경 이미지(login.png) 안에 로고+문구가 함께 박혀있어 문구 수정이 코드에 반영되지 않는 문제가 있었음.
+// 로고만 별도 이미지로 분리하고, 문구는 LoginScreen에서 Text 컴포넌트로 직접 렌더링하도록 변경.
+export const NeurousLogo = createImageIconComponent(
+  logo_Neurous,
+  scaleWidth(200),
+  scaleWidth(36),
 );
