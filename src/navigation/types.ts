@@ -39,20 +39,20 @@ export type SocialLoginProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'APPLE';
  * 온보딩 화면들의 파라미터 타입 정의
  *
  * 처리 흐름:
- *   소셜 로그인 → 약관 동의 → 온보딩 인트로 3개 → 관심분야 선택 → 난이도 선택
+ *   소셜 로그인(계정 선택 + 서버 로그인) → newUser 분기
+ *     - 신규 유저: 약관 동의 → 온보딩 인트로 3개 → 관심분야 선택 → 난이도 선택
+ *     - 기존 유저: 약관/온보딩 생략, 바로 홈
+ *
+ * 약관 동의는 로그인이 이미 끝난 뒤(newUser === true일 때)에만 노출되며,
+ * 동의 없이 이탈하면 자동 로그아웃된다 (TermsAgreementScreen 참고).
  */
 export type OnboardingStackParamList = {
-  /**
-   * 소셜 로그인 화면
-   * @param agreedProvider - 약관 동의 후 돌아올 때 어떤 소셜로 로그인할지 전달 (선택)
-   */
-  [RouteNames.SOCIAL_LOGIN]:
-    | { agreedProvider?: SocialLoginProvider }
-    | undefined;
+  /** 소셜 로그인 화면 (파라미터 없음 — 로그인 성공 후에는 항상 앞으로만 진행) */
+  [RouteNames.SOCIAL_LOGIN]: undefined;
 
   /**
-   * 약관 동의 화면
-   * @param provider - 어떤 소셜 로그인을 진행 중인지 (필수)
+   * 약관 동의 화면 (newUser === true인 신규 유저만 진입)
+   * @param provider - 어떤 소셜 로그인으로 가입 중인지 (필수, 이탈 시 자동 로그아웃에 사용)
    */
   [RouteNames.TERMS_AGREEMENT]: { provider: SocialLoginProvider };
 
