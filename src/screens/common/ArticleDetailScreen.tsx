@@ -66,6 +66,7 @@ import { useExperienceStore } from '../../store/experienceStore';
 import { ExperienceModalContent } from '../../components/ArticlePointModalContent';
 import { Modal_IMG } from '../../icons';
 import { ARTICLE_READ_EXPERIENCE } from '../../config/rewards';
+import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -173,6 +174,10 @@ const ArticleDetailScreen = () => {
 
       await AsyncStorage.setItem(readRewardKey, 'true');
       addExperience(ARTICLE_READ_EXPERIENCE);
+
+      // 캐릭터 탭 진입 전 미리 최신 정보를 백그라운드로 받아둠 (silent 여부와 무관하게
+      // 경험치는 이미 지급됐으므로 두 경로 모두에서 호출)
+      prefetchCharacterAfterReward();
 
       if (options.silent) {
         // 퀴즈로 이어지는 경로: 팝업/분석 이벤트 없이 store에만 조용히 반영
