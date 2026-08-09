@@ -1,5 +1,16 @@
 /**
  * 소셜 로그인 화면 (LoginScreen.tsx)
+ *
+ * 로그인 버튼을 누르면 곧바로 소셜 SDK 계정 선택 + 서버 로그인을 실행하고,
+ * 서버 응답의 newUser 값을 확인한 뒤에야 이용약관 노출 여부를 결정한다.
+ *
+ *   로그인 버튼 → 소셜 계정 선택 → 서버 로그인 → newUser 분기
+ *     ├─ 신규(newUser !== false): 알림 권한 처리 → 이용약관 → 온보딩 → 홈
+ *     └─ 기존(newUser === false): 알림 권한 처리 → 홈 (이용약관/온보딩 생략)
+ *
+ * 이용약관 화면에서 동의 없이 이탈하면(TermsAgreementScreen 참고) 자동
+ * 로그아웃되므로, 신규 유저가 이용약관 노출 전에 서버에는 이미 계정이
+ * 생성됐더라도 앱을 다시 열면 로그인 화면부터 다시 시작하게 된다.
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -12,7 +23,7 @@ import {
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RouteNames } from '../../../routes';
@@ -42,14 +53,9 @@ import { updateNotificationStatus } from '../../api/notificationApi';
 import { getUserInfo } from '../../services/authService';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
-type LoginRouteProp = RouteProp<
-  OnboardingStackParamList,
-  typeof RouteNames.SOCIAL_LOGIN
->;
 
 const LoginScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<LoginRouteProp>();
 
   // ──────────────────────────────────────────────
   // State & Refs
@@ -57,12 +63,20 @@ const LoginScreen = () => {
 
   const [loading, setLoading] = useState<SocialLoginProvider | null>(null);
   const socialLoginInProgressRef = useRef(false);
-  const pendingProviderRef = useRef<SocialLoginProvider | null>(null);
   const [recentLogin, setRecentLogin] = useState<RecentLoginInfo | null>(null);
   const trackingModalShownRef = useRef<boolean>(false);
+  /**
+   * 알림 권한 요청으로 OS 설정 화면에 다녀오는 동안 유지해야 하는 정보
+   *
+   * isExistingUser: 신규/기존 유저 분기 결과를 기억해뒀다가 설정 화면에서
+   *                  복귀했을 때 그대로 이어서 사용한다.
+   * provider: 신규 유저인 경우, 복귀 후 이용약관 화면으로 이동할 때
+   *           어떤 소셜 로그인으로 가입 중이었는지 전달하기 위해 필요하다.
+   */
   const waitingForSettingsRef = useRef<{
     isWaiting: boolean;
     isExistingUser?: boolean;
+    provider?: SocialLoginProvider;
   }>({ isWaiting: false });
 
   // ──────────────────────────────────────────────
@@ -106,7 +120,7 @@ const LoginScreen = () => {
           nextAppState === 'active' &&
           waitingForSettingsRef.current.isWaiting
         ) {
-          const { isExistingUser } = waitingForSettingsRef.current;
+          const { isExistingUser, provider } = waitingForSettingsRef.current;
           waitingForSettingsRef.current = { isWaiting: false };
 
           // 알림 수신 설정 서버 동기화 (화면 전환 전에 완료 보장 — 먼저 화면이 사라지면 Network Error 발생)
@@ -121,9 +135,11 @@ const LoginScreen = () => {
           }
 
           if (isExistingUser) {
+            // 기존 유저: 이용약관/온보딩 없이 바로 홈으로
             await completeOnboarding();
-          } else {
-            navigation.navigate(RouteNames.INTRO_CARDLIST);
+          } else if (provider) {
+            // 신규 유저: 이용약관 동의부터 시작 (약관 동의 후 온보딩으로 이어짐)
+            navigation.navigate(RouteNames.TERMS_AGREEMENT, { provider });
           }
         }
       },
@@ -200,14 +216,17 @@ const LoginScreen = () => {
   // ──────────────────────────────────────────────
 
   const handleNotificationModal = useCallback(
-    async (isExistingUser = false) => {
+    async (isExistingUser = false, provider?: SocialLoginProvider) => {
       waitingForSettingsRef.current.isExistingUser = isExistingUser;
+      waitingForSettingsRef.current.provider = provider;
 
       const proceedNext = async () => {
         if (isExistingUser) {
+          // 기존 유저: 이용약관/온보딩 없이 바로 홈으로
           await completeOnboarding();
-        } else {
-          navigation.navigate(RouteNames.INTRO_CARDLIST);
+        } else if (provider) {
+          // 신규 유저: 이용약관 동의부터 시작 (약관 동의 후 온보딩으로 이어짐)
+          navigation.navigate(RouteNames.TERMS_AGREEMENT, { provider });
         }
       };
 
@@ -328,9 +347,11 @@ const LoginScreen = () => {
 
         if (result.success && result.userInfo) {
           if (result.newUser === false) {
+            // 기존 유저: 이용약관/온보딩 없이 바로 홈으로
             await handleNotificationModal(true);
           } else {
-            await handleNotificationModal(false);
+            // 신규 유저: 알림 권한 처리 후 이용약관 화면으로 이동
+            await handleNotificationModal(false, provider);
           }
           return;
         }
@@ -354,38 +375,6 @@ const LoginScreen = () => {
   );
 
   // ──────────────────────────────────────────────
-  // Effect 3: 약관 동의 화면 복귀 시 로그인 트리거
-  // ──────────────────────────────────────────────
-
-  useEffect(() => {
-    const agreedProvider = route.params?.agreedProvider;
-    if (!agreedProvider) return;
-
-    pendingProviderRef.current = agreedProvider as SocialLoginProvider;
-    navigation.setParams({ agreedProvider: undefined });
-  }, [route.params?.agreedProvider, navigation]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('transitionEnd', () => {
-      const provider = pendingProviderRef.current;
-      if (!provider) return;
-      pendingProviderRef.current = null;
-      handleSocialLogin(provider);
-    });
-    return () => unsubscribe();
-  }, [navigation, handleSocialLogin]);
-
-  // ──────────────────────────────────────────────
-  // UI 핸들러: 약관 동의 화면으로 이동
-  // ──────────────────────────────────────────────
-
-  const goTermsAgreement = (provider: SocialLoginProvider) => {
-    navigation.navigate(RouteNames.TERMS_AGREEMENT, {
-      provider,
-    });
-  };
-
-  // ──────────────────────────────────────────────
   // UI 렌더링
   // ──────────────────────────────────────────────
 
@@ -405,7 +394,7 @@ const LoginScreen = () => {
           <SocialLoginButton
             provider="KAKAO"
             onPress={() => {
-              goTermsAgreement('KAKAO');
+              handleSocialLogin('KAKAO');
               logEvent('Kakao_Login_Onboarding_SocialLogin');
             }}
             loading={loading}
@@ -414,7 +403,7 @@ const LoginScreen = () => {
           <SocialLoginButton
             provider="GOOGLE"
             onPress={() => {
-              goTermsAgreement('GOOGLE');
+              handleSocialLogin('GOOGLE');
               logEvent('Google_Login_Onboarding_SocialLogin');
             }}
             loading={loading}
@@ -423,7 +412,7 @@ const LoginScreen = () => {
           <SocialLoginButton
             provider="NAVER"
             onPress={() => {
-              goTermsAgreement('NAVER');
+              handleSocialLogin('NAVER');
               logEvent('NAVER_Login_Onboarding_SocialLogin');
             }}
             loading={loading}
@@ -433,7 +422,7 @@ const LoginScreen = () => {
             <SocialLoginButton
               provider="APPLE"
               onPress={() => {
-                goTermsAgreement('APPLE');
+                handleSocialLogin('APPLE');
                 logEvent('apple_Login_Onboarding_SocialLogin');
               }}
               loading={loading}
