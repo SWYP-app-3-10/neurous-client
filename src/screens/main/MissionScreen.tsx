@@ -53,6 +53,8 @@ import {
 import Spacer from '../../components/Spacer';
 import { useMissions } from '../../hooks/useMissions';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
+// 위클리 출석 완료 여부를 서버 출석 기록(월~토)으로 판단하기 위해 직접 조회
+import { fetchCharacterMe } from '../../api/characterApi';
 import { MissionCard, ArticleCard } from '../../components';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useArticleNavigation } from '../../hooks/useArticleNavigation';
@@ -505,7 +507,9 @@ const MissionScreen = () => {
    *   2. 오늘 날짜와 비교
    *   3. 날짜가 다르면:
    *      - 오늘 날짜 저장
-   *      - 포인트 및 경험치 지급
+   *      - (일요일인 경우) 서버 출석 기록(GET /api/characters/me)을 조회해
+   *        월~토가 전부 출석 처리되어 있는지 확인 → 위클리 보상 지급 여부 결정
+   *      - 포인트 및 경험치 지급 (데일리, 위클리 조건 충족 시 위클리 합산)
    *      - 출석 체크 모달 표시
    *   4. 같으면: 아무 동작 없음
    *
@@ -538,12 +542,36 @@ const MissionScreen = () => {
           await AsyncStorage.setItem(DAILY_MISSION_ENTRY_KEY, today);
           hasCheckedDailyEntryRef.current = true;
 
-          // 일요일(마지막 요일) 데일리 출석 = 위클리 출석도 함께 완료
-          // 위클리는 항상 이 시점에 데일리와 합산 지급되므로 별도 dedup이 필요 없다
-          // (DAILY_MISSION_ENTRY_KEY의 하루 1회 체크가 위클리 중복 지급도 함께 막아준다)
-          const isWeeklyAttendanceComplete = now.getDay() === 0; // 0 = 일요일 (today와 동일한 now 기준)
+          // 위클리 출석 완료 여부 판정
+          //
+          // 주의: 예전에는 "오늘이 일요일인가"만 보고 위클리 보상을 함께 지급했다.
+          // 이러면 월~토를 하나도 채우지 않은 유저(예: 가입 당일이 하필 일요일인 경우)도
+          // 위클리 보상을 받아버리는 문제가 있었다.
+          // → 일요일이면서 서버 출석 기록상 월~토가 전부 true일 때만 위클리 보상을 준다.
+          // (DAILY_MISSION_ENTRY_KEY의 하루 1회 체크는 그대로 유지되어 위클리 중복 지급도 막아준다)
+          const isSundayToday = now.getDay() === 0; // 0 = 일요일 (today와 동일한 now 기준)
+          let isWeeklyAttendanceComplete = false;
 
-          // 포인트 및 경험치 지급 (일요일이면 데일리 + 위클리 합산)
+          if (isSundayToday) {
+            try {
+              const { data } = await fetchCharacterMe();
+              const { monday, tuesday, wednesday, thursday, friday, saturday } =
+                data.attendance;
+              isWeeklyAttendanceComplete =
+                monday &&
+                tuesday &&
+                wednesday &&
+                thursday &&
+                friday &&
+                saturday;
+            } catch (error) {
+              // 서버 출석 기록 조회 실패 시에는 위클리 보상을 지급하지 않는
+              // 안전한 기본값(false)을 유지한다. 데일리 보상 지급 자체는 막지 않는다.
+              console.error('위클리 출석 기록 조회 실패:', error);
+            }
+          }
+
+          // 포인트 및 경험치 지급 (위클리 조건 충족 시 데일리 + 위클리 합산)
           addPoints(
             DAILY_ATTENDANCE_POINT +
               (isWeeklyAttendanceComplete ? WEEKLY_ATTENDANCE_POINT : 0),
@@ -577,7 +605,7 @@ const MissionScreen = () => {
             });
           }
 
-          // 출석 체크 모달 표시 (일요일이면 데일리+위클리 합산 값으로 표시)
+          // 출석 체크 모달 표시 (위클리 조건 충족 시 데일리+위클리 합산 값으로 표시)
           showModal({
             title: '포인트 & 경험치 획득!',
             image: <Modal_IMG />,

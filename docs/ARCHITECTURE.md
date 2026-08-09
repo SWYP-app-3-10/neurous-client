@@ -251,7 +251,7 @@ sequenceDiagram
         Storage-->>-Screen: 완료
         Screen->>Screen: getLocalDateKey()로 오늘 날짜, getDay()로 요일 계산<br/>(둘 다 로컬 기준 Date 하나로 통일)
 
-        Note over Screen,Backend: ⚠️ 이 지점에는 서버로 보내는 API 호출이 없다.<br/>출석 사실 자체는 서버에 전달되지 않는다.
+        Note over Screen,Backend: ⚠️ 데일리 출석 지급 자체는 서버로 보내는 API 호출이 없다.<br/>출석 사실 자체는 서버에 전달되지 않는다.
 
         alt 평일 (일요일 아님)
             Screen->>+Store: addPoints(DAILY_POINT) / addExperience(DAILY_EXP)
@@ -260,28 +260,44 @@ sequenceDiagram
             Mixpanel-->>-Screen: 완료
             Screen->>+Modal: showModal (데일리 보상 팝업)
             Modal-->>-User: 보상 팝업 노출
-        else 일요일 (위클리 출석 완료)
-            Screen->>+Store: addPoints(DAILY+WEEKLY) / addExperience(DAILY+WEEKLY)
-            Store-->>-Screen: 반영 완료
-            Screen->>+Mixpanel: reward_popup_view (reward_source: daily_attendance)
-            Mixpanel-->>-Screen: 완료
-            Screen->>+Mixpanel: reward_popup_view (reward_source: weekly_attendance)
-            Mixpanel-->>-Screen: 완료
-            Screen->>+Modal: showModal (데일리+위클리 합산 보상 팝업, weekly=true)
-            Modal-->>-User: 보상 팝업 노출
+        else 일요일
+            Screen->>+API: fetchCharacterMe()
+            API->>+Backend: GET /api/characters/me
+            Backend-->>-API: attendance (monday~sunday boolean)
+            API-->>-Screen: data.attendance
+            Screen->>Screen: 월~토가 전부 true인지 확인<br/>(하나라도 false면 위클리 보상 미지급)
+
+            alt 월~토 전부 출석 (위클리 완료)
+                Screen->>+Store: addPoints(DAILY+WEEKLY) / addExperience(DAILY+WEEKLY)
+                Store-->>-Screen: 반영 완료
+                Screen->>+Mixpanel: reward_popup_view (reward_source: daily_attendance)
+                Mixpanel-->>-Screen: 완료
+                Screen->>+Mixpanel: reward_popup_view (reward_source: weekly_attendance)
+                Mixpanel-->>-Screen: 완료
+                Screen->>+Modal: showModal (데일리+위클리 합산 보상 팝업, weekly=true)
+                Modal-->>-User: 보상 팝업 노출
+            else 월~토 중 하나라도 미출석 (또는 조회 실패)
+                Screen->>+Store: addPoints(DAILY_POINT) / addExperience(DAILY_EXP)
+                Store-->>-Screen: 반영 완료
+                Screen->>+Mixpanel: reward_popup_view (reward_source: daily_attendance)
+                Mixpanel-->>-Screen: 완료
+                Screen->>+Modal: showModal (데일리 보상 팝업)
+                Modal-->>-User: 보상 팝업 노출
+            end
         end
     end
 
-    Note over Backend: 서버의 "주간 출석 기록"(CharacterScreen에 표시)은<br/>이 플로우와 무관하게 별도로 계산된다.<br/>클라이언트가 출석을 알리는 write API는 없고,<br/>서버가 그날의 다른 인증 활동을 근거로 자체 판단한다.
-    Screen-->>-User: (참고) 이후 CharacterScreen 진입 시<br/>GET /api/characters/me로 서버 판단 출석 기록을 별도 조회 (4-4 참고)
+    Note over Backend: 서버의 "주간 출석 기록"(CharacterScreen에 표시)은<br/>클라이언트가 출석을 알리는 write API 없이<br/>서버가 그날의 다른 인증 활동을 근거로 자체 판단한다.<br/>일요일 위클리 판정은 이 기록을 read-only로 조회해서 쓴다.
+    Screen-->>-User: (참고) 이후 CharacterScreen 진입 시에도<br/>GET /api/characters/me로 동일한 출석 기록을 별도 조회 (4-4 참고)
 ```
 
 **설계 메모**
 
-- 위클리 출석은 서버 API 없이 클라이언트에서 요일(일요일)만으로 판단하며, 항상 그날의 데일리 출석과 같은 시점에 합산 지급된다. 별도의 위클리 전용 dedup 키가 없는 이유는 `DAILY_MISSION_ENTRY_KEY`의 하루 1회 체크가 이미 위클리 중복 지급도 막아주기 때문
+- 위클리 출석은 일요일이면서 서버 출석 기록(`GET /api/characters/me`의 `attendance.monday~saturday`)이 전부 `true`일 때만 데일리와 같은 시점에 합산 지급된다. 요일이 일요일이라는 사실만으로는 지급하지 않는다 (월~토를 채우지 못한 유저가 위클리 보상을 받는 것을 막기 위함). 별도의 위클리 전용 dedup 키가 없는 이유는 `DAILY_MISSION_ENTRY_KEY`의 하루 1회 체크가 이미 위클리 중복 지급도 막아주기 때문
+- 출석 기록 조회(`fetchCharacterMe`)가 실패하면 위클리 보상은 지급하지 않고(안전한 기본값 `false`) 데일리 보상만 지급한다
 - 팝업은 하나로 합쳐서 보여주지만(`ExperienceModalContent`의 `weekly` prop), Mixpanel 분석 이벤트는 `daily_attendance` / `weekly_attendance` 두 건으로 나눠서 전송한다 (소스별 집계를 위해)
 - 날짜 판단은 반드시 로컬(기기) 기준으로 통일해야 한다. `Date.toISOString()`(UTC)과 `Date.getDay()`(로컬)를 섞어 쓰면 한국시간 자정~오전 9시 사이 요일 판별이 어긋나는 버그가 있었다 (`src/utils/dateUtils.ts`의 `getLocalDateKey()` 참고)
-- 이 플로우 전체에 백엔드 호출이 없다는 것 자체가 중요한 특징이다. 서버가 보여주는 "주간 출석 기록"은 이 로컬 보상 지급과 완전히 별개의 시스템이며, 서버에 출석을 기록시키는 write API는 코드 전체에 존재하지 않는다 (4-4 참고)
+- 데일리 보상 지급 자체(포인트/경험치 적립)에는 여전히 백엔드 호출이 없다 — 위클리 판정에만 `GET /api/characters/me`를 read-only로 사용할 뿐, 이 조회가 서버에 "출석했다"고 알리는 것은 아니다. 서버에 출석을 기록시키는 write API는 코드 전체에 존재하지 않는다 (4-4 참고)
 
 ### 2-6. 글 읽기 보상 플로우 (퀴즈 이어풀기 시 합산)
 
@@ -421,9 +437,12 @@ flowchart TD
     QuizServerValue --> QuizPopup["퀴즈 결과 팝업<br/>⚠️ 표시 텍스트는 로컬 상수<br/>(QUIZ_CORRECT/INCORRECT_*)"]
 
     DailyEntry(["앱 실행 (일일 첫 진입)"]) --> DailyCheck{"AsyncStorage<br/>오늘 이미 출석?"}
-    DailyCheck -- No --> DailyLocal["❌ API 호출 자체가 없음<br/>로컬 상수만 지급<br/>DAILY_ATTENDANCE_POINT/EXP<br/>→ 서버는 존재를 모름"]
+    DailyCheck -- No --> DailyLocal["❌ 지급 자체는 API 호출 없음<br/>로컬 상수만 지급<br/>DAILY_ATTENDANCE_POINT/EXP<br/>→ 서버는 지급 사실을 모름"]
     DailyCheck -- No --> SundayCheck{"오늘 일요일?"}
-    SundayCheck -- Yes --> WeeklyLocal["❌ API 호출 자체가 없음<br/>위클리 보상 합산<br/>WEEKLY_ATTENDANCE_POINT/EXP<br/>→ 서버는 존재를 모름"]
+    SundayCheck -- Yes --> AttendanceAPI["✅ GET /api/characters/me 조회<br/>(read-only, 지급 여부 판단용)"]
+    AttendanceAPI --> WeekCompleteCheck{"월~토 전부<br/>출석(true)?"}
+    WeekCompleteCheck -- Yes --> WeeklyLocal["위클리 보상 합산 지급<br/>WEEKLY_ATTENDANCE_POINT/EXP<br/>(지급 자체는 로컬, 조건만 서버 기록 기반)"]
+    WeekCompleteCheck -- No / 조회 실패 --> WeeklySkip["위클리 보상 없음<br/>(데일리만 지급)"]
     DailyCheck -- Yes --> DailySkip["보상 없음 (중복 방지)"]
 
     AdWatch(["광고 시청 완료"]) --> AdAPI["purchaseContentWithAd API 호출<br/>⚠️ API 목적은 '콘텐츠 열람권 부여'<br/>포인트도 같이 크레딧하는지는<br/>서버 스펙 미확인"]
@@ -467,6 +486,7 @@ flowchart TD
     style PurchaseServer fill:#e8f5e9
     style ServerRefetch fill:#e8f5e9
     style CharacterScreen fill:#e8f5e9
+    style AttendanceAPI fill:#e8f5e9
     style DailyLocal fill:#fff3e0
     style WeeklyLocal fill:#fff3e0
     style AdLocal fill:#fff3e0
@@ -480,7 +500,7 @@ flowchart TD
 
 🟢 초록(서버 값) · 🟠 주황(로컬 상수, 서버 미반영) · 🔴 빨강(표시값과 실제 지급값이 다를 수 있는 지점)
 
-**읽는 법**: 왼쪽의 6개 시작점(퀴즈 제출/일일 출석/광고 시청/글 진입/포인트 구매)이 각각 어떤 방식으로 보상을 만들어내는지 보여준다. 서버 API를 호출해도 그 응답값을 실제로 쓰는 건 퀴즈뿐이고, 나머지는 API를 호출하더라도(광고, 포인트 구매) 보상액 자체는 로컬 상수이거나 서버 차감이 로컬에 반영되지 않는다. 결국 모든 로컬 지급은 `LocalStore`로 모이지만, 유저가 실제로 보는 `CharacterScreen`은 이 store를 거치지 않고 서버를 직접 재조회한 값만 보여준다 — 그래서 로컬 지급은 "유저 체감상 즉시 받은 것처럼 보이지만, 서버 기준 실제 수치와는 별개"라는 점이 이 흐름도의 핵심이다.
+**읽는 법**: 왼쪽의 6개 시작점(퀴즈 제출/일일 출석/광고 시청/글 진입/포인트 구매)이 각각 어떤 방식으로 보상을 만들어내는지 보여준다. 서버 API를 호출해도 그 응답값을 보상액 자체로 쓰는 건 퀴즈뿐이다. 위클리 출석은 예외적으로 서버 API(`GET /api/characters/me`)를 호출하긴 하지만, 이건 보상액을 받아오는 게 아니라 "지급해도 되는지"만 판단하는 read-only 조회이고 실제 지급액은 여전히 로컬 상수(`WEEKLY_ATTENDANCE_POINT`/`EXPERIENCE`)다. 나머지(광고, 포인트 구매)는 API를 호출하더라도 보상액 자체는 로컬 상수이거나 서버 차감이 로컬에 반영되지 않는다. 결국 모든 로컬 지급은 `LocalStore`로 모이지만, 유저가 실제로 보는 `CharacterScreen`은 이 store를 거치지 않고 서버를 직접 재조회한 값만 보여준다 — 그래서 로컬 지급은 "유저 체감상 즉시 받은 것처럼 보이지만, 서버 기준 실제 수치와는 별개"라는 점이 이 흐름도의 핵심이다.
 
 파란색(`Prefetch`) 노드는 이 구조 때문에 생긴 체감 지연 문제를 완화하기 위해 추가된 경로다. 보상이 지급되는 4곳(퀴즈/데일리/위클리/글 읽기) 모두에서 `prefetchCharacterAfterReward()`를 호출해, 유저가 실제로 `CharacterScreen`에 들어가기 전에 미리 서버 값을 백그라운드로 당겨온다. 자세한 배경은 4-5 참고.
 
@@ -491,7 +511,7 @@ flowchart TD
 | 퀴즈 정답/오답 | **서버** — `submitQuiz` 응답의 `rewardResponse.earnedPoint`/`earnedExp` | `addPoints(서버값)` / `addExperience(서버값)` | `QuizScreen.tsx` |
 | 퀴즈 팝업에 **표시되는 텍스트** | ⚠️ 로컬 고정값 (`QUIZ_CORRECT_EXPERIENCE` 등) — 실제 지급된 서버값과 다를 수 있음 | `ExperienceModalContent`가 상수를 그대로 렌더링 | `ArticlePointModalContent.tsx` |
 | 데일리 출석 | 로컬 상수 (`DAILY_ATTENDANCE_POINT`/`EXPERIENCE`) — 서버 API 호출 없음 | AsyncStorage로 하루 1회 dedup 후 로컬 지급 | `MissionScreen.tsx` |
-| 위클리 출석 | 로컬 상수 (`WEEKLY_ATTENDANCE_POINT`/`EXPERIENCE`) — 서버 API 호출 없음 | 일요일 데일리 출석과 같은 시점에 합산 지급 | `MissionScreen.tsx` |
+| 위클리 출석 | 지급액은 로컬 상수 (`WEEKLY_ATTENDANCE_POINT`/`EXPERIENCE`) — 단, 지급 여부는 `GET /api/characters/me`의 `attendance.monday~saturday` 서버 기록으로 판단 | 일요일 + 월~토 전부 출석일 때만 데일리 출석과 같은 시점에 합산 지급 | `MissionScreen.tsx` |
 | 광고 시청 | 로컬 상수 (`AD_REWARD_POINTS`) — `purchaseContentWithAd` API는 별도 호출되지만 지급액은 로컬 상수 | 광고 시청 완료 시 로컬 지급 | `AdLoadingScreen.tsx` |
 | 글 읽기 | 로컬 상수 (`ARTICLE_READ_EXPERIENCE`) — 서버 API 호출 없음 (완독 처리는 `fetchContentDetail` 호출 자체가 겸함) | AsyncStorage로 글 ID당 1회 dedup 후 로컬 지급 | `ArticleDetailScreen.tsx` |
 | 포인트로 글 열람 (비용 차감) | ⚠️ 서버만 차감 — `purchaseContentWithPoint` 성공해도 로컬 `pointStore`는 차감되지 않음 (미동기화) | - | `useArticleNavigation.ts` |
@@ -503,9 +523,9 @@ flowchart TD
 - **퀴즈 팝업 표시값과 실제 지급값이 다를 수 있다.** 팝업은 `QUIZ_CORRECT_EXPERIENCE`(25) 같은 로컬 상수를 그대로 보여주지만, 실제로 store에 더해지는 값은 서버가 응답한 `rewardResponse.earnedExp`다. 서버 리워드 정책이 바뀌면 팝업 표시값도 함께 업데이트해야 한다.
 - **포인트 구매(글 열람) 차감이 로컬에 반영되지 않는다.** 서버는 포인트를 차감하지만 `pointStore`는 그대로라, 다음 서버 재조회 전까지 로컬 fallback 값이 실제보다 높게 남아있을 수 있다.
 
-### 4-4. 출석 보상 지급 vs 서버 출석 기록 조회 — 서로 무관한 두 트랙
+### 4-4. 출석 보상 지급 vs 서버 출석 기록 조회 — 데일리는 무관, 위클리는 판정만 연결
 
-**데일리/위클리 출석 "보상 지급"과, CharacterScreen에 보이는 "주간 출석 기록(요일별 체크)"은 완전히 다른 시스템이다.** 하나는 순수 로컬, 하나는 서버 조회이며 둘은 서로 데이터를 주고받지 않는다.
+**데일리 출석 "보상 지급"과, CharacterScreen에 보이는 "주간 출석 기록(요일별 체크)"은 여전히 완전히 다른 시스템이다.** 다만 위클리 출석만은 예외로, 지급 여부를 판정할 때 서버 출석 기록을 read-only로 조회한다 (지급액 자체는 여전히 로컬 상수).
 
 ```mermaid
 flowchart TD
@@ -517,17 +537,22 @@ flowchart TD
         Compare -- No --> SaveToday["AsyncStorage.setItem<br/>('@daily_mission_entry', today)"]
         SaveToday --> IsSunday{"오늘 일요일?"}
         IsSunday -- No --> DailyLocal["로컬 상수 지급<br/>DAILY_ATTENDANCE_POINT/EXP<br/>addPoints / addExperience"]
-        IsSunday -- Yes --> WeeklyLocal["로컬 상수 합산 지급<br/>DAILY + WEEKLY_ATTENDANCE_POINT/EXP<br/>addPoints / addExperience"]
+        IsSunday -- Yes --> QueryAttendance["fetchCharacterMe() 조회<br/>(월~토 attendance 확인용)"]
+        QueryAttendance --> WeekComplete{"월~토 전부<br/>true?"}
+        WeekComplete -- Yes --> WeeklyLocal["로컬 상수 합산 지급<br/>DAILY + WEEKLY_ATTENDANCE_POINT/EXP<br/>addPoints / addExperience"]
+        WeekComplete -- "No / 조회 실패" --> DailyOnlyOnSunday["로컬 상수 지급 (데일리만)<br/>DAILY_ATTENDANCE_POINT/EXP<br/>addPoints / addExperience"]
         DailyLocal --> Modal["showModal<br/>(포인트/경험치 획득 팝업)"]
         WeeklyLocal --> Modal
+        DailyOnlyOnSunday --> Modal
         DailyLocal --> Mixpanel1["trackEvent('reward_popup_view')"]
         WeeklyLocal --> Mixpanel2["trackEvent('reward_popup_view') x2<br/>(daily + weekly)"]
+        DailyOnlyOnSunday --> Mixpanel1
     end
 
-    NoAPI(["❌ 이 트랙에는<br/>서버로 보내는 API 호출이<br/>단 한 줄도 없음"])
+    NoAPI(["❌ 데일리 지급 자체에는<br/>서버로 보내는 API 호출이 없음<br/>(위클리 판정용 조회는 예외, 아래 참고)"])
     SaveToday -.->|"출석 사실은<br/>서버로 전송 안 됨"| NoAPI
 
-    subgraph Server["서버 — 출석 기록 트랙 (완전히 별개)"]
+    subgraph Server["서버 — 출석 기록 트랙"]
         AnyActivity(["유저의 그날 서버 인증 활동<br/>(어떤 API든 호출 시 서버가<br/>자체적으로 '출석'으로 판단·기록<br/>— 클라이언트는 관여 안 함)"]) --> ServerCompute["서버가 요일별 출석 여부<br/>자체 계산/저장<br/>(WeeklyAttendance: mon~sun boolean)"]
     end
 
@@ -538,20 +563,23 @@ flowchart TD
     end
 
     ServerCompute --> FetchAPI
+    ServerCompute --> QueryAttendance
 
     style DailyLocal fill:#fff3e0
     style WeeklyLocal fill:#fff3e0
+    style DailyOnlyOnSunday fill:#fff3e0
     style NoAPI fill:#ffe0e0
     style ServerCompute fill:#e8f5e9
     style FetchAPI fill:#e8f5e9
+    style QueryAttendance fill:#e8f5e9
     style Render fill:#e8f5e9
 ```
 
-- **보상 지급 트랙 (`MissionScreen.tsx`)**: `AsyncStorage` 키 `@daily_mission_entry`로 "오늘 이미 출석했는가"만 로컬 체크하고, 통과하면 로컬 상수를 `addPoints`/`addExperience`로 바로 반영한다. 서버에 "오늘 출석했다"를 알리는 API 호출은 코드 전체에 존재하지 않는다 (`client.post`/`patch` + attendance/출석 키워드로 전수 검색해도 0건).
-- **출석 기록 조회 트랙 (`CharacterScreen.tsx`)**: 요일별 체크 원(`주간 출석 기록`)은 `GET /api/characters/me` (`fetchCharacterMe`, `src/api/characterApi.ts:384-399`)의 응답 중 `attendance` 필드(`WeeklyAttendance`: `monday~sunday` boolean, `characterApi.ts:118-126`)를 그대로 그려주는 것이다. 이 값은 서버가 자체적으로 계산해서 내려주며, 클라이언트가 별도로 "기록"시키는 write API는 존재하지 않는다.
+- **보상 지급 트랙 (`MissionScreen.tsx`)**: `AsyncStorage` 키 `@daily_mission_entry`로 "오늘 이미 출석했는가"만 로컬 체크하고, 통과하면 로컬 상수를 `addPoints`/`addExperience`로 바로 반영한다. 데일리 지급 자체를 서버에 "오늘 출석했다"고 알리는 API 호출은 코드 전체에 존재하지 않는다 (`client.post`/`patch` + attendance/출석 키워드로 전수 검색해도 0건). 위클리 지급 여부만 예외적으로 `fetchCharacterMe()`로 서버 기록을 읽어서 판단한다 — 이 호출도 "지급 여부 확인"용 read일 뿐, 서버에 뭔가를 기록시키는 write는 아니다.
+- **출석 기록 조회 트랙 (`CharacterScreen.tsx`)**: 요일별 체크 원(`주간 출석 기록`)은 `GET /api/characters/me` (`fetchCharacterMe`, `src/api/characterApi.ts:384-399`)의 응답 중 `attendance` 필드(`WeeklyAttendance`: `monday~sunday` boolean, `characterApi.ts:118-126`)를 그대로 그려주는 것이다. 이 값은 서버가 자체적으로 계산해서 내려주며, 클라이언트가 별도로 "기록"시키는 write API는 존재하지 않는다. `MissionScreen`의 위클리 판정도 동일한 API·동일한 필드를 그대로 재사용한다.
 - **서버가 정확히 무엇을 근거로 출석을 판단하는지는 코드로 확인 불가.** 그날 다른 API를 하나라도 호출하면 출석 처리되는 것인지, 별도 로그인/세션 체크인지는 백엔드 스펙 확인이 필요하다.
-- **결론**: 유저가 실제로 받는 포인트/경험치(로컬)와 CharacterScreen에 보이는 "출석 기록"(서버)은 서로 다른 기준으로 독립적으로 움직인다. 둘을 같은 하나의 "출석 시스템"으로 오해하지 않도록 주의.
-- **후속 조치**: 이 구조 자체(로컬 지급 vs 서버 조회 분리)는 그대로 두되, 화면에 낡은 값이 보이는 체감 문제는 4-5에서 정리한 3가지 수정으로 완화했다.
+- **결론**: 유저가 실제로 받는 데일리 포인트/경험치(로컬)와 CharacterScreen에 보이는 "출석 기록"(서버)은 여전히 서로 다른 기준으로 독립적으로 움직인다. 다만 위클리 보상만은 이 서버 기록을 지급 조건으로 참조하므로, 둘을 완전히 무관한 시스템으로 오해하지 않도록 주의 (지급액 자체는 여전히 로컬 상수이며, 서버가 계산한 위클리 보상액이 따로 있는 것은 아니다).
+- **후속 조치**: 데일리 지급 트랙과 서버 조회 트랙이 분리된 구조는 그대로 두되, 화면에 낡은 값이 보이는 체감 문제는 4-5에서 정리한 3가지 수정으로 완화했다. 위클리 판정에 서버 조회가 추가되면서 생기는 지연(네트워크 왕복 시간)은 데일리 보상 표시를 막지 않는다 — 실패해도 데일리는 그대로 지급된다.
 
 ### 4-5. 트러블슈팅: 캐릭터 탭 데이터가 즉시 반영되지 않던 문제
 
