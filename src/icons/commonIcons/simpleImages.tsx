@@ -13,6 +13,7 @@ import level_3_tooltip from '../../assets/png/level3_tooltip.png';
 import level_4_tooltip from '../../assets/png/level4_tooltip.png';
 import level_5_tooltip from '../../assets/png/level5_tooltip.png';
 import ModalIMG from '../../assets/png/ModalIMG.png';
+import ErrorToastInfo from '../../assets/png/errorToast_Info.png';
 
 import level1 from '../../assets/png/level1.png';
 import level2 from '../../assets/png/level2.png';
@@ -111,6 +112,12 @@ export const Modal_IMG = createImageIconComponent(
   ModalIMG,
   scaleWidth(259.46),
   scaleWidth(152.62),
+);
+// 에러 토스트(네트워크/일반) 전용 "!" 아이콘 — errorToast.ts에서 사용
+export const ErrorToastInfoIcon = createImageIconComponent(
+  ErrorToastInfo,
+  scaleWidth(24),
+  scaleWidth(24),
 );
 // 로그인 화면 상단 "Neurous" 로고 워드마크
 // 기존에는 배경 이미지(login.png) 안에 로고+문구가 함께 박혀있어 문구 수정이 코드에 반영되지 않는 문제가 있었음.
