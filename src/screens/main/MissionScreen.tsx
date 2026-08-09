@@ -52,6 +52,7 @@ import {
 } from '../../styles/typography';
 import Spacer from '../../components/Spacer';
 import { useMissions } from '../../hooks/useMissions';
+import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 import { MissionCard, ArticleCard } from '../../components';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useArticleNavigation } from '../../hooks/useArticleNavigation';
@@ -551,6 +552,11 @@ const MissionScreen = () => {
             DAILY_ATTENDANCE_EXPERIENCE +
               (isWeeklyAttendanceComplete ? WEEKLY_ATTENDANCE_EXPERIENCE : 0),
           );
+
+          // 캐릭터 탭 진입 전 미리 최신 정보를 백그라운드로 받아둠
+          // (여기서 지급하는 출석 보상은 로컬 store에만 반영되고 서버 동기화가
+          //  없어서, 캐릭터 탭이 보여주는 서버 데이터가 반영될 때까지 시간차가 있음)
+          prefetchCharacterAfterReward();
 
           // Mixpanel: 보상 팝업 노출 (데일리 출석)
           trackEvent('reward_popup_view', {
