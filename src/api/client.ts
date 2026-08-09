@@ -142,31 +142,18 @@ client.interceptors.request.use(
 );
 
 // ─────────────────────────────────────────────────────────────
-// Network Error 재시도
+// Network Error 판별
 // ─────────────────────────────────────────────────────────────
-
-/** 응답 자체를 못 받은 경우(Network Error, 타임아웃) 최대 재시도 횟수 */
-const MAX_NETWORK_RETRY = 2;
-
-/** ms만큼 대기 */
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * 서버 응답을 아예 못 받은 요청인지 판별한다.
- * (4xx/5xx처럼 서버가 응답한 에러는 재시도 대상이 아님)
+ * (4xx/5xx처럼 서버가 응답한 에러와 구분해 네트워크 에러 토스트 문구를 고를 때 사용)
+ *
+ * 과거에는 이 경우 최대 2회까지 자동 재시도했으나, 재시도 중 사용자가
+ * 아무 피드백도 못 받는 대기 시간이 생기는 문제로 재시도 없이 바로
+ * 실패 처리하고 공통 에러 토스트를 띄우는 방식으로 변경했다.
  */
 const isNoResponseError = (error: AxiosError) => !error.response;
-
-/**
- * 로그인/토큰 재발급 엔드포인트인지 판별한다.
- *
- * 이 두 엔드포인트는 이미 자체적인 사용자 피드백(로그인 실패 Alert,
- * 재발급 실패 시 로그아웃 처리)을 갖고 있으므로, 아래 공통 에러 토스트를
- * 중복으로 띄우지 않기 위해 제외 대상으로 둔다.
- */
-const isAuthEndpoint = (url?: string) =>
-  !!url &&
-  (url.includes('/api/auth/login/') || url.includes('/api/auth/refresh'));
 
 // ─────────────────────────────────────────────────────────────
 // Response Interceptor
@@ -194,31 +181,8 @@ client.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as
-      | (InternalAxiosRequestConfig & {
-          _retry?: boolean;
-          _retryCount?: number;
-        })
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
-
-    // ── Network Error / 타임아웃 재시도 ──────────────────────
-    // 서버 응답 자체를 못 받은 경우(간헐적 커넥션 실패 등) 짧은 대기 후 재시도.
-    // 4xx/5xx처럼 서버가 실제로 응답한 에러는 재시도하지 않는다.
-    if (originalRequest && isNoResponseError(error)) {
-      const retryCount = originalRequest._retryCount || 0;
-
-      if (retryCount < MAX_NETWORK_RETRY) {
-        originalRequest._retryCount = retryCount + 1;
-
-        if (__DEV__) {
-          console.warn(
-            `[네트워크 재시도] ${retryCount + 1}/${MAX_NETWORK_RETRY} - ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`,
-          );
-        }
-
-        await delay(500 * (retryCount + 1)); // 500ms, 1000ms ...
-        return client(originalRequest);
-      }
-    }
 
     // ── 401 / 403 처리 ───────────────────────────────────────
     if (
@@ -312,16 +276,17 @@ client.interceptors.response.use(
     }
 
     // ── 그 외 에러 → 공통 에러 토스트 ─────────────────────────
-    // 여기까지 내려오는 에러는 (1) 네트워크 재시도를 모두 소진했거나
-    // (2) 401/403이 아닌 그 외 상태 코드(400/404/409/500 등)로 처리가
-    // 끝난 경우다. 로그인/재발급 엔드포인트는 이미 자체 UI(Alert,
-    // 로그아웃 처리)가 있으므로 중복 노출을 막기 위해 제외한다.
-    if (!isAuthEndpoint(originalRequest?.url)) {
-      if (isNoResponseError(error)) {
-        showNetworkErrorToast(); // A. 네트워크 오류
-      } else {
-        showGeneralErrorToast(); // B. 일반 오류 (원인 특정이 어려운 나머지 실패)
-      }
+    // 여기까지 내려오는 에러는 (1) 서버 응답 자체를 못 받았거나(네트워크
+    // 에러 — 재시도 없이 바로 실패 처리) (2) 401/403이 아닌 그 외 상태
+    // 코드(400/404/409/500 등)로 처리가 끝난 경우다. 로그인/재발급
+    // 요청도 예외 없이 포함한다 — 화면
+    // 자체에 Alert 등 추가 UI가 있더라도, 실제 사용자에게 최소한의
+    // 공통 피드백(토스트)이 항상 보이도록 보장하기 위함이다.
+    // (예: 소셜 로그인 API가 500을 반환해도 토스트가 떠야 함)
+    if (isNoResponseError(error)) {
+      showNetworkErrorToast(); // A. 네트워크 오류
+    } else {
+      showGeneralErrorToast(); // B. 일반 오류 (원인 특정이 어려운 나머지 실패)
     }
 
     if (__DEV__) {
