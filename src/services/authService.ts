@@ -394,9 +394,15 @@ export const withdraw = async (): Promise<void> => {
     );
 
     // 소셜 SDK 로그아웃: 백엔드 토큰과 무관 → 계속 fire-and-forget
-    signOutSocial(provider).catch(() =>
-      console.warn('[withdraw] 소셜 로그아웃 실패'),
-    );
+    // 단, 카카오는 위 withdrawUser() 호출에서 unlinkSocial: true로 서버가
+    // 이미 연결을 끊었기 때문에, 이 시점에 카카오 SDK 로그아웃을 다시 호출하면
+    // 이미 무효화된 토큰으로 요청하게 되어 expired_or_invalid_refresh_token
+    // 에러가 항상 발생한다. 탈퇴 목적은 이미 달성되었으므로 재호출을 생략한다.
+    if (provider !== 'KAKAO') {
+      signOutSocial(provider).catch(() =>
+        console.warn('[withdraw] 소셜 로그아웃 실패'),
+      );
+    }
 
     await AsyncStorage.multiRemove([
       AUTH_TOKEN_KEY,
