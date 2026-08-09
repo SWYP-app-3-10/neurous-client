@@ -22,8 +22,7 @@ import React from 'react';
 import { useModalStore } from '../store/modalStore';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
 import { Body_16M } from '../styles/typography';
-import { InfoIcon } from '../icons';
-import { ICON_SIZES } from '../icons/config/iconSizes';
+import { ErrorToastInfoIcon } from '../icons';
 
 /** A. 네트워크 오류 토스트 문구 */
 const NETWORK_ERROR_MESSAGE = '네트워크 상태를 확인한 후\n다시 시도해주세요';
@@ -39,13 +38,13 @@ const GENERAL_ERROR_MESSAGE =
  * padding 18(상하) 20(좌우), radius 16, gap 12, background gray800
  * 테두리 없음
  * bottomOffset은 따로 지정하지 않고 ToastModal 공통 기본값(52)을 그대로 따름
+ *
+ * 아이콘: 디자인팀이 전달한 전용 "!" 에셋(assets/png/errorToast_Info.png)을
+ * simpleImages.tsx에 24x24로 등록해 사용한다. PNG라 InfoIcon(SVG)과 달리
+ * color prop으로 틴트할 수 없어, 크기만 등록 시점에 고정해서 그대로 쓴다.
  */
 const ERROR_TOAST_STYLE = {
-  icon: React.createElement(InfoIcon, {
-    color: COLORS.white,
-    width: ICON_SIZES.XL, // scaleWidth(24)
-    height: ICON_SIZES.XL,
-  }),
+  icon: React.createElement(ErrorToastInfoIcon),
   position: 'bottom' as const,
   backgroundColor: COLORS.gray800,
   marginHorizontal: scaleWidth(20),
