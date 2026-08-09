@@ -118,10 +118,13 @@ sequenceDiagram
 
     AuthSvc-->>Social: signOutSocial(provider) — fire-and-forget
     AuthSvc->>Storage: multiRemove([토큰들]) — 위 API 완료 후에만 실행
+    AuthSvc->>AuthSvc: queryClient.clear()<br/>(React Query 캐시 전체 삭제)
     AuthSvc-->>Screen: 로그아웃 완료 → 로그인 화면 이동
 ```
 
 > ⚠️ **순서 주의**: 인증 필요 API(위 rect 영역)를 로컬 토큰 삭제보다 먼저 완료해야 함. 순서가 뒤바뀌면 요청 인터셉터가 토큰을 헤더에 붙이기 전에 토큰이 삭제되어 401이 발생함 (`docs/AUTH_FLOW.md`의 "로그아웃 순서 보장", `docs/TROUBLESHOOTING.md`의 "네이버/구글 로그아웃·탈퇴 시 401" 참고).
+>
+> ⚠️ **캐시 삭제 이유**: `queryClient`는 앱 전체에서 하나만 쓰는 싱글턴이고, 캐릭터 쿼리 키(`characterKeys.me()` 등)는 유저 ID로 구분되지 않는다. `queryClient.clear()`가 없으면 다른 계정으로 로그인했을 때 이전 계정의 캐릭터 정보가 캐시에 남아있다가 잠깐 화면에 보이는 문제가 있었다 (`docs/TROUBLESHOOTING.md`의 "로그아웃 후 다른 계정 로그인 시 이전 계정 캐릭터 정보가 잠깐 보임" 참고).
 
 ### 2-2. 메인 기능 플로우 (미션 조회 + 토큰 재발급)
 
@@ -442,13 +445,21 @@ flowchart TD
 
     LocalStore["experienceStore / pointStore<br/>(Zustand, addExperience/addPoints)"]
 
-    LocalStore -->|"experience 증가 감지"| RootNav["RootNavigator<br/>→ characterData refetch<br/>→ 레벨업 체크"]
+    LocalStore -->|"experience 증가 감지"| RootNav["RootNavigator<br/>→ characterKeys.all 무효화<br/>(data + me + reward 전체)<br/>→ 레벨업 체크"]
     LocalStore -->|"fallback 값으로만 사용"| ArticleNavFallback["useArticleNavigation<br/>currentPoints fallback"]
 
+    QuizServerValue -.->|"보상 지급 직후"| Prefetch
+    DailyLocal -.->|"보상 지급 직후"| Prefetch
+    WeeklyLocal -.->|"보상 지급 직후"| Prefetch
+    ArticleLocal -.->|"보상 지급 직후"| Prefetch
+
+    Prefetch["prefetchCharacterAfterReward()<br/>즉시 1회 + 1.5초 뒤 1회 더<br/>prefetchQuery(me / data)<br/>— 캐시 유무 무관하게 항상 요청"]
+
     RootNav --> ServerRefetch["GET /api/characters/me<br/>재조회"]
+    Prefetch --> ServerRefetch
     PurchaseServer -.->|"다음 CharacterScreen<br/>진입 시에만 반영"| ServerRefetch
 
-    ServerRefetch --> CharacterScreen["CharacterScreen<br/>('나의 레벨' 화면)<br/>유저가 보는 실제 수치<br/>= userGrowthInfo.currentExp/currentPoint"]
+    ServerRefetch --> CharacterScreen["CharacterScreen<br/>('나의 레벨' 화면)<br/>refetchOnMount:'always'로<br/>진입할 때마다 항상 재조회<br/>유저가 보는 실제 수치<br/>= userGrowthInfo.currentExp/currentPoint"]
 
     style QuizAPI fill:#e8f5e9
     style QuizServerValue fill:#e8f5e9
@@ -464,11 +475,14 @@ flowchart TD
     style AdAPI fill:#fce4ec
     style ContentAPI fill:#fce4ec
     style QuizPopup fill:#ffe0e0
+    style Prefetch fill:#e1f5fe
 ```
 
 🟢 초록(서버 값) · 🟠 주황(로컬 상수, 서버 미반영) · 🔴 빨강(표시값과 실제 지급값이 다를 수 있는 지점)
 
 **읽는 법**: 왼쪽의 6개 시작점(퀴즈 제출/일일 출석/광고 시청/글 진입/포인트 구매)이 각각 어떤 방식으로 보상을 만들어내는지 보여준다. 서버 API를 호출해도 그 응답값을 실제로 쓰는 건 퀴즈뿐이고, 나머지는 API를 호출하더라도(광고, 포인트 구매) 보상액 자체는 로컬 상수이거나 서버 차감이 로컬에 반영되지 않는다. 결국 모든 로컬 지급은 `LocalStore`로 모이지만, 유저가 실제로 보는 `CharacterScreen`은 이 store를 거치지 않고 서버를 직접 재조회한 값만 보여준다 — 그래서 로컬 지급은 "유저 체감상 즉시 받은 것처럼 보이지만, 서버 기준 실제 수치와는 별개"라는 점이 이 흐름도의 핵심이다.
+
+파란색(`Prefetch`) 노드는 이 구조 때문에 생긴 체감 지연 문제를 완화하기 위해 추가된 경로다. 보상이 지급되는 4곳(퀴즈/데일리/위클리/글 읽기) 모두에서 `prefetchCharacterAfterReward()`를 호출해, 유저가 실제로 `CharacterScreen`에 들어가기 전에 미리 서버 값을 백그라운드로 당겨온다. 자세한 배경은 4-5 참고.
 
 ### 4-2. 보상 종류별 지급 방식 (요약 표)
 
@@ -537,6 +551,22 @@ flowchart TD
 - **출석 기록 조회 트랙 (`CharacterScreen.tsx`)**: 요일별 체크 원(`주간 출석 기록`)은 `GET /api/characters/me` (`fetchCharacterMe`, `src/api/characterApi.ts:384-399`)의 응답 중 `attendance` 필드(`WeeklyAttendance`: `monday~sunday` boolean, `characterApi.ts:118-126`)를 그대로 그려주는 것이다. 이 값은 서버가 자체적으로 계산해서 내려주며, 클라이언트가 별도로 "기록"시키는 write API는 존재하지 않는다.
 - **서버가 정확히 무엇을 근거로 출석을 판단하는지는 코드로 확인 불가.** 그날 다른 API를 하나라도 호출하면 출석 처리되는 것인지, 별도 로그인/세션 체크인지는 백엔드 스펙 확인이 필요하다.
 - **결론**: 유저가 실제로 받는 포인트/경험치(로컬)와 CharacterScreen에 보이는 "출석 기록"(서버)은 서로 다른 기준으로 독립적으로 움직인다. 둘을 같은 하나의 "출석 시스템"으로 오해하지 않도록 주의.
+- **후속 조치**: 이 구조 자체(로컬 지급 vs 서버 조회 분리)는 그대로 두되, 화면에 낡은 값이 보이는 체감 문제는 4-5에서 정리한 3가지 수정으로 완화했다.
+
+### 4-5. 트러블슈팅: 캐릭터 탭 데이터가 즉시 반영되지 않던 문제
+
+4-4에서 정리한 구조(로컬 지급 트랙과 서버 조회 트랙이 완전히 분리) 때문에 실제로 아래 3가지 문제가 있었고, 원인을 하나씩 좁혀가며 순서대로 해결했다. 셋은 증상은 비슷해 보이지만 원인은 서로 다르다.
+
+| # | 증상 | 원인 | 해결 |
+| --- | --- | --- | --- |
+| 1 | 경험치가 오른 뒤 캐릭터 탭에 처음 들어가면 출석/진행률이 갱신 전 상태. 다른 탭 갔다 와야 반영 | `RootNavigator`가 exp 증가 시 `characterKeys.data()`만 무효화하고, 실제 화면이 쓰는 `characterKeys.me()`는 앱 어디서도 무효화하지 않음 (`CharacterScreen`의 `useFocusEffect` refetch 한 번에만 의존) | `characterKeys.all`로 무효화 범위 확장 + `useCharacterMe`/`useCharacterData`에 `refetchOnMount:'always'` 추가 |
+| 2 | 신규 가입 직후 캐릭터 탭에 경험치 0 / 출석기록 없음으로 뜸. 잠시 후 재진입하면 정상 | 1번을 고쳐도 남는 문제. 서버가 그 시점에 아직 보상을 반영하지 못한 상태로 응답한 것 — 클라이언트가 아무리 빨리 재요청해도 서버 응답 자체가 그 순간엔 미반영 상태 | 완전한 해결은 아니고 체감 완화: 보상 지급 4곳(퀴즈/데일리/위클리/글 읽기)에서 `prefetchCharacterAfterReward()`로 캐릭터 탭 진입 전에 미리 백그라운드 조회(즉시 1회 + 1.5초 뒤 1회 더) |
+| 3 | 로그아웃 후 다른 계정으로 로그인하면 이전 계정의 캐릭터 정보가 잠깐 보였다가 새 계정 정보로 바뀜 | `queryClient`가 앱 전체 싱글턴인데 로그아웃 시 캐시를 비우지 않음. 캐릭터 쿼리 키가 유저 ID로 구분되지 않아 이전 계정 응답이 캐시에 그대로 남음 | `logout()`/`withdraw()`에서 `queryClient.clear()` 호출 |
+
+**디버깅 포인트**: 1번과 2번은 증상(화면에 낡은/빈 값이 보임)이 똑같아서 처음엔 같은 원인으로 오인하기 쉬웠다. 구분 기준은 "화면에 로딩 스피너가 아니라 실제 숫자(0, 없음 등)가 떴는가"였다 — 이는 이미 서버 응답을 받았다는 뜻이므로, 캐시 무효화 문제가 아니라 그 순간 서버가 준 응답 자체가 미반영 상태였다는 걸 의미한다. `refetchQueries`(캐시에 이미 등록된 쿼리만 대상)와 `prefetchQuery`(캐시 유무 무관하게 항상 요청)의 차이를 여기서 정확히 구분해서 써야 했던 이유이기도 하다.
+
+**관련 파일**: `src/navigation/RootNavigator.tsx`, `src/hooks/useCharacter.ts`, `src/screens/main/MissionScreen.tsx`, `src/screens/common/ArticleDetailScreen.tsx`, `src/screens/common/QuizScreen.tsx`, `src/services/authService.ts`
+**관련 문서**: `docs/TROUBLESHOOTING.md`의 "캐릭터 탭 첫 진입 시 출석/진행률 미갱신", "로그아웃 후 다른 계정 로그인 시 이전 계정 캐릭터 정보가 잠깐 보임"
 
 <br />
 
