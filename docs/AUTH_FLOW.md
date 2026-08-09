@@ -164,8 +164,22 @@ retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
 
 ## 약관 동의 플로우
 
-소셜 로그인 실행 전에 약관 동의 화면을 별도 플로우로 분리했습니다. 동의 완료 후 선택한 제공자 정보를 파라미터로 전달하여 로그인을 재개하는 구조입니다.
+약관 동의는 로그인이 **끝난 뒤**, 서버 응답의 `newUser` 값을 확인한 다음에만 노출합니다. (과거에는 로그인 실행 전에 약관 동의부터 거치는 구조였는데, 로그인 전이라 신규/기존 유저 여부를 알 수 없어 기존 유저에게도 약관 동의를 매번 보여주는 문제가 있었습니다. 이 문서화 시점에 로그인 이후로 순서를 바로잡았습니다.)
 
 ```
-LoginScreen → TermsAgreementScreen → (동의 완료) → LoginScreen으로 복귀 + 로그인 재개
+LoginScreen(버튼) → 소셜 계정 선택 → 서버 로그인(POST /api/auth/login/:provider) → newUser 분기
+  ├─ newUser === false (기존 유저) → 약관/온보딩 생략, 알림 권한 처리 후 바로 홈
+  └─ newUser !== false (신규 유저) → 알림 권한 처리 → TermsAgreementScreen
+                                        ├─ 동의 완료 → IntroSlides → Interests → DifficultySetting → 홈
+                                        └─ 동의 없이 이탈(뒤로가기 등) → 자동 로그아웃
 ```
+
+### `newUser` 분기 (`LoginResponse.data.newUser`)
+
+- 타입: `src/api/authApi.ts`의 `LoginResponse.data.newUser?: boolean`
+- 값이 없으면(응답 필드 누락 등) `socialLoginService.ts`의 각 제공자별 로그인 함수가 `newUser ?? true`로 신규 유저 취급합니다(약관을 건너뛰는 쪽보다 한 번 더 보여주는 쪽이 안전하다는 판단).
+- 분기 지점: `LoginScreen.tsx`의 `handleSocialLogin` — `result.newUser === false`만 기존 유저로 취급하고, 그 외에는 전부 신규 유저 취급합니다.
+
+### 약관 동의 없이 이탈 시 자동 로그아웃
+
+`TermsAgreementScreen`에 도달한 시점에는 이미 소셜 로그인 + 서버 로그인이 끝난 상태입니다(서버에는 이미 계정이 생성되어 있음). 이 화면에서 뒤로가기 등으로 동의 없이 이탈하면, 서버 계정과 클라이언트 로그인 상태가 어긋나는 것을 막기 위해 `logout()`을 자동 호출해 로컬 토큰을 즉시 삭제합니다(`TermsAgreementScreen.tsx`의 unmount effect, `hasAgreedRef`로 정상 진행과 구분). 다음 실행 시에는 다시 로그인 화면부터 시작합니다.
