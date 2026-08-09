@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -17,6 +17,7 @@ import Header from '../../components/Header';
 import { CheckIcon } from '../../icons';
 import RightArrow from '../../assets/svg/RightArrow.svg';
 import { logEvent } from '../../services/analyticsService';
+import { logout } from '../../services/authService';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
 type RouteP = RouteProp<
@@ -56,6 +57,18 @@ const TermsAgreementScreen = () => {
     [age14, tos, privacy],
   );
 
+  /**
+   * 약관에 동의하고 정상적으로 다음 화면(온보딩)으로 넘어갔는지 여부
+   *
+   * 이 화면에 도달한 시점에는 이미 소셜 로그인 + 서버 로그인이 끝난 상태다
+   * (LoginScreen 참고: newUser === true일 때만 이 화면으로 옴).
+   * 즉 여기서 뒤로가기 등으로 동의 없이 이탈하면, 서버에는 이미 계정이
+   * 생성됐는데 클라이언트만 로그인 이전 상태로 돌아가는 불일치가 생긴다.
+   * 이를 막기 위해 정상적으로 동의하고 넘어간 경우가 아니면(false로 남아있으면)
+   * 화면이 사라질 때(아래 unmount effect) 자동으로 로그아웃 처리한다.
+   */
+  const hasAgreedRef = useRef(false);
+
   // "모두 동의하기" 토글
   const toggleAll = () => {
     logEvent('AgreeAll_AgreeToTerms');
@@ -65,29 +78,42 @@ const TermsAgreementScreen = () => {
     setPrivacy(next);
   };
 
-  // 약관 동의 완료 → LoginScreen(SOCIAL_LOGIN)으로 돌아가서 agreedProvider 전달
-  // LoginScreen에서 route.params.agreedProvider 감지 후 기존 로그인 로직(handleSocialLogin) 실행
-  const proceedToLogin = () => {
-    if (!provider) {
-      console.log('[TermsAgreement] proceedToLogin failed: provider missing');
-      return;
-    }
+  // 약관 동의 완료 → 온보딩 인트로 화면으로 진행
+  // (로그인은 이 화면에 오기 전에 이미 끝난 상태이므로 로그인 화면으로
+  //  되돌아갈 필요 없이 그대로 앞으로 진행하면 된다)
+  const proceedToOnboarding = () => {
+    console.log('[TermsAgreement] 약관 동의 완료, 온보딩으로 진행:', provider);
 
-    console.log('[TermsAgreement] TermsAgreement agree provider:', provider);
+    // 자동 로그아웃(아래 unmount effect)이 발동하지 않도록 먼저 표시
+    hasAgreedRef.current = true;
 
-    navigation.navigate(RouteNames.SOCIAL_LOGIN, {
-      agreedProvider: provider,
-    });
+    navigation.navigate(RouteNames.INTRO_CARDLIST);
   };
 
-  // 필수 3개를 다 체크한 순간 자동으로 LoginScreen으로 복귀(1회만)
+  // 필수 3개를 다 체크한 순간 자동으로 온보딩으로 진행(1회만)
   useEffect(() => {
     if (!allChecked) return;
     if (didProceed) return;
 
     setDidProceed(true);
-    proceedToLogin();
+    proceedToOnboarding();
   }, [allChecked, didProceed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 약관 동의 없이 화면을 벗어나면(뒤로가기 등) 자동 로그아웃
+  // provider는 이 화면에 진입한 시점에 고정되는 값이라 의도적으로 의존성 배열에서
+  // 제외했다(마운트 시점의 provider를 그대로 클로저로 캡처) — cleanup이 "실제 언마운트"
+  // 시에만 한 번 실행되도록 하기 위함이며, eslint-disable로 이를 명시한다.
+  useEffect(() => {
+    return () => {
+      if (!hasAgreedRef.current) {
+        console.log('[TermsAgreement] 약관 미동의 상태로 이탈 → 자동 로그아웃');
+        logout(provider).catch(err =>
+          console.warn('[TermsAgreement] 이탈 시 로그아웃 실패:', err),
+        );
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
