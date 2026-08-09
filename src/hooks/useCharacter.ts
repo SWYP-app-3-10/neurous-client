@@ -20,6 +20,7 @@ import {
   CharacterRewardResponse,
   CharacterMeResponse,
 } from '../api/characterApi';
+import { queryClient } from '../config/queryClient';
 
 // ─────────────────────────────────────────────────────────────
 // Query Keys
@@ -106,6 +107,49 @@ export const useCharacterMe = () => {
     // 갱신 전 상태로 보이던 문제의 재발 방지용 안전장치.
     refetchOnMount: 'always',
   });
+};
+
+// ─────────────────────────────────────────────────────────────
+// 보상 발생 시 백그라운드 프리페치
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 포인트/경험치 보상 발생 시점(모달 노출 등)에 캐릭터 정보를 백그라운드로 미리 요청한다.
+ *
+ * 목적: 유저가 실제로 캐릭터 탭에 들어가기 전에 캐시를 미리 채워둬서
+ *       탭 진입 시 체감 로딩 시간을 줄인다.
+ *
+ * 즉시 1회 + 1.5초 뒤 1회 더 요청하는 이유:
+ *   보상 지급 시점에 서버 반영이 아직 안 끝났을 수 있어(예: 로컬에서만
+ *   처리되는 출석 체크), 한 번만 요청하면 여전히 이전 값을 받아올 수 있다.
+ *   짧은 지연 후 한 번 더 요청해 반영 지연에 대비한다.
+ *
+ * refetchQueries가 아닌 prefetchQuery를 쓰는 이유:
+ *   refetchQueries는 캐시에 기존 쿼리가 있어야만 동작한다. 신규 가입 유저나
+ *   로그아웃 후 재로그인(캐시 전체 삭제됨) 직후처럼 캐릭터 탭에 한 번도
+ *   들어간 적 없어 캐시가 비어있는 경우엔 아무 일도 하지 않으므로, 캐시
+ *   유무와 무관하게 항상 요청하는 prefetchQuery를 사용한다.
+ *
+ * 사용처: 일일 출석 체크(MissionScreen), 글 읽기 보상(ArticleDetailScreen),
+ *         퀴즈 보상(QuizScreen) — 포인트/경험치 지급 직후 호출
+ */
+export const prefetchCharacterAfterReward = () => {
+  const run = () => {
+    // prefetchQuery는 에러가 나도 throw하지 않아 화면 로직에 영향을 주지 않는다.
+    queryClient.prefetchQuery({
+      queryKey: characterKeys.me(),
+      queryFn: fetchCharacterMe,
+      staleTime: 0, // 캐시 신선도 무시하고 항상 새로 요청
+    });
+    queryClient.prefetchQuery({
+      queryKey: characterKeys.data(),
+      queryFn: fetchCharacterData,
+      staleTime: 0,
+    });
+  };
+
+  run();
+  setTimeout(run, 1500);
 };
 
 // ─────────────────────────────────────────────────────────────
