@@ -569,5 +569,5 @@ flowchart TD
 `MockArticleDetailScreen.tsx` / `MockQuizScreen.tsx`(`src/screens/common/`)는 스토어 등록용 스크린샷 촬영을 위해 추가된 화면이다.
 
 - `ArticleDetailScreen` / `QuizScreen`과 시각적으로 동일하지만, 서버 API 호출과 포인트·경험치 지급 로직이 없다. 콘텐츠는 `src/data/mock/mockArticleQuiz.ts`에 고정된 값을 사용한다.
-- `IS_INTERNAL_TEST`(`src/config/env.ts`)가 true인 내부 테스트 빌드에서만 홈(`MissionScreen`)·탐색(`SearchScreen`) 리스트 맨 위에 mock 카드로 노출되며, 실서비스 배포 빌드에는 표시되지 않는다.
+- (2026-08-09 기준) 홈(`MissionScreen`)·탐색(`SearchScreen`) 리스트 맨 위 mock 카드 노출은 비활성화되어 현재 진입 경로가 없다. 라우트(`MOCK_ARTICLE_DETAIL` / `MOCK_QUIZ`)와 화면·데이터 파일은 재사용을 위해 그대로 유지된다.
 - 실제 `ArticleDetailScreen` / `QuizScreen`의 로직에는 영향을 주지 않는 별도 화면이다.
