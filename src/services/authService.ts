@@ -23,6 +23,7 @@ import {
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAccessToken as getKakaoAccessToken } from '@react-native-seoul/kakao-login';
 import { identifyUser, resetUser } from './mixpanelService';
+import { queryClient } from '../config/queryClient';
 
 export interface AuthStatus {
   isAuthenticated: boolean;
@@ -280,6 +281,13 @@ export const logout = async (provider?: SocialLoginProvider): Promise<void> => {
     // Mixpanel 사용자 식별 초기화
     resetUser();
 
+    // React Query 캐시 전체 삭제
+    // (queryClient는 앱 전체에서 하나만 쓰는 싱글턴이라 로그아웃해도 자동으로
+    //  비워지지 않는다. 캐릭터 정보 등 쿼리 키가 유저 ID로 구분되지 않기 때문에,
+    //  안 지우면 다음에 다른 계정으로 로그인했을 때 이전 계정 데이터가 캐시에서
+    //  잠깐 그대로 보이는 문제가 있었음)
+    queryClient.clear();
+
     console.log('[logout] 완료');
   } catch (error) {
     console.error('로그아웃 중 오류:', error);
@@ -416,6 +424,9 @@ export const withdraw = async (): Promise<void> => {
 
     // Mixpanel 사용자 식별 초기화
     resetUser();
+
+    // React Query 캐시 전체 삭제 (logout()과 동일한 이유)
+    queryClient.clear();
 
     console.log('[withdraw] 완료');
   } catch (error: any) {
