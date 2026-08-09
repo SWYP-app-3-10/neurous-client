@@ -129,6 +129,8 @@
 - **원인**: `RootNavigator`가 로컬 경험치(`experience`) 증가를 감지해 캐릭터 쿼리를 무효화(`invalidateQueries`)할 때 대상이 `characterKeys.data()`뿐이었음. 정작 출석·진행률이 담긴 `characterKeys.me()` 캐시는 앱 전체 어디서도 무효화되지 않아, `CharacterScreen`의 `useFocusEffect` 강제 refetch 한 번에만 전적으로 의존하는 구조 → 마운트 타이밍과 겹치면 첫 포커스에서 최신 데이터를 받아오지 못함
 - **해결**: `RootNavigator`의 무효화 대상을 `characterKeys.data()` → `characterKeys.all`로 확장(`data`/`me`/`reward` 전체 무효화). 추가로 `useCharacterMe`/`useCharacterData`에 `refetchOnMount: 'always'`를 붙여(`useMissions`와 동일한 패턴) 화면 마운트 시 캐시 신선도와 무관하게 항상 서버 재조회하도록 이중 안전장치를 둠
 - **수정 파일**: `src/navigation/RootNavigator.tsx`, `src/hooks/useCharacter.ts`
+- **후속 조치 (신규 가입 등 서버 반영 자체가 늦는 케이스 대비)**: 위 조치는 "캐릭터 탭에 들어갈 때마다 다시 요청"하는 것까진 보장하지만, 그 요청 시점에 서버가 아직 보상을 반영 못 했으면 여전히 낡은 값을 받아옴. 이를 완화하기 위해 포인트/경험치 지급 직후(일일 출석 체크·글 읽기 보상·퀴즈 보상) 캐릭터 탭 진입 전에 미리 백그라운드로 조회해두는 `prefetchCharacterAfterReward()`를 추가. 캐시 존재 여부와 무관하게 항상 요청이 나가야 해서 `refetchQueries`가 아닌 `prefetchQuery`를 사용했고, 서버 반영 지연 대비 즉시 1회 + 1.5초 뒤 1회 더 요청함
+- **후속 조치 수정 파일**: `src/hooks/useCharacter.ts`(`prefetchCharacterAfterReward` 추가), `src/screens/main/MissionScreen.tsx`, `src/screens/common/ArticleDetailScreen.tsx`, `src/screens/common/QuizScreen.tsx`
 
 ### 로그인 화면 문구를 코드에서 수정해도 반영되지 않음
 
