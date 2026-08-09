@@ -58,6 +58,14 @@
 - **수정 파일**: `src/services/authService.ts` (`logout()`, `withdraw()`)
 - **관련 문서**: `docs/AUTH_FLOW.md`의 "로그아웃 순서 보장" 절
 
+### 이용약관이 신규/기존 유저 구분 없이 로그인 때마다 노출
+
+- **증상**: 이미 가입한 기존 유저도 소셜 로그인 버튼을 누를 때마다 이용약관 동의 화면을 다시 봐야 했음
+- **원인**: 소셜 버튼 `onPress`가 실제 로그인(계정 선택 + 서버 로그인)보다 먼저 무조건 `TermsAgreementScreen`으로 이동하는 구조였음. 신규/기존 유저를 가르는 `newUser` 값은 서버 로그인 응답에만 들어있는데, 약관 화면이 로그인보다 먼저 뜨다 보니 애초에 분기할 수 있는 시점이 없었음
+- **해결**: 소셜 버튼이 로그인을 바로 실행하도록 순서를 뒤집음. 로그인 성공 후 `newUser === false`(기존 유저)면 약관/온보딩 없이 바로 홈으로, 그 외(신규 유저)만 약관 화면으로 이동. 로그인이 이미 끝난 뒤에 약관 화면을 보여주는 구조가 되면서, 약관 미동의 이탈 시 서버 계정과 클라이언트 상태가 어긋나지 않도록 `TermsAgreementScreen` 언마운트 시 자동 로그아웃을 추가함
+- **수정 파일**: `src/screens/auth/LoginScreen.tsx`, `src/screens/onboarding/TermsAgreementScreen.tsx`, `src/navigation/types.ts`
+- **관련 문서**: `docs/AUTH_FLOW.md`의 "약관 동의 플로우" 절
+
 <br />
 
 ## UI / UX
