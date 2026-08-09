@@ -48,6 +48,8 @@ const addExp = useExperienceStore(s => s.addExperience);       // 쓰기
 | `addExperience(amount)` | `(number) => void` | 경험치 추가 |
 | `subtractExperience(amount)` | `(number) => void` | 경험치 차감 |
 
+> ⚠️ **이 store는 UI 표시용 임시 상태일 뿐, 서버 동기화를 보장하지 않는다.** 출석/글 읽기 보상은 여기 `addExperience`만 호출하고 서버 API를 부르지 않는 경우가 있다. 캐릭터 탭이 보여주는 실제 경험치는 이 store가 아니라 서버 재조회(`useCharacterMe`) 값이며, 둘 사이 반영 시차 문제와 대응 방법은 `docs/ARCHITECTURE.md`의 "4. 보상 시스템 — 서버 값 vs 로컬 값" 참고.
+
 ---
 
 ## 🔔 notificationStore.ts — 알림 Store
