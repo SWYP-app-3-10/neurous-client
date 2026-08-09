@@ -73,6 +73,23 @@ const { data: me } = useCharacterMe();
 > staleTime과 무관하게 화면이 마운트될 때마다 서버에서 다시 받아오므로 이중 안전장치가 됩니다.
 > (홈 탭의 `useMissions`도 동일한 이유로 `refetchOnMount: true`를 사용 중)
 
+### prefetchCharacterAfterReward() — 보상 발생 시 미리 받아두기
+
+> 포인트/경험치가 지급되는 순간(일일 출석 체크, 글 읽기 보상, 퀴즈 보상)마다 호출해서,
+> 유저가 캐릭터 탭에 들어가기 전에 미리 최신 데이터를 캐시에 채워두는 함수예요.
+
+```ts
+// 사용 예시 (보상 지급 직후)
+addExperience(ARTICLE_READ_EXPERIENCE);
+prefetchCharacterAfterReward();
+```
+
+> 💡 **왜 refetchQueries가 아니라 prefetchQuery인가요?**
+> `refetchQueries`는 캐시에 이미 등록된 쿼리만 다시 실행할 수 있어요. 신규 가입 유저나
+> 로그아웃 후 재로그인처럼 캐릭터 탭에 한 번도 안 들어가 캐시가 비어있으면 아무 일도 안 합니다.
+> `prefetchQuery`는 캐시 유무와 무관하게 항상 요청을 만들기 때문에 이런 상황에서도 동작해요.
+> 보상 지급 시점엔 서버 반영이 아직 안 끝났을 수도 있어서, 즉시 1회 + 1.5초 뒤 1회 더 요청합니다.
+
 ---
 
 ## 📡 useNotificationSSE.ts — 실시간 알림 훅
