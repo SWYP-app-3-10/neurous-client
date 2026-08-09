@@ -78,11 +78,6 @@ import { AlarmIcon, Modal_IMG } from '../../icons';
 import { logEvent, logScreenView } from '../../services/analyticsService';
 import { trackEvent } from '../../services/mixpanelService';
 import { getLocalDateKey } from '../../utils/dateUtils';
-import { IS_INTERNAL_TEST } from '../../config/env';
-import {
-  MOCK_ARTICLE_QUIZ,
-  MOCK_ARTICLE_THUMBNAIL_DATA_URI,
-} from '../../data/mock/mockArticleQuiz';
 
 // ──────────────────────────────────────────────
 // 상수 정의
@@ -424,18 +419,6 @@ const MissionScreen = () => {
     });
   }, [navigation]);
 
-  /**
-   * [내부 테스트] 스토어 스크린샷용 mock 카드 클릭 핸들러
-   *
-   * 실제 아티클과 달리 useArticleNavigation(접근 권한 확인, 포인트 차감 등)을
-   * 거치지 않고 MockArticleDetailScreen으로 바로 이동한다.
-   */
-  const handlePressMockArticleCard = useCallback(() => {
-    navigation.navigate(RouteNames.FULL_SCREEN_STACK, {
-      screen: RouteNames.MOCK_ARTICLE_DETAIL,
-    });
-  }, [navigation]);
-
   // ──────────────────────────────────────────────
   // Effect 3: Android 뒤로가기 종료 처리
   // ──────────────────────────────────────────────
@@ -734,28 +717,6 @@ const MissionScreen = () => {
 
         {/* ────── 추천 아티클 목록 ────── */}
         <View style={missionScreenStyles.articleList}>
-          {/*
-            [내부 테스트] 스토어 스크린샷용 mock 카드
-            - 서버 데이터가 아닌 고정된 목데이터(mockArticleQuiz.ts)를 사용
-            - IS_INTERNAL_TEST 빌드에서만 노출, 실서비스 배포 빌드에는 표시되지 않음
-            - 실제 추천 아티클 목록보다 항상 맨 위에 위치
-          */}
-          {IS_INTERNAL_TEST && (
-            <ArticleCard
-              article={{
-                id: 'mock-article',
-                title: MOCK_ARTICLE_QUIZ.title,
-                category: MOCK_ARTICLE_QUIZ.categoryName,
-                readTime: '3분',
-                date: MOCK_ARTICLE_QUIZ.contentDate,
-                // ArticleCard는 Image를 {uri: imageUrl} 형태로만 그리므로
-                // 로컬 require 에셋 대신 base64 data URI를 사용해야 카드에 썸네일이 보인다
-                imageUrl: MOCK_ARTICLE_THUMBNAIL_DATA_URI,
-              }}
-              onPress={handlePressMockArticleCard}
-            />
-          )}
-
           {hasContents ? (
             contents.map((content, index) => {
               const article = convertMissionContentToArticle(content, index);
