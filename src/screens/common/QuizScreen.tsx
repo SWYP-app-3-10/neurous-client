@@ -70,6 +70,7 @@ import { useDifficultyFeedbackCheck } from '../../hooks/useDifficultyFeedbackChe
 import { useDifficultySuggestion } from '../../hooks/useDifficultySuggestion';
 import { saveDifficultyFeedback } from '../../services/difficultyFeedbackService';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 import { LevelCategory, LevelCategoryNames } from '../../types/interests';
 import LevelSuggestionModal from '../../components/LevelSuggestionModal';
 import { trackEvent } from '../../services/mixpanelService';
@@ -559,6 +560,11 @@ const QuizScreen: React.FC = () => {
       if (rewardResponse) {
         addPoints(rewardResponse.earnedPoint);
         addExperience(rewardResponse.earnedExp);
+
+        // 캐릭터 탭 진입 전 미리 최신 정보를 백그라운드로 받아둠
+        // (퀴즈 보상은 submitQuiz API 응답 기반이라 서버에는 이미 반영된 상태지만,
+        //  캐릭터 탭 진입 시 체감 로딩을 줄이기 위해 동일하게 프리페치)
+        prefetchCharacterAfterReward();
 
         // 리워드 팝업 Mixpanel 이벤트용으로 보상 내역 저장
         setEarnedReward({
