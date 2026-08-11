@@ -165,7 +165,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: scaleWidth(20),
     paddingTop: scaleWidth(25),
-    paddingBottom: scaleWidth(10),
+    // 스크롤 최하단에서 CTA 영역과 겹치지 않도록 여백 확보 (Figma 디자인 기준 48px)
+    paddingBottom: scaleWidth(48),
   },
   title: {
     ...Heading_20EB_Round,
@@ -197,7 +198,10 @@ const styles = StyleSheet.create({
     marginTop: scaleWidth(32),
   },
   bottom: {
-    height: scaleWidth(63),
+    // 고정 height 대신 상/하 padding으로 버튼 높이에 맞춰 자연스럽게 영역이 결정되도록 변경
+    // (Android에서 키보드-CTA 간격이 어색하면 paddingBottom 값을 조정)
+    paddingTop: scaleWidth(8),
+    paddingBottom: scaleWidth(16),
     paddingHorizontal: scaleWidth(20),
     backgroundColor: COLORS.white,
   },
