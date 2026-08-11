@@ -150,6 +150,13 @@
 - **수정 파일**: `src/screens/myPage/InquiryScreen.tsx`
 - **참고**: 프로젝트 내 `KeyboardAvoidingView`를 사용하는 화면은 현재 이 화면이 유일함. 추후 입력 화면 추가 시 `behavior: Platform.OS === 'ios' ? 'padding' : 'height'` 패턴을 기본으로 사용할 것
 
+### 문의하기 화면 이메일 미입력·오입력 시에도 전달하기 버튼 활성화
+
+- **증상**: 마이페이지 > 설정 > 문의하기 화면에서 이메일을 입력하지 않거나 잘못된 형식으로 입력해도 전달하기 버튼이 활성화됨
+- **원인**: `isSubmitEnabled`가 문의 내용 길이(`content.trim().length >= 10`)만 검사하고 이메일 값은 전혀 검증하지 않았음
+- **해결**: 이메일 도메인 형식을 검사하는 `getEmailDomainError()` 추가(`@` 누락/중복, 로컬·도메인파트 누락, 도메인 `.` 누락/시작·끝/연속, 허용되지 않는 문자, 최상위 도메인 2자 미만, 전체 254자 초과) 후 `isSubmitEnabled` 조건에 이메일 유효성 통과 여부 포함. 오류 시 입력창 테두리 색상과 케이스별 안내 메시지도 함께 노출
+- **수정 파일**: `src/screens/myPage/InquiryScreen.tsx`
+
 <br />
 
 ## iOS 빌드 / 설정
