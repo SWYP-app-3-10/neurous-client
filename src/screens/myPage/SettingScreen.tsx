@@ -8,16 +8,11 @@
  *   2. 알림 설정 (OS 권한 연동)
  *   3. 약관 및 정책 확인
  *   4. 도움말 (문의하기)
- *   5. [내부 테스트] 온보딩 다시보기
  *
  * 알림 설정 동작:
  *   - 토글 ON: OS 권한이 허용된 경우 앱 내부 알림만 활성화
  *   - 토글 OFF → ON: OS 권한 요청 또는 설정 화면으로 이동
  *   - 포커스 시 권한 상태 자동 동기화
- *
- * 온보딩 다시보기:
- *   - IS_INTERNAL_TEST 플래그가 true일 때만 표시
- *   - 로그아웃 없이 온보딩 인트로 3개 화면만 다시 표시
  */
 
 import React, { useState, useCallback, useRef } from 'react';
@@ -34,7 +29,6 @@ import Toggle from '../../components/Toggle';
 import { COLORS, scaleWidth } from '../../styles/global';
 import { Heading_16B, Caption_14R, Body_16SB } from '../../styles/typography';
 import { RouteNames } from '../../../routes';
-import { IS_INTERNAL_TEST } from '../../config/env';
 
 import { useNotificationPermission } from '../../hooks/useNotificationPermission';
 import { useToastMessage, useClearToast } from '../../store/toastStore';
@@ -222,19 +216,6 @@ const SettingScreen = () => {
     }
   };
 
-  /**
-   * [내부 테스트] 온보딩 다시보기 핸들러
-   *
-   * 로그아웃 없이 온보딩 인트로 3개 화면만 다시 표시한다.
-   * 온보딩 스택의 INTRO_CARDLIST 화면으로 이동하여
-   * IntroCardList → IntroFunction → IntroSearch 순서로 다시 볼 수 있다.
-   */
-  const handleReviewOnboarding = () => {
-    navigation.navigate(RouteNames.ONBOARDING, {
-      screen: RouteNames.INTRO_CARDLIST,
-    });
-  };
-
   // ──────────────────────────────────────────────
   // UI 렌더링
   // ──────────────────────────────────────────────
@@ -313,22 +294,6 @@ const SettingScreen = () => {
           <Text style={styles.rowTitle}>문의하기</Text>
           <RightArrow color={COLORS.gray700} />
         </Pressable>
-
-        {/* 내부 테스트 섹션 */}
-        {IS_INTERNAL_TEST && (
-          <>
-            <View style={styles.divider} />
-            <Text style={[styles.sectionLabel, styles.testSectionLabel]}>
-              내부 테스트
-            </Text>
-            <Pressable style={styles.row} onPress={handleReviewOnboarding}>
-              <Text style={[styles.rowTitle, styles.testRowTitle]}>
-                온보딩 다시보기
-              </Text>
-              <RightArrow color={COLORS.gray700} />
-            </Pressable>
-          </>
-        )}
       </View>
     </SafeAreaView>
   );
@@ -394,11 +359,5 @@ const styles = StyleSheet.create({
     ...Caption_14R,
     color: COLORS.gray700,
     marginTop: scaleWidth(4),
-  },
-  testSectionLabel: {
-    color: COLORS.gray700,
-  },
-  testRowTitle: {
-    color: COLORS.black,
   },
 });
