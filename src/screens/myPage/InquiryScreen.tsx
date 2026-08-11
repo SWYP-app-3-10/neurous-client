@@ -21,10 +21,44 @@ import { LevelChangeCheckIcon } from '../../icons';
 import { getUserInfo } from '../../services/authService';
 import {
   Body_16M,
+  Caption_12M,
   Heading_16B,
   Heading_18SB,
   Heading_20EB_Round,
 } from '../../styles/typography';
+
+/**
+ * 이메일 도메인 형식을 검사해 오류 메시지를 반환합니다.
+ * 문제가 없으면 빈 문자열을 반환합니다. (도메인 오입력 케이스별 안내)
+ */
+const getEmailDomainError = (value: string): string => {
+  const email = value.trim();
+  if (email.length === 0) return '';
+  if (email.length > 254) return '이메일은 최대 254자까지 입력할 수 있습니다.';
+
+  const atCount = (email.match(/@/g) || []).length;
+  if (atCount === 0) return "이메일에 '@' 문자를 포함해 주세요.";
+  if (atCount > 1) return "'@'는 한 번만 사용할 수 있습니다.";
+
+  const [local, domain] = email.split('@');
+  if (local.length === 0) return "'@' 앞에 아이디를 입력해 주세요.";
+  if (domain.length === 0)
+    return "'@' 뒤에 도메인(예: example.com)을 입력해 주세요.";
+  if (!domain.includes('.'))
+    return "도메인에 '.'을 포함해 주세요. 예) example.com";
+  if (domain.startsWith('.')) return '도메인은 알파벳·숫자로 시작해야 합니다.';
+  if (domain.endsWith('.')) return '도메인은 알파벳·숫자로 끝나야 합니다.';
+  if (domain.includes('..')) return "도메인에 연속된 '..'은 허용되지 않습니다.";
+  if (!/^[A-Za-z0-9.-]+$/.test(domain)) {
+    return '도메인에는 영문, 숫자, 하이픈(-)만 사용할 수 있습니다.';
+  }
+
+  const tld = domain.split('.').pop() ?? '';
+  if (tld.length < 2)
+    return '최상위 도메인은 최소 2자 이상이어야 합니다. 예) .com';
+
+  return '';
+};
 
 const InquiryScreen = () => {
   const navigation = useNavigation<any>();
@@ -44,9 +78,17 @@ const InquiryScreen = () => {
     fetchEmail();
   }, []);
 
+  // 이메일 도메인 오입력 여부 (빈 문자열이면 정상)
+  const emailError = useMemo(() => getEmailDomainError(email), [email]);
+
   const isSubmitEnabled = useMemo(() => {
-    return content.trim().length >= 10;
-  }, [content]);
+    // 문의 내용 10자 이상 + 이메일 입력 및 형식 검증 통과 시에만 활성화
+    return (
+      content.trim().length >= 10 &&
+      email.trim().length > 0 &&
+      emailError === ''
+    );
+  }, [content, email, emailError]);
 
   const onPressSubmit = () => {
     console.log('[Inquiry] submit', { content, email });
@@ -113,9 +155,14 @@ const InquiryScreen = () => {
             variant="outline"
             keyboardType="email-address"
             autoCapitalize="none"
+            error={emailError}
             containerStyle={styles.emailContainer}
             style={styles.textareaInput}
           />
+          {/* 이메일 도메인 형식이 잘못된 경우 케이스별 안내 메시지 표시 */}
+          {emailError ? (
+            <Text style={styles.emailErrorText}>{emailError}</Text>
+          ) : null}
         </ScrollView>
 
         <View style={styles.bottom}>
@@ -189,6 +236,11 @@ const styles = StyleSheet.create({
   emailContainer: {
     height: scaleWidth(60),
     borderColor: COLORS.gray300,
+  },
+  emailErrorText: {
+    ...Caption_12M,
+    color: COLORS.red.main,
+    marginTop: -scaleWidth(8),
   },
   textareaInput: {
     ...Body_16M,
