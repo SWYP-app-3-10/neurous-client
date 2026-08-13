@@ -53,8 +53,9 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- AdMob 앱 ID: src/config/api.ts의 ADMOB_REWARDED_IOS와 동일한 AdMob 계정(2195740935444660)에 등록된 값이어야 한다 -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-5312046759396775~9471713566</string>
+	<string>ca-app-pub-2195740935444660~4424580644</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>KAKAO_APP_KEY</key>
