@@ -159,6 +159,22 @@
 
 <br />
 
+## 광고 (AdMob)
+
+### 배포 빌드에서만 리워드 광고 로드 실패 ("광고를 불러올 수 없습니다. 네트워크 연결을 확인해주세요")
+
+- **증상**: 개발/내부테스트 빌드(테스트 광고 사용)에서는 정상이나, 실제 배포(release) 빌드에서만 리워드 광고 진입 시 항상 "광고를 불러올 수 없습니다. 네트워크 연결을 확인해주세요" 에러
+- **원인**: 이전 팀원이 설정해둔 `src/config/api.ts`의 `ADMOB_REWARDED_ANDROID` 값이 광고 단위(Ad Unit) ID가 아니라 앱(App) ID였음(`~` 구분자 — `AndroidManifest.xml`의 `APPLICATION_ID`와 동일한 문자열이 그대로 들어가 있었음). `ADMOB_REWARDED_IOS`와 `ios/Neurous/Info.plist`의 `GADApplicationIdentifier`도 실제 사용 중인 AdMob 계정과 다른 계정 값으로 설정되어 있었음. `AdLoadingScreen.tsx`가 `useRewardedAd`의 `error`를 원인 구분 없이 동일한 "네트워크 연결 확인" 문구로 알림 처리하고 있어, 실제 원인(잘못된 광고 단위 ID)이 에러 메시지만으로는 드러나지 않았음
+- **해결**: AdMob 콘솔에서 실제 계정(`ca-app-pub-2195740935444660`)의 Android/iOS 리워드 광고 단위 ID와 앱 ID를 재확인하여 아래와 같이 교체
+  - `src/config/api.ts`: `ADMOB_REWARDED_ANDROID`, `ADMOB_REWARDED_IOS`를 올바른 광고 단위 ID(`/` 구분자)로 교체, 앱 ID와 혼동 방지 주석 추가
+  - `ios/Neurous/Info.plist`: `GADApplicationIdentifier`를 실제 계정의 앱 ID로 교체
+  - `app.json`: `react-native-google-mobile-ads.android_app_id` / `ios_app_id`도 동일 계정으로 동기화
+- **수정 파일**: `src/config/api.ts`, `ios/Neurous/Info.plist`, `app.json`
+- **참고**: 원래 설정은 이전 팀원이 작업한 것으로, 이번에 증상을 재현·분석해 원인(앱 ID/광고 단위 ID 혼동, 계정 불일치)을 특정하고 수정함
+- **교훈**: AdMob 앱 ID(`~` 구분자)와 광고 단위 ID(`/` 구분자)는 형식이 비슷해 혼동하기 쉬우므로, 값을 하드코딩할 때 주석으로 구분자 규칙을 명시해둘 것
+
+<br />
+
 ## iOS 빌드 / 설정
 
 ### 신규 환경 Archive 빌드 실패 (GoogleService-Info.plist 누락)
