@@ -9,6 +9,7 @@
  *   3. 포인트 및 경험치 현황
  *   4. 주간 출석 기록 (7일)
  *   5. 오늘의 미션 목록 (진행 중 → 완료 → 잠김 순서)
+ *   6. 아래로 당겨서 새로고침 (Pull to Refresh)
  *
  * 데이터 소스:
  *   - useCharacterMe: 사용자 성장 정보, 출석 기록, 미션 목록
@@ -34,6 +35,7 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   StatusBar,
   Platform,
@@ -127,6 +129,9 @@ const CharacterScreen = () => {
     null,
   );
 
+  /** 당겨서 새로고침(Pull to Refresh) 진행 중 여부 — RefreshControl 스피너 표시에 사용 */
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // ──────────────────────────────────────────────
   // API Hooks
   // ──────────────────────────────────────────────
@@ -181,6 +186,26 @@ const CharacterScreen = () => {
       refetchCharacterData(); // 다음 레벨 경험치도 최신 데이터로 갱신
     }, [refetchCharacterMe, refetchCharacterData]),
   );
+
+  // ──────────────────────────────────────────────
+  // Pull to Refresh
+  // ──────────────────────────────────────────────
+
+  /**
+   * 아래로 당겨서 새로고침 핸들러
+   *
+   * useFocusEffect의 자동 갱신과 동일하게 캐릭터 메인 정보 + 다음 레벨
+   * 경험치를 함께 재조회한다. 두 요청을 Promise.all로 동시에 보내고,
+   * 스피너는 둘 다 끝난 뒤(성공/실패 무관) 내려가도록 finally에서 해제한다.
+   */
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetchCharacterMe(), refetchCharacterData()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchCharacterMe, refetchCharacterData]);
 
   // ──────────────────────────────────────────────
   // 데이터 추출 및 변환
@@ -535,11 +560,22 @@ const CharacterScreen = () => {
 
       <ScrollView
         ref={scrollViewRef}
-        bounces={false}
+        // 주의: bounces를 false로 두면 iOS에서 최상단 오버스크롤 제스처 자체가 막혀
+        // 아래 RefreshControl의 당겨서 새로고침이 동작하지 않는다. (안드로이드는 무관)
+        // 상단 Lottie가 화면 끝까지 꽉 차는 디자인이라 당길 때 위쪽에 배경색이
+        // 잠깐 보일 수 있지만, 새로고침 기능을 위해 감수한다.
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: tabBarHeight }} // 탭바 높이만큼 패딩
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.puple.main}
+            colors={[COLORS.puple.main]}
+          />
+        }
       >
         {/* ────── Lottie 애니메이션 영역 ────── */}
         <View style={styles.lottieContainer}>
