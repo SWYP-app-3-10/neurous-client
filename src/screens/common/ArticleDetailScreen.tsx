@@ -67,6 +67,7 @@ import { ExperienceModalContent } from '../../components/ArticlePointModalConten
 import { Modal_IMG } from '../../icons';
 import { ARTICLE_READ_EXPERIENCE } from '../../config/rewards';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
+import { prefetchPointHistoryAfterReward } from '../../hooks/usePointHistory';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -178,6 +179,8 @@ const ArticleDetailScreen = () => {
       // 캐릭터 탭 진입 전 미리 최신 정보를 백그라운드로 받아둠 (silent 여부와 무관하게
       // 경험치는 이미 지급됐으므로 두 경로 모두에서 호출)
       prefetchCharacterAfterReward();
+      // "받은 내역 확인하기" 화면도 같은 시점에 함께 프리페치
+      prefetchPointHistoryAfterReward();
 
       if (options.silent) {
         // 퀴즈로 이어지는 경로: 팝업/분석 이벤트 없이 store에만 조용히 반영

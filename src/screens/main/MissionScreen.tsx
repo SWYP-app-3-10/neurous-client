@@ -53,6 +53,7 @@ import {
 import Spacer from '../../components/Spacer';
 import { useMissions } from '../../hooks/useMissions';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
+import { prefetchPointHistoryAfterReward } from '../../hooks/usePointHistory';
 // 위클리 출석 완료 여부를 서버 출석 기록(월~토)으로 판단하기 위해 직접 조회
 import { fetchCharacterMe } from '../../api/characterApi';
 import { MissionCard, ArticleCard } from '../../components';
@@ -585,6 +586,8 @@ const MissionScreen = () => {
           // (여기서 지급하는 출석 보상은 로컬 store에만 반영되고 서버 동기화가
           //  없어서, 캐릭터 탭이 보여주는 서버 데이터가 반영될 때까지 시간차가 있음)
           prefetchCharacterAfterReward();
+          // "받은 내역 확인하기" 화면도 같은 시점에 함께 프리페치
+          prefetchPointHistoryAfterReward();
 
           // Mixpanel: 보상 팝업 노출 (데일리 출석)
           trackEvent('reward_popup_view', {
