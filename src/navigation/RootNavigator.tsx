@@ -21,6 +21,7 @@ import {
 import { useIsOnboardingCompleted } from '../store/onboardingStore';
 
 import NotificationModal from '../components/NotificationModal';
+import RewardModal from '../components/RewardModal';
 import BottomSheetModal from '../components/BottomSheetModal';
 import ToastModal from '../components/ToastModal';
 
@@ -295,6 +296,23 @@ const RootNavigatorContent: React.FC<{
         >
           {modalState.children}
         </BottomSheetModal>
+      )}
+
+      {modalState.type === 'reward' && (
+        <RewardModal
+          visible={modalState.visible}
+          image={modalState.image}
+          imageSize={modalState.imageSize}
+          imageTopOffset={modalState.imageTopOffset}
+          topContent={modalState.topContent}
+          bottomTopContent={modalState.bottomTopContent}
+          rewards={modalState.rewards}
+          onNextArticle={modalState.onNextArticle}
+          onMoreQuiz={modalState.onMoreQuiz}
+          onDismiss={modalState.onDismiss}
+          closeOnBackdropPress={modalState.closeOnBackdropPress}
+          onClose={hideModal}
+        />
       )}
 
       {modalState.type === 'toast' && (
