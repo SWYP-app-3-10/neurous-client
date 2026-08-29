@@ -51,6 +51,13 @@ const createTextStyle = (
 
 const TYPOGRAPHY = StyleSheet.create({
   // ========== Heading Styles ==========
+  // 보상 모달 "+25 XP" 헤드라인 전용 (기존 Heading_24EB_Round보다 한 단계 큼)
+  Heading_26EB_Round: {
+    fontFamily: 'NanumSquareRoundEB',
+    fontSize: scaleWidth(26),
+    lineHeight: getLineHeight(26, 150),
+    letterSpacing: getLetterSpacing(26, 0),
+  },
   Heading_24EB_Round: {
     fontFamily: 'NanumSquareRoundEB',
     fontSize: scaleWidth(24),
@@ -94,6 +101,7 @@ const TYPOGRAPHY = StyleSheet.create({
   Caption_11M: createTextStyle(11, 500, 150, 0),
 });
 
+export const Heading_26EB_Round = TYPOGRAPHY.Heading_26EB_Round;
 export const Heading_24EB_Round = TYPOGRAPHY.Heading_24EB_Round;
 export const Heading_20EB_Round = TYPOGRAPHY.Heading_20EB_Round;
 export const Heading_18B = TYPOGRAPHY.Heading_18B;
