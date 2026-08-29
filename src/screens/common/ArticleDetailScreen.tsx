@@ -1,23 +1,25 @@
 /**
  * 글 상세 화면 (ArticleDetailScreen.tsx)
  *
- * 사용자가 선택한 글의 전체 내용을 표시하고, 퀴즈 풀기 화면으로 이동할 수 있다.
+ * 사용자가 선택한 글의 전체 내용을 표시하고, 다 읽은 뒤 다음 행동(다음 글 보기 /
+ * 퀴즈 풀고 더 얻기 / 그만 보기)을 고를 수 있는 모달로 이어준다.
  *
  * 주요 기능:
  *   1. 글 내용 표시 (API로 조회)
  *   2. 광고를 통해 열린 글인 경우 토스트 메시지 표시
- *   3. 글 읽기 보상 지급 (경험치만, 퀴즈로 이어지지 않고 이탈할 때 지급)
- *   4. 퀴즈 화면으로 이동
+ *   3. 원문 기사 확인하기 버튼 (현재는 테스트로 네이버에 연결, 추후 실제 원문 URL로 교체)
+ *   4. "다 읽었어요" 버튼 → 글 읽기 보상 지급 + 다음 행동 선택 모달 표시
  *
  * 보상 처리 방식 (트리거 시점이 핵심):
  *   - 글 읽기 보상(5xp)은 "화면 진입 시"가 아니라 "퀴즈를 풀지 않고 이 화면을 벗어날 때" 지급된다.
  *     * fetchContentDetail 호출 자체가 서버의 "완독 처리"를 겸하고 있어서
  *       (마이페이지 읽은 글 목록에 퀴즈 미응시 글도 표시되는 이유), 별도 서버 API 없이
  *       클라이언트에서 보상만 로컬로 지급한다.
- *     * 퀴즈 풀기 버튼을 눌러 이동한 경우(wentToQuizRef): 팝업 없이 조용히 5xp만 store에 반영.
- *       이후 QuizScreen에서 정답/오답 팝업이 뜨는데, 그 팝업의 25XP/15XP는 이 5xp를 포함한
- *       합산값(=서버가 주는 퀴즈 보상 + 여기서 조용히 더한 5xp)이므로 별도 팝업을 띄우지 않는다.
- *     * 퀴즈로 이어지지 않고 뒤로가기 등으로 이탈한 경우: 경험치 획득 팝업을 띄우며 5xp 지급.
+ *     * "다 읽었어요" 버튼을 눌러 다음 행동 선택 모달을 연 경우(hasShownReadRewardRef):
+ *       보상은 이 모달에서 이미 보여줬으므로, 화면을 벗어날 때 별도 팝업을 또 띄우지 않는다.
+ *       (모달에서 "퀴즈 풀고 더 얻기"를 선택해 QuizScreen으로 이동한 경우도 동일 — 그 뒤에 뜨는
+ *       퀴즈 정답/오답 팝업의 25XP/15XP는 이 5xp를 포함한 합산값이다)
+ *     * "다 읽었어요"를 누르지 않고 뒤로가기 등으로 이탈한 경우: 경험치 획득 팝업을 띄우며 5xp 지급.
  *     * 이동 방식과 무관하게 React Navigation 스택 구조상 퀴즈로 push해도 이 화면은
  *       언마운트되지 않고 blur만 되므로, useFocusEffect의 cleanup으로 이탈을 감지한다.
  *     * AsyncStorage에 글 ID별로 지급 여부를 기록해 중복 지급 방지 (퀴즈 경로/이탈 경로 공통 dedup)
@@ -37,6 +39,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -53,7 +56,11 @@ import Spacer from '../../components/Spacer';
 import { RouteNames } from '../../../routes';
 import { FullScreenStackParamList } from '../../navigation/types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useShowToastModal, useShowModal } from '../../store/modalStore';
+import {
+  useShowToastModal,
+  useShowModal,
+  useHideModal,
+} from '../../store/modalStore';
 import { fetchContentDetail, ContentDetail } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import ArticleContent from '../../components/ArticleContent';
@@ -68,6 +75,8 @@ import { Modal_IMG } from '../../icons';
 import { ARTICLE_READ_EXPERIENCE } from '../../config/rewards';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 import { prefetchPointHistoryAfterReward } from '../../hooks/usePointHistory';
+import NextArticleModalContent from '../../components/NextArticleModalContent';
+import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -84,6 +93,7 @@ const ArticleDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const showToastModal = useShowToastModal();
   const showModal = useShowModal();
+  const hideModal = useHideModal();
   const { addExperience } = useExperienceStore();
 
   // ──────────────────────────────────────────────
@@ -137,13 +147,13 @@ const ArticleDetailScreen = () => {
   const hasLoadedContentRef = useRef(false);
 
   /**
-   * "퀴즈 풀기" 버튼을 눌러서 이동했는지 여부
+   * "다 읽었어요" 버튼을 눌러 보상 모달을 이미 보여줬는지 여부
    *
    * true면 화면 이탈(blur) 시 별도 글 읽기 보상 팝업을 띄우지 않는다.
-   * (퀴즈 풀기 버튼을 누른 시점에 이미 조용히 5xp가 지급된 상태이며,
-   *  이어지는 QuizScreen의 정답/오답 팝업이 이 5xp를 포함한 합산값을 보여준다)
+   * (모달 안의 3가지 액션 중 무엇을 골랐든, 보상은 "다 읽었어요"를 누른 시점에
+   *  이미 조용히 지급하고 모달로 보여줬기 때문)
    */
-  const wentToQuizRef = useRef(false);
+  const hasShownReadRewardRef = useRef(false);
 
   // ──────────────────────────────────────────────
   // 글 읽기 보상 지급 함수
@@ -302,14 +312,14 @@ const ArticleDetailScreen = () => {
    *   - 뒤로가기(pop)든 퀴즈로 이동(push)이든 전부 blur를 거치므로 이 cleanup 하나로
    *     "화면을 벗어나는 모든 경우"를 감지할 수 있다.
    *
-   * wentToQuizRef로 분기:
-   *   - 퀴즈로 이동한 경우: 이미 handlePressQuizButton에서 조용히 지급했으므로 여기서는 스킵
+   * hasShownReadRewardRef로 분기:
+   *   - "다 읽었어요"를 눌러 모달을 이미 띄운 경우: 거기서 조용히 지급했으므로 여기서는 스킵
    *   - 그 외 이탈(뒤로가기 등): 여기서 팝업과 함께 지급
    */
   useFocusEffect(
     useCallback(() => {
       return () => {
-        if (!wentToQuizRef.current && hasLoadedContentRef.current) {
+        if (!hasShownReadRewardRef.current && hasLoadedContentRef.current) {
           grantArticleReadReward({ silent: false });
         }
       };
@@ -379,27 +389,63 @@ const ArticleDetailScreen = () => {
   // ──────────────────────────────────────────────
 
   /**
-   * "퀴즈 풀기" 버튼을 눌렀을 때 실행된다.
+   * "원문 기사 확인하기" 버튼을 눌렀을 때 실행된다.
+   *
+   * 백엔드가 아직 원문 URL 필드를 내려주지 않아서, 우선 네이버로 테스트 연결해두고
+   * 실제 URL 필드가 추가되면 그 값으로 교체한다.
+   */
+  const handlePressOriginalArticleButton = () => {
+    Linking.openURL('https://www.naver.com');
+  };
+
+  /**
+   * "다 읽었어요" 버튼을 눌렀을 때 실행된다.
    *
    * 처리 흐름:
-   *   1. analytics 이벤트 기록
-   *   2. wentToQuizRef를 true로 세팅 (화면 이탈 시 별도 글 읽기 팝업이 뜨지 않도록)
-   *   3. 글 읽기 보상(5xp)을 조용히(팝업 없이) 지급 — QuizScreen의 정답/오답 팝업이
-   *      이 5xp를 포함한 합산값을 보여주므로 여기서 별도로 노출하지 않는다
-   *   4. 퀴즈 화면으로 이동
+   *   1. hasShownReadRewardRef를 true로 세팅 (화면 이탈 시 별도 글 읽기 팝업이 뜨지 않도록)
+   *   2. 글 읽기 보상(5xp)을 조용히(팝업 없이) 지급 — 아래 모달에서 직접 보여주므로
+   *      grantArticleReadReward 자체의 팝업은 띄우지 않는다
+   *   3. "다음 글 보기 / 퀴즈 풀고 더 얻기 / 지금은 괜찮아요" 3단 액션 모달 표시
    *
    * 주의:
    *   - 완독 체크(서버)와 퀴즈 자체의 보상 지급은 QuizScreen의 퀴즈 제출 버튼에서 처리한다.
    */
-  const handlePressQuizButton = () => {
-    logEvent('StartQuiz_Reading');
-
-    wentToQuizRef.current = true;
+  const handlePressDoneReadingButton = () => {
+    hasShownReadRewardRef.current = true;
     grantArticleReadReward({ silent: true });
 
-    navigation.navigate(RouteNames.QUIZ, {
-      articleId,
-      returnTo: returnTo || 'mission',
+    showModal({
+      title: `+ ${ARTICLE_READ_EXPERIENCE} XP`,
+      titleStyle: { ...Heading_20EB_Round, color: COLORS.puple.main },
+      description: '경험치를 획득했어요!',
+      descriptionColor: COLORS.black,
+      titleDescriptionGapSize: scaleWidth(8),
+      image: <Modal_IMG />,
+      closeOnBackdropPress: false,
+      children: React.createElement(NextArticleModalContent, {
+        experience: ARTICLE_READ_EXPERIENCE,
+        // "다음 글 보기" — 서버가 다음 글 id를 내려주면 그 글로 이동하도록 교체 예정.
+        // 우선은 원문 버튼과 동일하게 네이버로 테스트 연결한다.
+        onNextArticle: () => {
+          hideModal();
+          Linking.openURL('https://www.naver.com');
+        },
+        onMoreQuiz: () => {
+          hideModal();
+          logEvent('StartQuiz_Reading');
+          navigation.navigate(RouteNames.QUIZ, {
+            articleId,
+            returnTo: returnTo || 'mission',
+          });
+        },
+        // "지금은 괜찮아요" — 모달을 닫고 원래 들어왔던 곳(홈/탐색)으로 돌아간다.
+        onDismiss: () => {
+          hideModal();
+          navigation.dispatch(
+            createQuizCompleteNavigation(returnTo || 'mission'),
+          );
+        },
+      }),
     });
   };
 
@@ -455,15 +501,27 @@ const ArticleDetailScreen = () => {
       >
         {/* 글 본문 */}
         <ArticleContent content={contentDetail} showReconstructedBanner />
+
+        <Spacer num={24} />
+
+        {/* 원문 기사 확인하기 — 우선 네이버로 테스트 연결, 추후 실제 원문 URL로 교체 */}
+        <Button
+          title="원문 기사 확인하기"
+          onPress={handlePressOriginalArticleButton}
+          variant="ghost"
+          style={styles.originalArticleButton}
+          textStyle={Body_16M}
+        />
+
         <Spacer num={48} />
       </ScrollView>
 
-      {/* 퀴즈 화면으로 이동 */}
+      {/* "다 읽었어요" — 누르면 다음 행동 선택 모달(다음 글 보기 / 퀴즈 풀고 더 얻기 / 지금은 괜찮아요) 표시 */}
       <Button
-        title="퀴즈 풀기"
-        onPress={handlePressQuizButton}
+        title="다 읽었어요"
+        onPress={handlePressDoneReadingButton}
         variant="primary"
-        style={styles.quizButton}
+        style={styles.doneReadingButton}
       />
     </SafeAreaView>
   );
@@ -503,8 +561,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: scaleWidth(20),
   },
 
-  /** 하단 퀴즈 풀기 버튼 */
-  quizButton: {
+  /* 원문 기사 확인하기 버튼
+   * height ->'auto'로 무효화해서 padding 값에 따라 실제 높이가 결정되도록 함.
+   */
+  originalArticleButton: {
+    alignSelf: 'center',
+    height: 'auto',
+    paddingHorizontal: scaleWidth(24),
+    paddingVertical: scaleWidth(12),
+    borderRadius: BORDER_RADIUS[12],
+    backgroundColor: COLORS.puple[3],
+  },
+
+  /** 하단 "다 읽었어요" 버튼 */
+  doneReadingButton: {
     marginHorizontal: scaleWidth(20),
   },
 });
