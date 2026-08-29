@@ -15,7 +15,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
-import { Body_16SB, Caption_14R } from '../styles/typography';
+import { Heading_16B, Caption_14R } from '../styles/typography';
 import Button from './Button';
 import Spacer from './Spacer';
 
@@ -55,7 +55,7 @@ const RewardModal: React.FC<RewardModalProps> = ({
   closeOnBackdropPress = false,
   image,
   imageSize = { width: scaleWidth(80), height: scaleWidth(80) },
-  imageTopOffset = scaleWidth(-81),
+  imageTopOffset = scaleWidth(-36),
   topContent,
   bottomTopContent,
   rewards,
@@ -122,6 +122,7 @@ const RewardModal: React.FC<RewardModalProps> = ({
                     title="다음 글 보기"
                     onPress={onNextArticle}
                     style={styles.actionButton}
+                    textStyle={styles.actionButtonText}
                   />
 
                   {onMoreQuiz && (
@@ -213,16 +214,23 @@ const styles = StyleSheet.create({
   buttonGroup: {
     width: '100%',
   },
+  // Button 기본 height(scaleWidth(63))가 고정돼 있으면 paddingVertical이 시각적으로 반영되지 않아
+  // height를 'auto'로 풀어준다 (원문 기사 확인하기 버튼과 동일한 이유)
   actionButton: {
     width: '100%',
+    height: 'auto',
+    paddingVertical: scaleWidth(12),
   },
   /** "퀴즈 풀고 더 얻기" — Button의 outline 기본값(보라 보더+굵은 보라 텍스트)은
       "다음 글 보기"와 비슷하게 튀어 보여서, 시안처럼 톤을 낮춘 회색 보조 버튼으로 오버라이드 */
+  actionButtonText: {
+    ...Heading_16B,
+  },
   moreQuizButton: {
     borderColor: COLORS.gray300,
   },
   moreQuizButtonText: {
-    ...Body_16SB,
+    ...Heading_16B,
     color: COLORS.gray700,
   },
   dismissButton: {
