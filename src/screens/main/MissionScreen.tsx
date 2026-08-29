@@ -677,9 +677,6 @@ const MissionScreen = () => {
         <View style={missionScreenStyles.header}>
           <View style={missionScreenStyles.headerLeft}>
             <Text style={missionScreenStyles.headerTitle}>오늘의 미션</Text>
-            <Text style={missionScreenStyles.headerDescription}>
-              오늘의 미션으로 부담 없이 첫 읽기를 시작해보세요.
-            </Text>
           </View>
         </View>
 
@@ -712,7 +709,8 @@ const MissionScreen = () => {
                       style={{
                         width: isEdge ? WIDTH_EDGE : WIDTH_MID,
                         marginRight: index === missions.length - 1 ? 0 : GAP,
-                        height: scaleWidth(105),
+                        // MissionCard 홈 카드 높이(74)에 맞춤
+                        height: scaleWidth(74),
                       }}
                     >
                       <MissionCard mission={mission} />
@@ -751,6 +749,16 @@ const MissionScreen = () => {
         )}
 
         <Spacer num={47} />
+
+        {/* ────── 추천 글 섹션 헤더 ────── */}
+        <View style={missionScreenStyles.recommendHeader}>
+          <Text style={missionScreenStyles.recommendTitle}>추천 글</Text>
+          <Text style={missionScreenStyles.recommendDescription}>
+            짧은 읽기부터 시작해 하루 한 걸음을 성장해보세요.
+          </Text>
+        </View>
+
+        <Spacer num={24} />
 
         {/* ────── 추천 아티클 목록 ────── */}
         <View style={missionScreenStyles.articleList}>
@@ -851,6 +859,19 @@ export const missionScreenStyles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: scaleWidth(50),
+  },
+  // "추천 글" 섹션 헤더 — "오늘의 미션" 헤더와 동일한 타이포 사용
+  recommendHeader: {
+    paddingHorizontal: scaleWidth(20),
+  },
+  recommendTitle: {
+    ...Heading_24EB_Round,
+    color: COLORS.black,
+    marginBottom: scaleWidth(4),
+  },
+  recommendDescription: {
+    ...Body_16M,
+    color: COLORS.gray600,
   },
   articleList: {
     gap: scaleWidth(24),
