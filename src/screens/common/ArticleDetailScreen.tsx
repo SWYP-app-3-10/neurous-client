@@ -510,6 +510,7 @@ const ArticleDetailScreen = () => {
           onPress={handlePressOriginalArticleButton}
           variant="ghost"
           style={styles.originalArticleButton}
+          textStyle={Body_16M}
         />
 
         <Spacer num={48} />
@@ -560,12 +561,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: scaleWidth(20),
   },
 
-  /** 원문 기사 확인하기 버튼 — 연보라 필 형태로 본문 아래 중앙에 배치 */
+  /** 원문 기사 확인하기 버튼 — 연보라 필 형태로 본문 아래 중앙에 배치 (텍스트 스타일은 Button의 textStyle prop으로 별도 적용)
+   * Button 기본 스타일에 height: scaleWidth(63) 고정값이 있어서, 그대로 두면 paddingVertical을
+   * 바꿔도 버튼 높이가 고정돼 있어 시각적으로 반영되지 않는다. height: 'auto'로 무효화해서
+   * padding 값에 따라 실제 높이가 결정되도록 함. */
   originalArticleButton: {
     alignSelf: 'center',
-    height: scaleWidth(44),
-    paddingHorizontal: scaleWidth(20),
-    borderRadius: BORDER_RADIUS[30],
+    height: 'auto',
+    paddingHorizontal: scaleWidth(24),
+    paddingVertical: scaleWidth(12),
+    borderRadius: BORDER_RADIUS[12],
     backgroundColor: COLORS.puple[3],
   },
 
