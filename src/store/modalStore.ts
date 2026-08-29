@@ -17,6 +17,7 @@ import {
   ModalButton,
   NotificationModalProps,
 } from '../components/NotificationModal';
+import { RewardChip } from '../components/RewardModal';
 import { StyleProp, TextStyle } from 'react-native';
 import { ReactNode } from 'react';
 import { ToastPosition } from '../components/ToastModal';
@@ -24,7 +25,7 @@ import { ToastPosition } from '../components/ToastModal';
 /**
  * 모달 타입 구분자
  */
-export type ModalType = 'notification' | 'bottomSheet' | 'toast';
+export type ModalType = 'notification' | 'bottomSheet' | 'toast' | 'reward';
 
 // ──────────────────────────────────────────────
 // 모달 타입별 상태 인터페이스
@@ -111,6 +112,28 @@ interface ToastModalState {
 }
 
 /**
+ * 보상 모달 상태 (2단 카드형 — 상단 연보라 블록 + 하단 흰 블록)
+ *
+ * 사용 사례:
+ *   - 글 읽기 완료 시 경험치 획득 모달 (ArticleDetailScreen)
+ *   - 퀴즈 완료/레벨업 모달 (QuizScreen, 추후 연동 예정)
+ */
+interface RewardModalState {
+  type: 'reward';
+  visible: boolean;
+  image: ReactNode; // 카드 위로 떠 있는 캐릭터/트로피 이미지 (RewardModal은 ReactNode만 받음)
+  imageSize?: { width: number; height: number };
+  imageTopOffset?: number;
+  topContent: ReactNode; // 상단 연보라 블록 콘텐츠 (모달 종류별로 다름)
+  bottomTopContent?: ReactNode; // 하단 블록에서 리워드 칩 위에 오는 선택적 콘텐츠 (레벨업의 "+25 XP" 등)
+  rewards: RewardChip[]; // 실제 지급된 보상만
+  onNextArticle: () => void;
+  onMoreQuiz?: () => void; // 없으면 "퀴즈 풀고 더 얻기" 버튼 자체를 숨김 (레벨업 모달)
+  onDismiss: () => void;
+  closeOnBackdropPress?: boolean;
+}
+
+/**
  * 모달 상태 Union 타입
  *
  * 세 가지 타입 중 하나만 활성화될 수 있도록 보장한다.
@@ -119,7 +142,8 @@ interface ToastModalState {
 type ModalState =
   | NotificationModalState
   | BottomSheetModalState
-  | ToastModalState;
+  | ToastModalState
+  | RewardModalState;
 
 // ──────────────────────────────────────────────
 // Store 인터페이스
@@ -142,6 +166,9 @@ interface ModalStore {
 
   /** 토스트 모달 표시 */
   showToastModal: (config: Omit<ToastModalState, 'visible' | 'type'>) => void;
+
+  /** 보상 모달 표시 (경험치 획득/레벨업 등 2단 카드형 모달) */
+  showRewardModal: (config: Omit<RewardModalState, 'visible' | 'type'>) => void;
 
   /** 모달 닫기 (타입 무관하게 모든 모달에 적용) */
   hideModal: () => void;
@@ -254,6 +281,29 @@ export const useModalStore = create<ModalStore>(set => ({
     }),
 
   /**
+   * 보상 모달을 표시한다. (경험치 획득/레벨업 등 2단 카드형 모달)
+   *
+   * 사용 예시:
+   *   showRewardModal({
+   *     image: <Modal_IMG />,
+   *     topContent: <XpHeadline value={25} />,
+   *     rewards: [{ label: '글 읽기', value: 10 }],
+   *     onNextArticle: () => {...},
+   *     onDismiss: () => {...},
+   *   });
+   *
+   * @param config 모달 설정 (visible, type 제외)
+   */
+  showRewardModal: config =>
+    set({
+      modalState: {
+        ...config,
+        type: 'reward',
+        visible: true,
+      } as RewardModalState,
+    }),
+
+  /**
    * 현재 표시 중인 모달을 닫는다.
    *
    * visible만 false로 변경하며, 나머지 상태는 유지한다.
@@ -300,6 +350,14 @@ export const useShowBottomSheetModal = () =>
  */
 export const useShowToastModal = () =>
   useModalStore(state => state.showToastModal);
+
+/**
+ * 편의 훅: showRewardModal 함수만 필요한 경우
+ *
+ * @returns showRewardModal 함수
+ */
+export const useShowRewardModal = () =>
+  useModalStore(state => state.showRewardModal);
 
 /**
  * 편의 훅: hideModal 함수만 필요한 경우

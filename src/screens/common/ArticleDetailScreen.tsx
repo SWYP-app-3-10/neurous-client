@@ -49,7 +49,11 @@ import {
   RouteProp,
 } from '@react-navigation/native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
-import { Body_16M, Heading_20EB_Round } from '../../styles/typography';
+import {
+  Body_16M,
+  Heading_20EB_Round,
+  Heading_26EB_Round,
+} from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import Spacer from '../../components/Spacer';
@@ -59,6 +63,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   useShowToastModal,
   useShowModal,
+  useShowRewardModal,
   useHideModal,
 } from '../../store/modalStore';
 import { fetchContentDetail, ContentDetail } from '../../api/missionApi';
@@ -75,7 +80,6 @@ import { Modal_IMG } from '../../icons';
 import { ARTICLE_READ_EXPERIENCE } from '../../config/rewards';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 import { prefetchPointHistoryAfterReward } from '../../hooks/usePointHistory';
-import NextArticleModalContent from '../../components/NextArticleModalContent';
 import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
 
 // ──────────────────────────────────────────────
@@ -93,6 +97,7 @@ const ArticleDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const showToastModal = useShowToastModal();
   const showModal = useShowModal();
+  const showRewardModal = useShowRewardModal();
   const hideModal = useHideModal();
   const { addExperience } = useExperienceStore();
 
@@ -414,38 +419,47 @@ const ArticleDetailScreen = () => {
     hasShownReadRewardRef.current = true;
     grantArticleReadReward({ silent: true });
 
-    showModal({
-      title: `+ ${ARTICLE_READ_EXPERIENCE} XP`,
-      titleStyle: { ...Heading_20EB_Round, color: COLORS.puple.main },
-      description: '경험치를 획득했어요!',
-      descriptionColor: COLORS.black,
-      titleDescriptionGapSize: scaleWidth(8),
+    showRewardModal({
       image: <Modal_IMG />,
       closeOnBackdropPress: false,
-      children: React.createElement(NextArticleModalContent, {
-        experience: ARTICLE_READ_EXPERIENCE,
-        // "다음 글 보기" — 서버가 다음 글 id를 내려주면 그 글로 이동하도록 교체 예정.
-        // 우선은 원문 버튼과 동일하게 네이버로 테스트 연결한다.
-        onNextArticle: () => {
-          hideModal();
-          Linking.openURL('https://www.naver.com');
-        },
-        onMoreQuiz: () => {
-          hideModal();
-          logEvent('StartQuiz_Reading');
-          navigation.navigate(RouteNames.QUIZ, {
-            articleId,
-            returnTo: returnTo || 'mission',
-          });
-        },
-        // "지금은 괜찮아요" — 모달을 닫고 원래 들어왔던 곳(홈/탐색)으로 돌아간다.
-        onDismiss: () => {
-          hideModal();
-          navigation.dispatch(
-            createQuizCompleteNavigation(returnTo || 'mission'),
-          );
-        },
-      }),
+      // 상단 연보라 블록: "+25 XP" 헤드라인 + 안내 문구
+      topContent: (
+        <>
+          <Text
+            style={[styles.rewardModalXpText, { color: COLORS.puple.main }]}
+          >
+            + {ARTICLE_READ_EXPERIENCE} XP
+          </Text>
+          <Spacer num={8} />
+          <Text style={styles.rewardModalDescriptionText}>
+            경험치를 획득했어요!
+          </Text>
+        </>
+      ),
+      // 리워드 칩 — 이 시점에 실제로 지급되는 보상은 글 읽기 경험치 하나뿐이라
+      // 그 값만 보여준다 (미션 완료/데일리 출석 등 다른 보상은 실제로 지급되지 않음)
+      rewards: [{ label: '글 읽기', value: ARTICLE_READ_EXPERIENCE }],
+      // "다음 글 보기" — 서버가 다음 글 id를 내려주면 그 글로 이동하도록 교체 예정.
+      // 우선은 원문 버튼과 동일하게 네이버로 테스트 연결한다.
+      onNextArticle: () => {
+        hideModal();
+        Linking.openURL('https://www.naver.com');
+      },
+      onMoreQuiz: () => {
+        hideModal();
+        logEvent('StartQuiz_Reading');
+        navigation.navigate(RouteNames.QUIZ, {
+          articleId,
+          returnTo: returnTo || 'mission',
+        });
+      },
+      // "지금은 괜찮아요" — 모달을 닫고 원래 들어왔던 곳(홈/탐색)으로 돌아간다.
+      onDismiss: () => {
+        hideModal();
+        navigation.dispatch(
+          createQuizCompleteNavigation(returnTo || 'mission'),
+        );
+      },
     });
   };
 
@@ -576,6 +590,18 @@ const styles = StyleSheet.create({
   /** 하단 "다 읽었어요" 버튼 */
   doneReadingButton: {
     marginHorizontal: scaleWidth(20),
+  },
+
+  /** 보상 모달 상단 블록 — "+25 XP" 헤드라인 */
+  rewardModalXpText: {
+    ...Heading_26EB_Round,
+    textAlign: 'center',
+  },
+  /** 보상 모달 상단 블록 — "경험치를 획득했어요!" 안내 문구 */
+  rewardModalDescriptionText: {
+    ...Heading_20EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
   },
 });
 

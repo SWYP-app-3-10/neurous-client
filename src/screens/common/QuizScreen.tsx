@@ -27,7 +27,14 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Linking,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
@@ -35,6 +42,7 @@ import {
   Body_16SB,
   Heading_18EB_Round,
   Heading_20EB_Round,
+  Heading_26EB_Round,
 } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -44,6 +52,7 @@ import Spacer from '../../components/Spacer';
 import { Modal_IMG, CheckIcon, LevelChangeCheckIcon } from '../../icons';
 import {
   useShowModal,
+  useShowRewardModal,
   useShowToastModal,
   useHideModal,
 } from '../../store/modalStore';
@@ -52,7 +61,6 @@ import DifficultySelectionModal, {
 } from '../../components/DifficultySelectionModal';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ExperienceModalContent } from '../../components/ArticlePointModalContent';
 import { usePointStore } from '../../store/pointStore';
 import { useExperienceStore } from '../../store/experienceStore';
 import {
@@ -60,6 +68,12 @@ import {
   checkCanSubmitDifficulty,
 } from '../../hooks/useDifficultySubmit';
 import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
+import {
+  QUIZ_CORRECT_EXPERIENCE,
+  QUIZ_CORRECT_POINT,
+  QUIZ_INCORRECT_EXPERIENCE,
+  QUIZ_INCORRECT_POINT,
+} from '../../config/rewards';
 import { fetchQuiz, QuizResponse, submitQuiz } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -147,6 +161,7 @@ const QuizScreen: React.FC = () => {
   // ──────────────────────────────────────────────
 
   const showModal = useShowModal();
+  const showRewardModal = useShowRewardModal();
   const showToastModal = useShowToastModal();
   const hideModal = useHideModal();
   const { addPoints } = usePointStore();
@@ -619,7 +634,7 @@ const QuizScreen: React.FC = () => {
    *
    * 처리 흐름:
    *   1. 리워드 팝업 표시
-   *   2. 팝업 "확인" 클릭 → 팝업 제거 후 원래 화면으로 이동
+   *   2. "지금은 괜찮아요" 클릭 → 팝업 제거 후 원래 화면으로 이동
    */
   const handleComplete = () => {
     if (timeoutRef.current) {
@@ -643,24 +658,42 @@ const QuizScreen: React.FC = () => {
       point_amount: earnedReward?.point ?? 0,
     });
 
-    showModal({
-      title: '포인트 & 경험치 획득!',
+    // 아티클 "다 읽었어요" 보상 모달과 동일한 구성. 다만 여기서는 퀴즈를 이미 풀고 난
+    // 직후라 "퀴즈 풀고 더 얻기" 버튼은 의미가 없어서 onMoreQuiz를 넘기지 않는다.
+    const exp = quizResult?.isAnswerCorrect
+      ? QUIZ_CORRECT_EXPERIENCE
+      : QUIZ_INCORRECT_EXPERIENCE;
+    const point = quizResult?.isAnswerCorrect
+      ? QUIZ_CORRECT_POINT
+      : QUIZ_INCORRECT_POINT;
+
+    showRewardModal({
       image: <Modal_IMG />,
-      titleStyle: {
-        ...Heading_20EB_Round,
+      closeOnBackdropPress: false,
+      topContent: (
+        <>
+          <Text
+            style={[styles.rewardModalXpText, { color: COLORS.puple.main }]}
+          >
+            + {exp} XP
+          </Text>
+          <Spacer num={8} />
+          <Text style={styles.rewardModalDescriptionText}>
+            경험치를 획득했어요!
+          </Text>
+        </>
+      ),
+      rewards: [
+        { label: '퀴즈', value: exp },
+        { label: '포인트', value: point },
+      ],
+      onNextArticle: () => {
+        hideModal();
+        Linking.openURL('https://www.naver.com');
       },
-      titleDescriptionGapSize: scaleWidth(20),
-      children: React.createElement(ExperienceModalContent, {
-        point: true,
-        correct: quizResult?.isAnswerCorrect ?? false,
-      }),
-      primaryButton: {
-        title: '확인',
-        onPress: () => {
-          // 모달 닫기 (hideModal은 모달 컴포넌트에서 처리)
-          // 팝업 확인 후 이전 화면으로 이동
-          navigation.dispatch(createQuizCompleteNavigation(returnTo));
-        },
+      onDismiss: () => {
+        hideModal();
+        navigation.dispatch(createQuizCompleteNavigation(returnTo));
       },
     });
   };
@@ -1018,6 +1051,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: BORDER_RADIUS[99],
+  },
+  rewardModalXpText: {
+    ...Heading_26EB_Round,
+    textAlign: 'center',
+  },
+  rewardModalDescriptionText: {
+    ...Heading_20EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
   },
 });
 
