@@ -7,7 +7,7 @@
  *   1. 회원정보 관리 (로그인 정보)
  *   2. 알림 설정 (OS 권한 연동)
  *   3. 약관 및 정책 확인
- *   4. 도움말 (문의하기)
+ *   4. 도움말 (문의하기, 레벨업 모달 다시 보기)
  *
  * 알림 설정 동작:
  *   - 토글 ON: OS 권한이 허용된 경우 앱 내부 알림만 활성화
@@ -25,15 +25,26 @@ import Header from '../../components/Header';
 import RightArrow from '../../assets/svg/RightArrow.svg';
 import Toast from '../../components/Toast';
 import Toggle from '../../components/Toggle';
+import Spacer from '../../components/Spacer';
 
 import { COLORS, scaleWidth } from '../../styles/global';
-import { Heading_16B, Caption_14R, Body_16SB } from '../../styles/typography';
+import {
+  Heading_16B,
+  Caption_14R,
+  Body_16SB,
+  Heading_24EB_Round,
+  Heading_20EB_Round,
+} from '../../styles/typography';
 import { RouteNames } from '../../../routes';
 
 import { useNotificationPermission } from '../../hooks/useNotificationPermission';
 import { useToastMessage, useClearToast } from '../../store/toastStore';
 import { updateNotificationStatus } from '../../api/notificationApi';
 import { getUserInfo } from '../../services/authService';
+import { useShowRewardModal, useHideModal } from '../../store/modalStore';
+import { fetchCharacterData } from '../../api/characterApi';
+// 레벨업 모달 미리보기용 — 실제 레벨별 캐릭터 이미지/타이틀 소스
+import { levelList } from '../character/criteria/level/levelData';
 
 const ALARM_ENABLED_KEY = '@alarm_enabled';
 
@@ -59,6 +70,8 @@ const SettingScreen = () => {
 
   const storedToastMessage = useToastMessage();
   const clearToast = useClearToast();
+  const showRewardModal = useShowRewardModal();
+  const hideModal = useHideModal();
 
   /**
    * 설정 화면 이동 추적 ref
@@ -141,6 +154,59 @@ const SettingScreen = () => {
   const handleHideToast = useCallback(() => {
     setToastVisible(false);
   }, []);
+
+  /**
+   * "레벨업 모달 다시 보기" 핸들러
+   *
+   * QuizScreen/MissionScreen에서 실제 레벨업 시 보여주는 것과 동일한
+   * RewardModal 레벨업 UI를 미리보기용으로 다시 띄운다. 실제 보상 지급은
+   * 전혀 발생하지 않으며, 화면에 뭐가 뜨는지 다시 확인하려는 용도다.
+   *
+   * 미리보기 레벨: 서버에서 현재 레벨을 조회해 "현재 레벨 + 1"을 보여준다
+   * (조회 실패 시 levelList의 두 번째 항목으로 대체). 포인트/경험치 수치는
+   * 실제 지급값이 아니라 레이아웃 확인용 예시 값이다.
+   */
+  const handlePressLevelUpPreview = async () => {
+    let previewLevelId = levelList[1]?.id ?? levelList[0]?.id;
+    try {
+      const { currentLevel } = await fetchCharacterData();
+      const maxLevelId = levelList[levelList.length - 1]?.id ?? currentLevel;
+      previewLevelId = Math.min(currentLevel + 1, maxLevelId);
+    } catch (error) {
+      console.error('레벨업 모달 미리보기 - 현재 레벨 조회 실패:', error);
+    }
+
+    const previewLevelData =
+      levelList.find(level => level.id === previewLevelId) ?? levelList[0];
+    if (!previewLevelData) {
+      return;
+    }
+
+    showRewardModal({
+      image: previewLevelData.character(styles.levelUpCharacterImage),
+      imageSize: styles.levelUpCharacterImage,
+      imageTopOffset: scaleWidth(-20),
+      closeOnBackdropPress: false,
+      topContent: (
+        <>
+          <Text style={styles.levelUpCaptionText}>축하해요! 레벨 업!</Text>
+          <Spacer num={6} />
+          <Text style={styles.levelUpTitleText}>{previewLevelData.title}</Text>
+        </>
+      ),
+      bottomTopContent: <Text style={styles.levelUpXpText}>+ 25 XP</Text>,
+      rewards: [
+        { label: '미션', value: 5 },
+        { label: '퀴즈', value: 20 },
+      ],
+      onNextArticle: () => {
+        hideModal();
+      },
+      onDismiss: () => {
+        hideModal();
+      },
+    });
+  };
 
   /**
    * 알림 설정 토글 핸들러
@@ -294,6 +360,10 @@ const SettingScreen = () => {
           <Text style={styles.rowTitle}>문의하기</Text>
           <RightArrow color={COLORS.gray700} />
         </Pressable>
+        <Pressable style={styles.row} onPress={handlePressLevelUpPreview}>
+          <Text style={styles.rowTitle}>레벨업 모달 다시 보기</Text>
+          <RightArrow color={COLORS.gray700} />
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -359,5 +429,25 @@ const styles = StyleSheet.create({
     ...Caption_14R,
     color: COLORS.gray700,
     marginTop: scaleWidth(4),
+  },
+  // 레벨업 모달 미리보기 전용 스타일 — QuizScreen의 레벨업 RewardModal과 동일한 값
+  levelUpCaptionText: {
+    ...Caption_14R,
+    color: COLORS.gray800,
+    textAlign: 'center',
+  },
+  levelUpTitleText: {
+    ...Heading_24EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
+  },
+  levelUpXpText: {
+    ...Heading_20EB_Round,
+    color: COLORS.puple.main,
+    textAlign: 'center',
+  },
+  levelUpCharacterImage: {
+    width: scaleWidth(120),
+    height: scaleWidth(120),
   },
 });
