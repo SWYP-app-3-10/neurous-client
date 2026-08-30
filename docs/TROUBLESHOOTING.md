@@ -159,6 +159,44 @@
 
 <br />
 
+## 보상 / 전역 상태 관리
+
+### 여러 보상 모달이 연달아 발생하면 앞의 보상이 사라질 수 있음
+
+- **증상**: 출석·글 읽기·퀴즈·레벨업처럼 둘 이상의 보상이 짧은 간격으로 발생하면 먼저 띄운 보상 모달이 닫히기 전에 다음 모달로 교체되거나, 일부 보상이 사용자에게 노출되지 않을 수 있음
+- **원인**: 현재 `modalStore`는 하나의 `modalState`만 보관함. `showRewardModal()`을 다시 호출하면 기존 상태를 새 상태로 통째로 대체하므로, 모달을 전역에서 렌더링한다는 사실만으로는 순차 표시가 보장되지 않음. 또한 화면이 `ReactNode`와 콜백을 직접 조립해 store에 넣기 때문에 보상 데이터와 UI·네비게이션 책임이 섞여 있음
+- **현재 조치**: `RewardModal`을 `compact`(일반 포인트·경험치)와 `split`(레벨업·글 읽기) 레이아웃으로 통일하고, 버튼을 상황별 `primaryAction`/`secondaryAction`/`dismissAction`으로 구성해 화면별 UI 불일치를 줄임. 단, 이는 표시 형태를 통일한 것이며 동시 보상의 유실 가능성까지 해결한 것은 아님
+- **권장 해결**: 일반 알림용 `modalStore`와 별도로 `rewardQueueStore`를 두고, 서버가 확정한 보상 이벤트를 배열 뒤에 `enqueue`함. 루트의 `RewardPresenter`는 `queue[0]` 하나만 표시하고 사용자가 완료하면 제거한 뒤 다음 항목을 표시함. 동일 `rewardTransactionId`는 중복 등록하지 않음
+- **수정 파일**: `src/components/RewardModal.tsx`, `src/store/modalStore.ts`, `src/navigation/RootNavigator.tsx`, `src/screens/common/ArticleDetailScreen.tsx`, `src/screens/common/QuizScreen.tsx`, `src/screens/main/MissionScreen.tsx`
+- **관련 문서**: `docs/REWARD_SYSTEM_DESIGN.md`
+
+### 포인트·경험치 로컬 store와 서버 잔액이 서로 다름
+
+- **증상**: 보상 직후 로컬에서는 포인트·경험치가 증가했지만 캐릭터 화면이나 콘텐츠 구매 화면의 서버 잔액에는 반영되지 않거나, 포인트 구매 후 로컬 값에는 차감이 반영되지 않을 수 있음
+- **원인**: `pointStore`와 `experienceStore`는 `addPoints()`/`addExperience()`로 로컬 합계를 누적하지만 서버 값으로 초기화·보정하는 호출이 사실상 없음. 퀴즈만 서버가 보상을 지급하고, 출석·글 읽기·광고는 보상 지급 API 없이 로컬 값만 올림. 반대로 콘텐츠 포인트 구매는 서버에서 차감하지만 응답에 최신 잔액이 없어 로컬 store를 정확하게 갱신할 수 없음
+- **현재 조치**: 캐릭터 등 주요 화면은 서버 조회값을 사용하고 보상 뒤 관련 React Query 캐시를 다시 조회함. 이는 화면에 오래된 값이 남는 시간을 줄이는 우회책이며, 서버에 존재하지 않는 로컬 보상을 동기화해주는 것은 아님
+- **권장 해결**: 포인트·경험치·레벨을 서버의 단일 진실 공급원으로 정함. 모든 지급·차감 API가 실제 지급량과 지급 후 `currentPoint`, `currentExp`, `levelCode`를 반환하고, 클라이언트는 로컬 합계를 더하지 않고 이 값으로 React Query 캐시를 대입함. optimistic update가 필요하면 실패 rollback과 성공 시 서버값 재대입을 함께 구현함
+- **관련 파일**: `src/store/pointStore.ts`, `src/store/experienceStore.ts`, `src/hooks/useCharacter.ts`, `src/hooks/useArticleNavigation.ts`
+- **관련 문서**: `docs/POINT_FLOW.md`, `docs/LEVEL_UP_FLOW.md`, `docs/REWARD_SYSTEM_DESIGN.md`
+
+### 출석·글 읽기 레벨업 모달이 서버의 실제 레벨업과 다를 수 있음
+
+- **증상**: 출석이나 글 읽기 보상에서 레벨업 모달이 떴지만 서버 레벨은 오르지 않거나, 반대로 서버 레벨이 올랐는데 레벨업 모달이 표시되지 않을 수 있음
+- **원인**: 퀴즈는 서버 응답의 `userLevelInformation`으로 레벨업을 확정하지만, 출석·글 읽기는 보상 지급 API가 없어 클라이언트가 `서버 현재 경험치 + 로컬 지급 예정 경험치`로 다음 레벨을 추정함. 이 계산은 서버에 경험치를 실제 반영하지 않으며, 다른 기기 동시 사용·보너스·서버 정책 변경에도 취약함
+- **현재 조치**: 서버 레벨 기준표를 조회해 가능한 범위에서 동일한 알고리즘으로 추정하고, 실패하면 일반 보상 모달로 처리함. 정식 서버 연동 전의 임시 조치이므로 서버 레벨업 확정으로 간주하면 안 됨
+- **권장 해결**: 출석·글 읽기 완료 API가 보상 지급과 레벨 계산을 하나의 서버 트랜잭션으로 처리하고 `levelUp` 정보를 공통 보상 응답에 포함함. 이후 `levelUpStore`와 화면별 레벨업 추정 코드를 제거하고 `RewardEvent.levelUp`만 사용함
+- **관련 파일**: `src/store/levelUpStore.ts`, `src/screens/common/QuizScreen.tsx`, `src/screens/common/ArticleDetailScreen.tsx`, `src/screens/main/MissionScreen.tsx`
+- **관련 문서**: `docs/LEVEL_UP_FLOW.md`, `docs/REWARD_SYSTEM_DESIGN.md`
+
+### 재시도·중복 탭으로 보상이 중복 지급되거나 모달이 다시 뜰 수 있음
+
+- **증상**: 네트워크 재시도, 완료 버튼 연타, 화면 재진입 또는 앱 재실행 시 같은 보상이 두 번 지급되거나 같은 모달이 반복 노출될 가능성이 있음
+- **원인**: 클라이언트의 AsyncStorage 키나 화면 ref만으로 중복을 막으면 앱 재설치·다른 기기·요청 타임아웃 후 재시도까지 포괄할 수 없음. 또한 서버 지급 거래와 모달 확인 여부를 식별하는 공통 ID가 없음
+- **권장 해결**: 지급 요청에 `Idempotency-Key` 또는 `requestId`를 보내고, 서버는 같은 키에 동일한 `rewardTransactionId`와 결과를 반환함. 클라이언트 보상 큐는 이 ID를 기준으로 중복 enqueue를 막음. 앱 종료 뒤 미확인 보상 복구가 필요하면 서버에 pending 조회와 ack API를 추가함
+- **관련 문서**: `docs/REWARD_SYSTEM_DESIGN.md`의 공통 `RewardTransactionResponse`, 권장 엔드포인트 절
+
+<br />
+
 ## 광고 (AdMob)
 
 ### 배포 빌드에서만 리워드 광고 로드 실패 ("광고를 불러올 수 없습니다. 네트워크 연결을 확인해주세요")
