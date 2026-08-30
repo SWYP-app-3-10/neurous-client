@@ -146,4 +146,6 @@ Screen → Hook → Store / Service → API (client.ts) → Backend
 | [`docs/NOTIFICATION.md`](./NOTIFICATION.md) | SSE, FCM, 알림 권한, 토큰 등록/해제 |
 | [`docs/ANALYTICS_EVENTS.md`](./ANALYTICS_EVENTS.md) | Firebase Analytics / Mixpanel 이벤트 전체 목록 |
 | [`docs/TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) | 전체 트러블슈팅 사례 |
+| [`docs/LEVEL_UP_FLOW.md`](./LEVEL_UP_FLOW.md) | 경험치/레벨업 지급 소스, 레벨업 모달 표시 흐름, 알려진 제약 |
+| [`docs/POINT_FLOW.md`](./POINT_FLOW.md) | 포인트 지급/차감 흐름, 서버-로컬 동기화 현황, 알려진 제약 |
 | [`docs/RELEASE.md`](./RELEASE.md) | Play Console, App Signing, versionCode, ProGuard, Firebase SHA |

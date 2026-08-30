@@ -230,3 +230,15 @@
 - **증상**: Firebase 초기화 실패 메시지 외 별도 크래시 없이 흰 화면만 표시
 - **원인**: Git에 커밋되지 않는 민감 설정 파일(`src/config/api.ts`, 소셜 로그인 키 등)이 신규 환경에 공유되지 않아 런타임 초기화 실패
 - **해결**: 팀 온보딩 시 필요한 설정 파일 목록 문서화 및 공유 프로세스 정리
+
+### `git status`/`git commit`이 특정 개발 환경에서 무한 대기(hang)
+
+- **증상**: 워킹트리 전체를 스캔하는 git 명령(`git status`, `git branch --show-current && git status`, `git commit -m ...`, `git commit --dry-run` 포함)이 진행 표시 없이 멈춤. 175초 이상 기다려도 끝나지 않고, 강제 종료 시 `.git/index.lock`이 남아 이후 명령까지 막힘. 반면 특정 파일만 지정한 `git status -- <path...>`, `git add <path...>`, `git write-tree`, `git rev-parse HEAD`는 몇 초 안에 정상 종료됨
+- **원인**: 정확히 특정되지 않았으나, 워킹트리 전체를 훑는 인덱스 리프레시 단계(모든 추적 파일을 stat)가 비정상적으로 느림 — 특정 개발 환경(예: 실시간 백신 검사가 걸리는 Windows PC, 네트워크 드라이브 등)에서 파일 I/O 지연이 누적되는 것으로 추정. `git commit`은 `-- <pathspec>`을 줘도 내부적으로 전체 인덱스를 리프레시하기 때문에 pathspec만으로는 우회되지 않음
+- **해결**: 저수준(plumbing) 명령으로 전체 워킹트리 스캔을 건너뛰고 커밋 생성
+  1. `git add <path...>` (필요한 파일만 스테이징 — 빠름)
+  2. `git write-tree` → 현재 인덱스로부터 트리 객체 생성 (인덱스만 사용, 워킹트리 전체 스캔 없음 — 빠름)
+  3. `git commit-tree <tree-sha> -p <parent-sha> -m "커밋 메시지"` → 커밋 객체 생성 (순수 객체 DB 쓰기 — 빠름)
+  4. `git update-ref refs/heads/<branch> <new-commit-sha>` → 브랜치 포인터 이동
+  - 멈춘 명령을 강제 종료했다면 재시도 전에 `.git/index.lock`이 남아있는지 확인하고 지울 것
+- **교훈**: 이 환경에서는 워킹트리 "전체"를 훑는 git 명령(무인자 `git status`, `git commit`, `git diff` 등)은 항상 느릴 수 있다고 가정하고, 가능하면 경로를 지정한 명령이나 위 plumbing 조합을 우선 사용할 것. 근본 원인(백신/네트워크 드라이브 등)은 아직 확인되지 않았으므로, 재현 환경에서 백신 예외 처리나 저장소를 로컬 SSD로 옮기는 시도도 고려해볼 수 있음
