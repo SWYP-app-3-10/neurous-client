@@ -53,6 +53,8 @@ import {
   Body_16M,
   Heading_20EB_Round,
   Heading_26EB_Round,
+  Heading_24EB_Round,
+  Caption_14R,
 } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -81,6 +83,9 @@ import { ARTICLE_READ_EXPERIENCE } from '../../config/rewards';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 import { prefetchPointHistoryAfterReward } from '../../hooks/usePointHistory';
 import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
+// 글 읽기 레벨업 임시 감지용 (MissionScreen과 동일한 방식 — docs/LEVEL_UP_FLOW.md 참고)
+import { fetchCharacterData } from '../../api/characterApi';
+import { levelList } from '../character/criteria/level/levelData';
 
 // ──────────────────────────────────────────────
 // 타입 정의
@@ -410,35 +415,92 @@ const ArticleDetailScreen = () => {
    *   1. hasShownReadRewardRef를 true로 세팅 (화면 이탈 시 별도 글 읽기 팝업이 뜨지 않도록)
    *   2. 글 읽기 보상(5xp)을 조용히(팝업 없이) 지급 — 아래 모달에서 직접 보여주므로
    *      grantArticleReadReward 자체의 팝업은 띄우지 않는다
-   *   3. "다음 글 보기 / 퀴즈 풀고 더 얻기 / 지금은 괜찮아요" 3단 액션 모달 표시
+   *   3. 레벨업 여부를 임시로 추정(MissionScreen과 동일한 방식) 후,
+   *      "다음 글 보기 / 퀴즈 풀고 더 얻기 / 지금은 괜찮아요" 액션 모달 표시
+   *      (레벨업이면 상단 이미지/문구만 레벨업 UI로 전환 — 버튼 구성은 동일하게 유지)
    *
    * 주의:
    *   - 완독 체크(서버)와 퀴즈 자체의 보상 지급은 QuizScreen의 퀴즈 제출 버튼에서 처리한다.
    */
-  const handlePressDoneReadingButton = () => {
+  const handlePressDoneReadingButton = async () => {
     hasShownReadRewardRef.current = true;
     grantArticleReadReward({ silent: true });
 
+    // 글 읽기 보상으로 레벨업이 발생하는지 임시로 추정한다.
+    // 글 읽기도 출석과 마찬가지로 서버에 보상 지급을 알리는 API가 없어서
+    // 서버가 레벨업 여부를 알려줄 수 없다 (docs/LEVEL_UP_FLOW.md 참고).
+    // 정식 해결 전까지의 임시 조치.
+    let isLevelUp = false;
+    let newLevelData: (typeof levelList)[number] | undefined;
+    try {
+      const { currentLevel, currentExp, levelStandard } =
+        await fetchCharacterData();
+      if (levelStandard && levelStandard.length > 0) {
+        const predictedExp = currentExp + ARTICLE_READ_EXPERIENCE;
+        let predictedStandard: (typeof levelStandard)[number] | null = null;
+        for (let i = levelStandard.length - 1; i >= 0; i--) {
+          if (predictedExp >= levelStandard[i].exp) {
+            predictedStandard = levelStandard[i];
+            break;
+          }
+        }
+        const match = predictedStandard?.characterLevel.match(/LEVEL_(\d+)/);
+        const predictedLevel = match ? parseInt(match[1], 10) : null;
+        if (predictedLevel && predictedLevel > currentLevel) {
+          isLevelUp = true;
+          newLevelData = levelList.find(level => level.id === predictedLevel);
+        }
+      }
+    } catch (error) {
+      console.error('글 읽기 레벨업 추정 실패:', error);
+    }
+
     showRewardModal({
-      image: <Modal_IMG />,
+      image:
+        isLevelUp && newLevelData ? (
+          newLevelData.character(styles.levelUpCharacterImage)
+        ) : (
+          <Modal_IMG />
+        ),
+      imageSize:
+        isLevelUp && newLevelData ? styles.levelUpCharacterImage : undefined,
+      imageTopOffset: isLevelUp && newLevelData ? scaleWidth(-20) : undefined,
       closeOnBackdropPress: false,
-      // 상단 연보라 블록: "+25 XP" 헤드라인 + 안내 문구
-      topContent: (
-        <>
-          <Text
-            style={[styles.rewardModalXpText, { color: COLORS.puple.main }]}
-          >
+      // 상단 연보라 블록: 레벨업이면 축하 문구, 아니면 기존 "+25 XP" 헤드라인
+      topContent:
+        isLevelUp && newLevelData ? (
+          <>
+            <Text style={styles.levelUpCaptionText}>축하해요! 레벨 업!</Text>
+            <Spacer num={6} />
+            <Text style={styles.levelUpTitleText}>{newLevelData.title}</Text>
+          </>
+        ) : (
+          <>
+            <Text
+              style={[styles.rewardModalXpText, { color: COLORS.puple.main }]}
+            >
+              + {ARTICLE_READ_EXPERIENCE} XP
+            </Text>
+            <Spacer num={8} />
+            <Text style={styles.rewardModalDescriptionText}>
+              경험치를 획득했어요!
+            </Text>
+          </>
+        ),
+      // 레벨업이면 하단 흰 블록의 칩 "위"에 "+XP" 문구를 추가로 보여준다
+      // (상단 블록이 축하 문구로 채워지면서 XP 표시가 이 자리로 내려온다)
+      bottomTopContent:
+        isLevelUp && newLevelData ? (
+          <Text style={styles.levelUpXpText}>
             + {ARTICLE_READ_EXPERIENCE} XP
           </Text>
-          <Spacer num={8} />
-          <Text style={styles.rewardModalDescriptionText}>
-            경험치를 획득했어요!
-          </Text>
-        </>
-      ),
+        ) : undefined,
       // 리워드 칩 — 이 시점에 실제로 지급되는 보상은 글 읽기 경험치 하나뿐이라
       // 그 값만 보여준다 (미션 완료/데일리 출석 등 다른 보상은 실제로 지급되지 않음)
       rewards: [{ label: '글 읽기', value: ARTICLE_READ_EXPERIENCE }],
+      // 버튼 구성은 레벨업 여부와 무관하게 동일하게 유지한다
+      // (다이어그램상 글 읽기 레벨업 모달은 "다음 글 보기 / 퀴즈 풀기" 둘 다 유지 —
+      //  퀴즈/출석 레벨업 모달이 버튼 1개로 줄어드는 것과는 다른 패턴)
       // "다음 글 보기" — 서버가 다음 글 id를 내려주면 그 글로 이동하도록 교체 예정.
       // 우선은 원문 버튼과 동일하게 네이버로 테스트 연결한다.
       onNextArticle: () => {
@@ -602,6 +664,26 @@ const styles = StyleSheet.create({
     ...Heading_20EB_Round,
     color: COLORS.black,
     textAlign: 'center',
+  },
+  // 글 읽기 레벨업(임시 조치) 전용 스타일 — QuizScreen/MissionScreen과 동일한 값
+  levelUpCaptionText: {
+    ...Caption_14R,
+    color: COLORS.gray800,
+    textAlign: 'center',
+  },
+  levelUpTitleText: {
+    ...Heading_24EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
+  },
+  levelUpXpText: {
+    ...Heading_20EB_Round,
+    color: COLORS.puple.main,
+    textAlign: 'center',
+  },
+  levelUpCharacterImage: {
+    width: scaleWidth(120),
+    height: scaleWidth(120),
   },
 });
 
