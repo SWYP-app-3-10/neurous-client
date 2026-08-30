@@ -40,8 +40,10 @@ import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
   Body_16M,
   Body_16SB,
+  Caption_14R,
   Heading_18EB_Round,
   Heading_20EB_Round,
+  Heading_24EB_Round,
   Heading_26EB_Round,
 } from '../../styles/typography';
 import Header from '../../components/Header';
@@ -68,6 +70,8 @@ import {
   checkCanSubmitDifficulty,
 } from '../../hooks/useDifficultySubmit';
 import { createQuizCompleteNavigation } from '../../utils/quizNavigation';
+import { useLevelUpStore } from '../../store/levelUpStore';
+import { levelList } from '../character/criteria/level/levelData';
 import {
   QUIZ_CORRECT_EXPERIENCE,
   QUIZ_CORRECT_POINT,
@@ -76,7 +80,6 @@ import {
 } from '../../config/rewards';
 import { fetchQuiz, QuizResponse, submitQuiz } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logEvent, logScreenView } from '../../services/analyticsService';
 import { FullScreenStackParamList } from '../../navigation/types';
 import { RouteNames } from '../../../routes';
@@ -166,6 +169,11 @@ const QuizScreen: React.FC = () => {
   const hideModal = useHideModal();
   const { addPoints } = usePointStore();
   const { addExperience } = useExperienceStore();
+  const setPendingLevelUp = useLevelUpStore(state => state.setPendingLevelUp);
+  const pendingLevelUp = useLevelUpStore(state => state.pendingLevelUp);
+  const clearPendingLevelUp = useLevelUpStore(
+    state => state.clearPendingLevelUp,
+  );
   const { submitDifficultyToServer } = useDifficultySubmit();
 
   /** 난이도 제안 관련 훅 */
@@ -487,7 +495,7 @@ const QuizScreen: React.FC = () => {
    *   4. 퀴즈 제출 시점에 완독 체크 API 호출
    *   5. submitQuiz API 호출
    *   6. 포인트 및 경험치 추가 (로컬 상태)
-   *   7. 레벨업 정보 AsyncStorage에 저장 (MissionScreen에서 감지)
+   *   7. 레벨업 정보가 있으면 전역 store(levelUpStore)에 기록
    *   8. 리워드 팝업 표시
    *   9. 리워드 팝업 "확인" 클릭 → 정답 체크 화면으로 전환
    *
@@ -591,13 +599,14 @@ const QuizScreen: React.FC = () => {
         });
       }
 
-      // 레벨업 정보가 있으면 AsyncStorage에 저장
-      // MissionScreen에서 이 정보를 감지하여 레벨업 모달 표시
+      // 레벨업 정보가 있으면 전역 store에 기록해둔다.
+      // "완료" 버튼을 눌러 리워드 모달을 띄우는 시점(handleComplete)에
+      // 이 store를 확인해서 폭죽 UI 대신 레벨업 UI로 바꿔서 보여준다.
       if (userLevelInformation) {
-        await AsyncStorage.setItem(
-          '@pending_level_up',
-          JSON.stringify(userLevelInformation),
-        );
+        setPendingLevelUp({
+          levelCode: userLevelInformation.levelCode,
+          characterName: userLevelInformation.characterName,
+        });
       }
 
       // ──────────────────────────────────────────────
@@ -667,10 +676,40 @@ const QuizScreen: React.FC = () => {
       ? QUIZ_CORRECT_POINT
       : QUIZ_INCORRECT_POINT;
 
+    // 이번 제출로 레벨업이 발생했으면(levelUpStore에 기록돼있으면) 폭죽 UI 대신
+    // 레벨업 UI(캐릭터 이미지 + "축하해요! 레벨 업!")로 바꿔서 보여준다.
+    // 리워드 칩/버튼 구성은 레벨업 여부와 무관하게 동일하게 유지한다.
+    const isLevelUp = !!pendingLevelUp;
+    const levelUpMatch = pendingLevelUp?.levelCode?.match(/LEVEL_(\d+)/);
+    const newLevelId = levelUpMatch ? parseInt(levelUpMatch[1], 10) : null;
+    const newLevelData = newLevelId
+      ? levelList.find(level => level.id === newLevelId)
+      : undefined;
+
     showRewardModal({
-      image: <Modal_IMG />,
+      image:
+        isLevelUp && newLevelData ? (
+          newLevelData.character(styles.levelUpCharacterImage)
+        ) : (
+          <Modal_IMG />
+        ),
+      // 레벨업 캐릭터는 시안상 폭죽 이미지보다 크고, 카드 상단 블록에 더 깊이
+      // 걸치듯 겹쳐 보인다. RewardModal 컨테이너 크기도 캐릭터 사이즈(levelUpCharacterImage)와
+      // 같은 값으로 맞추고, 카드 자체 레이아웃(topBlock paddingTop 등)은 공통 스타일 그대로 쓴다.
+      imageSize: isLevelUp
+        ? { width: scaleWidth(120), height: scaleWidth(120) }
+        : undefined,
+      imageTopOffset: isLevelUp ? scaleWidth(-20) : undefined,
       closeOnBackdropPress: false,
-      topContent: (
+      topContent: isLevelUp ? (
+        <>
+          <Text style={styles.levelUpCaptionText}>축하해요! 레벨 업!</Text>
+          <Spacer num={6} />
+          <Text style={styles.levelUpTitleText}>
+            {newLevelData?.title ?? pendingLevelUp?.characterName}
+          </Text>
+        </>
+      ) : (
         <>
           <Text
             style={[styles.rewardModalXpText, { color: COLORS.puple.main }]}
@@ -683,6 +722,12 @@ const QuizScreen: React.FC = () => {
           </Text>
         </>
       ),
+      // 레벨업 모달은 상단 블록이 "축하해요! 레벨 업!" 문구로 채워지면서
+      // 일반 모달의 "+ XP" 문구가 밀려나므로, 같은 문구를 리워드 칩 "위"
+      // (bottomTopContent)로 옮겨서 보여준다 — 칩/버튼 구성 자체는 동일.
+      bottomTopContent: isLevelUp ? (
+        <Text style={styles.levelUpXpText}>+ {exp} XP</Text>
+      ) : undefined,
       rewards: [
         { label: '퀴즈', value: exp },
         { label: '포인트', value: point },
@@ -696,6 +741,11 @@ const QuizScreen: React.FC = () => {
         navigation.dispatch(createQuizCompleteNavigation(returnTo));
       },
     });
+
+    // 레벨업 UI로 소비했으면 store를 비워 다음 진입 때 재노출되지 않게 한다.
+    if (isLevelUp) {
+      clearPendingLevelUp();
+    }
   };
 
   // ──────────────────────────────────────────────
@@ -1060,6 +1110,26 @@ const styles = StyleSheet.create({
     ...Heading_20EB_Round,
     color: COLORS.black,
     textAlign: 'center',
+  },
+  levelUpCaptionText: {
+    ...Caption_14R,
+    color: COLORS.gray800,
+    textAlign: 'center',
+  },
+  levelUpTitleText: {
+    ...Heading_24EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
+  },
+  levelUpXpText: {
+    ...Heading_20EB_Round,
+    color: COLORS.puple.main,
+    textAlign: 'center',
+  },
+  // 레벨업 캐릭터는 목록/캐릭터 화면용 기본 사이즈보다 크게 보여준다 (RewardModal.imageSize와 동일 값)
+  levelUpCharacterImage: {
+    width: scaleWidth(120),
+    height: scaleWidth(120),
   },
 });
 

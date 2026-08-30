@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   NavigationContainer,
   CommonActions,
@@ -13,11 +13,7 @@ import MainTabNavigator from './MainTabNavigator';
 import FullScreenStackNavigator from './FullScreenStackNavigator';
 import SearchStackNavigator from './SearchStackNavigator';
 
-import {
-  useModalState,
-  useModalStore,
-  useShowModal,
-} from '../store/modalStore';
+import { useModalState, useModalStore } from '../store/modalStore';
 import { useIsOnboardingCompleted } from '../store/onboardingStore';
 
 import NotificationModal from '../components/NotificationModal';
@@ -27,16 +23,9 @@ import ToastModal from '../components/ToastModal';
 
 import { useExperienceStore } from '../store/experienceStore';
 import { characterKeys } from '../hooks/useCharacter';
-import { LevelUpModalContent } from '../components/ArticlePointModalContent';
 import { useQueryClient } from '@tanstack/react-query';
-import { Heading_24EB_Round } from '../styles/typography';
-import { COLORS, scaleWidth } from '../styles/global';
-import { Modal_IMG } from '../icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LevelUpInfo } from '../api/missionApi';
 import { logScreenView } from '../services/analyticsService';
 import { isScreenMapped } from '../services/analyticsService';
-import { trackEvent } from '../services/mixpanelService';
 
 const Stack = createNativeStackNavigator();
 
@@ -45,7 +34,7 @@ const Stack = createNativeStackNavigator();
  * - NavigationContainer 밖으로 navigationRef를 전달받아 reset 같은 액션을 수행
  * - 전역 모달(Notification / BottomSheet) 렌더링
  * - 온보딩 완료 시 MAIN_TAB으로 reset
- * - 경험치/레벨 데이터 기반 레벨업 모달 표시
+ * - 경험치 변경 시 캐릭터 데이터 refetch (레벨업 모달은 각 화면이 직접 처리)
  */
 const RootNavigatorContent: React.FC<{
   navigationRef: React.RefObject<any>;
@@ -54,7 +43,6 @@ const RootNavigatorContent: React.FC<{
   // zustand: modalState만 구독 (리렌더링 최적화)
   const modalState = useModalState();
   const hideModal = useModalStore(state => state.hideModal);
-  const showModal = useShowModal();
 
   // zustand: 온보딩 완료 상태만 구독 (리렌더링 최적화)
   const isOnboardingCompleted = useIsOnboardingCompleted();
@@ -63,10 +51,9 @@ const RootNavigatorContent: React.FC<{
   const { experience } = useExperienceStore();
   const queryClient = useQueryClient();
 
-  // ref: 마지막 경험치 / 레벨업 모달 노출 여부 / 온보딩 완료 이전 상태
+  // ref: 마지막 경험치 / 온보딩 완료 이전 상태
   const lastCheckedExpRef = useRef<number>(0);
   const prevOnboardingCompletedRef = useRef<boolean>(false);
-  const hasCheckedPendingLevelUpRef = useRef<boolean>(false);
 
   // 온보딩 완료 시 메인 화면으로 자동 전환
   // 온보딩 미완료 시 로그인 화면으로 자동 전환 (401 에러 등으로 인한 로그아웃 처리)
@@ -103,91 +90,14 @@ const RootNavigatorContent: React.FC<{
     prevOnboardingCompletedRef.current = isOnboardingCompleted;
   }, [isOnboardingCompleted, navigationRef, isReady, queryClient]);
 
-  // 두 useEffect에서 공유하기 위해 useCallback으로 선언
-  const checkPendingLevelUp = useCallback(async () => {
-    if (hasCheckedPendingLevelUpRef.current) {
-      return;
-    }
-
-    try {
-      const pendingLevelUpData =
-        await AsyncStorage.getItem('@pending_level_up');
-
-      if (pendingLevelUpData) {
-        try {
-          const levelUpInfo: LevelUpInfo = JSON.parse(pendingLevelUpData);
-
-          if (!levelUpInfo || typeof levelUpInfo !== 'object') {
-            console.warn(
-              '[RootNavigator] 레벨업 정보 형식이 올바르지 않습니다:',
-              levelUpInfo,
-            );
-            await AsyncStorage.removeItem('@pending_level_up');
-            return;
-          }
-
-          hasCheckedPendingLevelUpRef.current = true;
-
-          // "LEVEL_2" 형식에서 숫자 추출 (Mixpanel 이벤트 및 모달 표시에 공용)
-          const levelUpMatch = levelUpInfo.levelCode?.match(/LEVEL_(\d+)/);
-          const levelAfter = levelUpMatch ? parseInt(levelUpMatch[1], 10) : 0;
-
-          // Mixpanel: 레벨업 팝업 노출
-          trackEvent('level_up_popup_view', {
-            level_before: levelAfter > 0 ? levelAfter - 1 : null,
-            level_after: levelAfter > 0 ? levelAfter : null,
-          });
-
-          // 레벨업 모달 표시
-          showModal({
-            title: levelUpInfo.title || '축하해요! 레벨 업!',
-            image: <Modal_IMG />,
-            imageTopOffset: scaleWidth(-100.62),
-            imagePaddingTop: scaleWidth(64),
-            titleStyle: { ...Heading_24EB_Round },
-            titleDescriptionGapSize: 4,
-            description:
-              levelUpInfo.message || '조금씩 생각이 자라나고 있어요.',
-            descriptionColor: COLORS.gray700,
-            children: React.createElement(LevelUpModalContent, {
-              newLevel: levelAfter,
-            }),
-            primaryButton: {
-              title: '확인',
-              onPress: async () => {
-                // Mixpanel: 레벨업 팝업 확인 버튼 클릭
-                trackEvent('level_up_popup_confirm', {
-                  level_before: levelAfter > 0 ? levelAfter - 1 : null,
-                  level_after: levelAfter > 0 ? levelAfter : null,
-                });
-
-                // 레벨업 정보 삭제
-                await AsyncStorage.removeItem('@pending_level_up');
-                hasCheckedPendingLevelUpRef.current = false;
-              },
-            },
-          });
-        } catch (parseError) {
-          console.error('[RootNavigator] 레벨업 정보 파싱 실패:', parseError);
-          // 잘못된 데이터 삭제
-          await AsyncStorage.removeItem('@pending_level_up');
-        }
-      }
-    } catch (error) {
-      console.error('[RootNavigator] 레벨업 체크 실패:', error);
-    }
-  }, [showModal]);
-
-  // 앱 진입 시 미처리 레벨업 정보 체크
-  useEffect(() => {
-    if (!isOnboardingCompleted) {
-      return;
-    }
-
-    checkPendingLevelUp();
-  }, [isOnboardingCompleted, checkPendingLevelUp]);
-
-  // 경험치 변경 시 characterData refetch + 레벨업 체크
+  // 경험치 변경 시 characterData refetch
+  //
+  // 레벨업 감지/모달 표시는 더 이상 여기서 전역으로 하지 않는다. 각 화면(퀴즈 등)이
+  // 보상 API 응답에서 받은 레벨업 정보를 levelUpStore에 기록해두고, 자신의 리워드
+  // 모달을 띄우는 시점에 그 store를 확인해서 UI만 레벨업 버전으로 바꿔서 보여준다
+  // (src/store/levelUpStore.ts 참고). 예전 방식(AsyncStorage 감지 후 별도 모달
+  // 표시)은 사용자가 정답/오답 피드백을 보기도 전에 팝업이 먼저 뜨고, 이후 화면
+  // 자체 리워드 모달과 이중으로 노출되는 문제가 있었다.
   useEffect(() => {
     if (!isOnboardingCompleted) {
       return;
@@ -201,12 +111,9 @@ const RootNavigatorContent: React.FC<{
       // (data()만 무효화하면 me()는 캐릭터 탭의 focus refetch에만 의존하게 되어
       //  탭 재진입 없이는 출석/진행률이 최신 상태로 반영되지 않는 문제가 있었음)
       queryClient.invalidateQueries({ queryKey: characterKeys.all });
-      // ref 리셋 직접 호출 - useEffect 의존성 재실행 없이도 즉시 체크
-      hasCheckedPendingLevelUpRef.current = false;
-      checkPendingLevelUp();
     }
     lastCheckedExpRef.current = experience;
-  }, [experience, isOnboardingCompleted, queryClient, checkPendingLevelUp]);
+  }, [experience, isOnboardingCompleted, queryClient]);
 
   return (
     <>
