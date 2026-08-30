@@ -1,6 +1,6 @@
 # 레벨/경험치 플로우
 
-> 최종 갱신: 2026-08-30. 이 문서는 "지금 코드가 실제로 어떻게 동작하는가"를 최대한 상세히 기록합니다.
+> 최종 갱신: 2026-08-31. 이 문서는 "지금 코드가 실제로 어떻게 동작하는가"를 최대한 상세히 기록합니다.
 > 팀이 확정한 최종 목표 아키텍처("전역 모달(포인트+레벨업) 플로우")와, 그중 아직 구현되지 않은 부분(임시 조치로 대체된 부분)을 구분해서 읽어주세요.
 
 ## 목차
@@ -28,7 +28,7 @@
 - 이 중 **서버가 레벨업 여부를 직접 알려주는 API 응답은 `submitQuiz` 하나뿐**입니다. 나머지 3개(출석 2종 + 글 읽기)는 애초에 "보상 지급"을 서버에 알리는 API 자체가 없어서, 서버가 레벨업을 계산하거나 통보할 방법이 구조적으로 없습니다.
 - 그래서 출석·글 읽기는 **클라이언트가 서버의 현재 경험치/레벨 기준표를 조회해서, 이번에 로컬로 더할 경험치를 가산한 뒤 레벨 경계를 넘는지 스스로 계산**하는 방식(추정)으로 임시 처리되어 있습니다 (2026-08-30 추가).
 - 레벨업 UI는 4곳(퀴즈/출석/글 읽기/설정 미리보기)에서 공용 컴포넌트 `RewardModal`을 재사용하지만, 레벨업 판단 로직과 모달에 넘기는 props 구성 코드는 **화면마다 따로 작성되어 있어 상당 부분 중복**됩니다.
-- 팀 회의에서 확정한 목표 구조("전역 모달 플로우")는 이미 큰 틀에서는 지금 구현과 일치합니다(액션마다 레벨업 여부를 분기해서 레벨업/포인트 모달을 각자 띄우는 방식). 다만 **출석의 일반(레벨업 아닌) 포인트 모달만 이번 라운드에서 예외적으로 옛 방식(`showModal`+`ExperienceModalContent`)을 유지**하기로 확정했습니다(2026-08-30, 사용자 확인).
+- 보상 UI는 공용 `RewardModal`로 통일됐습니다. 레벨업과 글 읽기는 2단 `split`, 출석·퀴즈의 일반 포인트/경험치 모달은 단일 흰 카드 `compact` 레이아웃을 사용합니다. 다만 서버 지급·잔액 동기화와 전역 보상 큐는 아직 미구현이며, 목표 구조는 [`REWARD_SYSTEM_DESIGN.md`](./REWARD_SYSTEM_DESIGN.md)에 정리했습니다.
 
 <br />
 
@@ -76,12 +76,12 @@ flowchart LR
 
 레벨업과 관련된 데이터는 성격이 다른 3개 층으로 나뉘고, 각 층의 소스가 다릅니다. 이 구분을 모르면 "왜 경험치 값이 화면마다 다르게 보이지?" 같은 혼란이 생기기 쉽습니다.
 
-| 층 | 내용 | 소스 | 진실 공급원 여부 |
-| --- | --- | --- | --- |
-| ① 현재 레벨 | "지금 몇 레벨인가" | `useCharacterMe()` → `userGrowthInfo.levelEnum` (예: `"LEVEL_3"`) | ✅ 서버가 진실 공급원 |
-| ② 레벨별 표시 정보 | 레벨별 캐릭터 이름/이미지/타이틀 문구 | `src/screens/character/criteria/level/levelData.ts`의 `levelList` (로컬 하드코딩) | ❌ 로컬 고정값 |
-| ③ 경험치 누적값 | "지금 경험치가 몇인가" | `experienceStore`(zustand, 클라이언트가 낙관적으로 누적) | ⚠️ 부분적 — 로컬 전용 보상(출석/글 읽기)이 섞여 있어 서버 `currentExp`와 항상 일치한다는 보장 없음 |
-| ④ 레벨 기준표 | "레벨 N이 되려면 경험치가 얼마 필요한가" | `fetchCharacterLevel`(`GET /api/characters/standards/level`)의 `levelStandard` 배열 | ✅ 서버가 진실 공급원 |
+| 층                 | 내용                                     | 소스                                                                                | 진실 공급원 여부                                                                                   |
+| ------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| ① 현재 레벨        | "지금 몇 레벨인가"                       | `useCharacterMe()` → `userGrowthInfo.levelEnum` (예: `"LEVEL_3"`)                   | ✅ 서버가 진실 공급원                                                                              |
+| ② 레벨별 표시 정보 | 레벨별 캐릭터 이름/이미지/타이틀 문구    | `src/screens/character/criteria/level/levelData.ts`의 `levelList` (로컬 하드코딩)   | ❌ 로컬 고정값                                                                                     |
+| ③ 경험치 누적값    | "지금 경험치가 몇인가"                   | `experienceStore`(zustand, 클라이언트가 낙관적으로 누적)                            | ⚠️ 부분적 — 로컬 전용 보상(출석/글 읽기)이 섞여 있어 서버 `currentExp`와 항상 일치한다는 보장 없음 |
+| ④ 레벨 기준표      | "레벨 N이 되려면 경험치가 얼마 필요한가" | `fetchCharacterLevel`(`GET /api/characters/standards/level`)의 `levelStandard` 배열 | ✅ 서버가 진실 공급원                                                                              |
 
 레벨업 **판단**에는 ①(현재 레벨, 서버)과 ④(레벨 기준표, 서버)를 쓰고, 레벨업 **화면 표시**에는 ②(로컬 `levelData.ts`)를 씁니다. 즉 "레벨업했다/안 했다"는 서버 값 기반으로 계산하지만, 그 결과를 그려주는 이미지·이름·문구는 로컬 상수에서 가져옵니다 — 서버가 캐릭터 리뉴얼 등으로 레벨 표시 정보를 바꾸면 앱 업데이트 없이는 반영되지 않습니다.
 
@@ -162,7 +162,7 @@ sequenceDiagram
         alt isLevelUp
             M->>RM: showRewardModal (레벨업 UI, 버튼 1개 "다음 글 보기")
         else
-            M->>RM: showModal + ExperienceModalContent (옛 방식, 버튼 "확인" 1개)
+            M->>RM: RewardModal compact UI<br/>(포인트·경험치, 버튼 "확인" 1개)
         end
     else 오늘 이미 진입함
         M->>M: 아무 동작 없음
@@ -177,7 +177,7 @@ sequenceDiagram
 - 지급 자체는 **로컬 전용**: `addPoints(totalPoint)` / `addExperience(totalExp)`로 `pointStore`/`experienceStore`만 갱신. 서버에 "출석 보상 지급했다"고 알리는 API 호출이 없음.
 - 지급 기준값: `DAILY_ATTENDANCE_POINT=10, DAILY_ATTENDANCE_EXPERIENCE=5, WEEKLY_ATTENDANCE_POINT=30, WEEKLY_ATTENDANCE_EXPERIENCE=30` (`src/config/rewards.ts`의 `DEFAULT_REWARDS_CONFIG`, 전부 하드코딩값).
 
-**레벨업일 때 vs 아닐 때 모달이 다른 컴포넌트라는 점에 주의**: 레벨업이면 `RewardModal`(신규 공용 컴포넌트)을 쓰지만, 레벨업이 아닌 일반 출석 모달은 **여전히 옛 `showModal` + `ExperienceModalContent`** 조합을 그대로 씁니다. 이건 실수가 아니라 팀 확정 사항입니다 — "출석의 일반 포인트 모달은 이번 라운드에서 `RewardModal`로 통일하지 않는다"고 확정됨(2026-08-30). 그 결과 같은 화면(MissionScreen)에서 레벨업이냐 아니냐에 따라 완전히 다른 두 모달 컴포넌트가 쓰이는 상태가 당분간 유지됩니다.
+**레벨업일 때와 아닐 때 모두 같은 공용 컴포넌트를 사용합니다**: 레벨업이면 `RewardModal`의 `split`, 일반 출석이면 `compact` 레이아웃을 사용합니다. 일반 출석은 포인트·경험치 칩과 `확인` 버튼 하나를 표시합니다.
 
 <br />
 
@@ -278,15 +278,15 @@ sequenceDiagram
 
 팀 회의에서 공유된 플로우차트("전역 모달(포인트+레벨업) 플로우")의 핵심 아이디어는 **포인트가 발생하는 모든 액션(출석/글 읽기/퀴즈)이 각자 레벨업 여부를 분기해서 레벨업 모달 또는 포인트 모달을 보여주는 구조**이며, 서버·프론트가 출석을 각각 처리하고 있는 문제도 다이어그램에 명시적으로 표시되어 있었습니다. 이번 라운드에서 사용자에게 직접 확인받은 적용 범위는 다음과 같습니다(2026-08-30):
 
-| 항목 | 목표(다이어그램) | 현재 구현 | 상태 |
-| --- | --- | --- | --- |
-| 퀴즈 레벨업 모달 | RewardModal 계열, 버튼 1개 | `RewardModal`, 버튼 1개 | ✅ 완료 |
-| 출석 레벨업 모달 | RewardModal 계열, 버튼 1개 | `RewardModal`, 버튼 1개 (클라이언트 추정 기반) | ⚠️ 임시 조치로 완료 |
-| 글 읽기 레벨업 모달 | RewardModal 계열, **버튼 2개 유지** | `RewardModal`, 버튼 2개 (클라이언트 추정 기반) | ⚠️ 임시 조치로 완료 |
-| 출석의 일반(레벨업 아님) 모달 | (다이어그램상으론 포인트 모달로 통일) | **옛 `showModal`+`ExperienceModalContent` 그대로 유지** — 이번 라운드에서 변경 안 하기로 확정 | 🔲 의도적으로 보류 |
-| 글 읽기의 일반(레벨업 아님) 모달 | RewardModal 계열 | 이미 `RewardModal` 사용 중 (레벨업 이전부터) | ✅ 기존에 완료돼 있었음 |
-| 서버·프론트 출석 이원화 문제 | (다이어그램에 문제로 명시, 해결책은 미정) | 미해결 — 클라이언트는 `DAILY_MISSION_ENTRY_KEY`, 서버는 자체 `attendance` 기록을 독립적으로 유지 | 🔲 미해결, 다음 팀 회의 안건 |
-| 레벨업 판단을 서버 API가 직접 응답 | 모든 보상 API가 `userLevelInformation`류 필드를 응답에 포함 | 퀴즈만 해당, 출석/글 읽기는 클라이언트 추정 | 🔲 백엔드 작업 필요 (미착수) |
+| 항목                               | 목표(다이어그램)                                            | 현재 구현                                                                                        | 상태                         |
+| ---------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------- |
+| 퀴즈 레벨업 모달                   | RewardModal 계열, 버튼 1개                                  | `RewardModal`, 버튼 1개                                                                          | ✅ 완료                      |
+| 출석 레벨업 모달                   | RewardModal 계열, 버튼 1개                                  | `RewardModal`, 버튼 1개 (클라이언트 추정 기반)                                                   | ⚠️ 임시 조치로 완료          |
+| 글 읽기 레벨업 모달                | RewardModal 계열, **버튼 2개 유지**                         | `RewardModal`, 버튼 2개 (클라이언트 추정 기반)                                                   | ⚠️ 임시 조치로 완료          |
+| 출석의 일반(레벨업 아님) 모달      | 단일 흰 카드 포인트·경험치 모달                             | `RewardModal`의 `compact` 레이아웃, 버튼 `확인`                                                  | ✅ 완료                      |
+| 글 읽기의 일반(레벨업 아님) 모달   | RewardModal 계열                                            | 이미 `RewardModal` 사용 중 (레벨업 이전부터)                                                     | ✅ 기존에 완료돼 있었음      |
+| 서버·프론트 출석 이원화 문제       | (다이어그램에 문제로 명시, 해결책은 미정)                   | 미해결 — 클라이언트는 `DAILY_MISSION_ENTRY_KEY`, 서버는 자체 `attendance` 기록을 독립적으로 유지 | 🔲 미해결, 다음 팀 회의 안건 |
+| 레벨업 판단을 서버 API가 직접 응답 | 모든 보상 API가 `userLevelInformation`류 필드를 응답에 포함 | 퀴즈만 해당, 출석/글 읽기는 클라이언트 추정                                                      | 🔲 백엔드 작업 필요 (미착수) |
 
 <br />
 
@@ -358,7 +358,7 @@ sequenceDiagram
 - `src/store/experienceStore.ts`, `src/store/pointStore.ts` — 경험치/포인트 로컬 상태
 - `src/screens/common/QuizScreen.tsx` — 서버 `userLevelInformation`으로 레벨업을 정식 소비하는 화면
 - `src/screens/common/ArticleDetailScreen.tsx` — 글 읽기 보상, `fetchCharacterData`로 레벨업을 임시 추정 ("다 읽었어요" 경로만 — 이탈 경로는 미지원)
-- `src/screens/main/MissionScreen.tsx` — 출석 보상, `fetchCharacterData`로 레벨업을 임시 추정 (일반 포인트 모달은 옛 방식 유지)
+- `src/screens/main/MissionScreen.tsx` — 출석 보상, `fetchCharacterData`로 레벨업을 임시 추정 (`RewardModal`의 split/compact 사용)
 - `src/screens/myPage/SettingScreen.tsx` — "레벨업 모달 다시 보기"(도움말 섹션) — 실제 지급 없이 UI만 미리보기
 - `src/screens/character/criteria/level/levelData.ts` — 레벨별 표시 정보(로컬 소스)
 - `src/api/missionApi.ts` — `SubmitQuizData.userLevelInformation` 타입 정의, 미사용 `LevelUpInfo` 타입

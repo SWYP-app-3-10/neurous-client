@@ -1,6 +1,6 @@
 # 포인트 플로우
 
-> 최종 갱신: 2026-08-30. 이 문서는 "지금 코드가 실제로 어떻게 동작하는가"를 최대한 상세히 기록합니다.
+> 최종 갱신: 2026-08-31. 이 문서는 "지금 코드가 실제로 어떻게 동작하는가"를 최대한 상세히 기록합니다.
 
 ## 목차
 
@@ -24,6 +24,7 @@
 
 - 포인트는 **퀴즈 정답/오답, 일일/위클리 출석, 광고 시청 리워드** 세 경로에서 지급되고, **아티클(글) 잠금 해제**에 사용(차감)됩니다.
 - **화면에 실제로 보여지는 포인트는 항상 서버 값**입니다(`userGrowthInfo.currentPoint` 등, 매번 새로 조회). `pointStore`(zustand)의 로컬 값은 `addPoints()`만 호출되고 화면에 직접 노출되는 곳이 사실상 없는, "쌓이기만 하고 거의 읽히지 않는" 값입니다.
+- 서버·클라이언트의 권장 개선 계약과 전역 보상 큐 설계는 [`REWARD_SYSTEM_DESIGN.md`](./REWARD_SYSTEM_DESIGN.md)를 참고하세요. 현재 구현은 아직 해당 구조로 서버 동기화된 상태가 아닙니다.
 - 지급 3경로 중 **서버 API 응답으로 실제 지급 사실을 확인할 수 있는 건 퀴즈뿐**입니다. 출석과 광고 시청은 지급 자체를 서버에 알리는 API가 없어 클라이언트가 로컬로만 포인트를 올립니다(광고 시청은 콘텐츠 접근 권한만 별도 API로 서버에 반영됨).
 - 포인트 **차감**(아티클 구매)은 서버에서 정상적으로 처리되지만, 그 결과(차감 후 잔액)를 응답으로 내려주지 않아서 로컬 `pointStore`에는 전혀 반영되지 않습니다. `subtractPoints()`/`setPoints()`는 코드 전체에서 한 번도 호출되지 않습니다.
 
@@ -133,6 +134,7 @@ flowchart TD
 
 **Q. 출석 보상을 서버 API에 연동하면 포인트 불일치가 완전히 사라지나?**
 아니요. 화면에 보이는 잔액(`userGrowthInfo.currentPoint`, `fetchContentAccess.currentPoints`)은 이미 매번 서버에서 새로 조회하는 구조라 출석 연동 여부와 무관하게 대부분 안전합니다. 그래도 남는 위험 두 가지:
+
 1. 위에서 설명한 `useArticleNavigation`의 로컬 fallback 경로 — `subtractPoints()`가 전혀 호출되지 않아 차감이 반영 안 된 값으로 폴백될 수 있음.
 2. 보상 모달에 보여주는 적립량을 클라이언트 상수(`DAILY_ATTENDANCE_POINT` 등)로 고정할지, 서버 응답값을 그대로 쓸지에 따라 갈림 — 서버가 보너스/캡 등으로 다른 값을 적립했는데 클라이언트가 상수를 쓰면 그 순간 모달에 뜨는 숫자만 실제와 어긋날 수 있음 (지속되는 잔액 불일치는 아님).
 
@@ -162,19 +164,19 @@ flowchart TD
 
 - 지급/차감 기준값은 전부 `src/config/rewards.ts`의 `DEFAULT_REWARDS_CONFIG`에 하드코딩돼 있습니다:
 
-| 상수 | 값 | 의미 |
-| --- | --- | --- |
-| `articleReadPointCost` | 30 | 글 읽기에 필요한 포인트(구매 비용) |
-| `articleReadExperience` | 5 | 글 읽기 완료 시 지급 경험치 |
-| `adRewardPoints` | 60 | 광고 시청 완료 시 지급 포인트 |
-| `quizCorrectExperience` | 25 | 퀴즈 정답 시 경험치(단, 실제 지급값은 서버 응답 우선) |
-| `quizCorrectPoint` | 30 | 퀴즈 정답 시 포인트(위와 동일) |
-| `quizIncorrectExperience` | 15 | 퀴즈 오답 시 경험치 |
-| `quizIncorrectPoint` | 10 | 퀴즈 오답 시 포인트 |
-| `dailyAttendanceExperience` | 5 | 일일 출석 경험치 |
-| `dailyAttendancePoint` | 10 | 일일 출석 포인트 |
-| `weeklyAttendanceExperience` | 30 | 위클리 출석(월~토 완주 시) 추가 경험치 |
-| `weeklyAttendancePoint` | 30 | 위클리 출석 추가 포인트 |
+| 상수                         | 값  | 의미                                                  |
+| ---------------------------- | --- | ----------------------------------------------------- |
+| `articleReadPointCost`       | 30  | 글 읽기에 필요한 포인트(구매 비용)                    |
+| `articleReadExperience`      | 5   | 글 읽기 완료 시 지급 경험치                           |
+| `adRewardPoints`             | 60  | 광고 시청 완료 시 지급 포인트                         |
+| `quizCorrectExperience`      | 25  | 퀴즈 정답 시 경험치(단, 실제 지급값은 서버 응답 우선) |
+| `quizCorrectPoint`           | 30  | 퀴즈 정답 시 포인트(위와 동일)                        |
+| `quizIncorrectExperience`    | 15  | 퀴즈 오답 시 경험치                                   |
+| `quizIncorrectPoint`         | 10  | 퀴즈 오답 시 포인트                                   |
+| `dailyAttendanceExperience`  | 5   | 일일 출석 경험치                                      |
+| `dailyAttendancePoint`       | 10  | 일일 출석 포인트                                      |
+| `weeklyAttendanceExperience` | 30  | 위클리 출석(월~토 완주 시) 추가 경험치                |
+| `weeklyAttendancePoint`      | 30  | 위클리 출석 추가 포인트                               |
 
 - 파일 상단 주석엔 "서버에서 리워드 설정을 받아오지만, 오프라인/에러 시 기본값으로 사용"이라고 적혀 있지만, **실제로 이 기본값을 덮어쓰는 코드는 없습니다** — 항상 하드코딩된 기본값이 그대로 쓰입니다.
 - `fetchCharacterReward`(`GET /api/characters/standards/reward`, 캐릭터 리워드 기준 조회 API)가 타입과 함수까지 정의돼 있지만, **어디에서도 호출되지 않는 미사용 코드**입니다. 응답 형태는 `{ aboutPointExpInformation: { rewardType, description }, rewardDataResponse: { rewardItem, exp, point } }`. 서버 정책이 바뀌면 이 상수들을 코드에서 직접 수정하고 앱을 업데이트해야 반영됩니다.
