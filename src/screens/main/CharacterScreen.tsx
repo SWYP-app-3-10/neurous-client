@@ -726,7 +726,7 @@ const CharacterScreen = () => {
           {/* 미션 카드 목록 (정렬: 진행 중 → 완료 → 잠김) */}
           {missions.map((mission: any) => (
             <View key={mission.id} style={styles.missionCardWrapper}>
-              <MissionCard mission={mission} myPage={true} />
+              <MissionCard mission={mission} myPage={false} />
             </View>
           ))}
         </View>

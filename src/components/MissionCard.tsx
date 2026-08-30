@@ -57,7 +57,7 @@ const MissionCard = React.memo(
               <Text
                 style={[
                   styles.statusText,
-                  { color: isCompleted ? COLORS.gray800 : COLORS.puple.main },
+                  { color: isCompleted ? COLORS.gray700 : COLORS.puple.main },
                 ]}
               >
                 {mission.status}
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
-  missionCardTitleCompleted: { color: COLORS.puple.completed },
+  missionCardTitleCompleted: { color: COLORS.gray800 },
   missionCardTitleMyPage: { ...Body_16SB, color: COLORS.black },
 
   statusBadge: {
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   // 홈/마이페이지 공용 상태 배지 스타일 (진행 중 / 완료)
-  statusBadgeInProgress: { backgroundColor: COLORS.puple[3] },
+  statusBadgeInProgress: { backgroundColor: COLORS.puple[2] },
   statusBadgeCompleted: { backgroundColor: COLORS.gray200 },
   statusText: { ...Caption_12SB, includeFontPadding: false },
 
