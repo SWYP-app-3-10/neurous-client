@@ -208,15 +208,16 @@ const RootNavigatorContent: React.FC<{
       {modalState.type === 'reward' && (
         <RewardModal
           visible={modalState.visible}
+          layout={modalState.layout}
           image={modalState.image}
           imageSize={modalState.imageSize}
           imageTopOffset={modalState.imageTopOffset}
           topContent={modalState.topContent}
           bottomTopContent={modalState.bottomTopContent}
           rewards={modalState.rewards}
-          onNextArticle={modalState.onNextArticle}
-          onMoreQuiz={modalState.onMoreQuiz}
-          onDismiss={modalState.onDismiss}
+          primaryAction={modalState.primaryAction}
+          secondaryAction={modalState.secondaryAction}
+          dismissAction={modalState.dismissAction}
           closeOnBackdropPress={modalState.closeOnBackdropPress}
           onClose={hideModal}
         />

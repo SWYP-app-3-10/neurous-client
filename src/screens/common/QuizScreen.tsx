@@ -667,8 +667,8 @@ const QuizScreen: React.FC = () => {
       point_amount: earnedReward?.point ?? 0,
     });
 
-    // 아티클 "다 읽었어요" 보상 모달과 동일한 구성. 다만 여기서는 퀴즈를 이미 풀고 난
-    // 직후라 "퀴즈 풀고 더 얻기" 버튼은 의미가 없어서 onMoreQuiz를 넘기지 않는다.
+    // 아티클 "다 읽었어요" 보상 모달과 같은 공용 컴포넌트를 사용한다. 다만 퀴즈를
+    // 이미 풀고 난 직후라 "퀴즈 풀고 더 얻기" 보조 액션은 표시하지 않는다.
     const exp = quizResult?.isAnswerCorrect
       ? QUIZ_CORRECT_EXPERIENCE
       : QUIZ_INCORRECT_EXPERIENCE;
@@ -687,6 +687,7 @@ const QuizScreen: React.FC = () => {
       : undefined;
 
     showRewardModal({
+      layout: isLevelUp ? 'split' : 'compact',
       image:
         isLevelUp && newLevelData ? (
           newLevelData.character(styles.levelUpCharacterImage)
@@ -710,17 +711,9 @@ const QuizScreen: React.FC = () => {
           </Text>
         </>
       ) : (
-        <>
-          <Text
-            style={[styles.rewardModalXpText, { color: COLORS.puple.main }]}
-          >
-            + {exp} XP
-          </Text>
-          <Spacer num={8} />
-          <Text style={styles.rewardModalDescriptionText}>
-            경험치를 획득했어요!
-          </Text>
-        </>
+        <Text style={styles.rewardModalDescriptionText}>
+          포인트 &amp; 경험치 획득!
+        </Text>
       ),
       // 레벨업 모달은 상단 블록이 "축하해요! 레벨 업!" 문구로 채워지면서
       // 일반 모달의 "+ XP" 문구가 밀려나므로, 같은 문구를 리워드 칩 "위"
@@ -728,18 +721,40 @@ const QuizScreen: React.FC = () => {
       bottomTopContent: isLevelUp ? (
         <Text style={styles.levelUpXpText}>+ {exp} XP</Text>
       ) : undefined,
-      rewards: [
-        { label: '퀴즈', value: exp },
-        { label: '포인트', value: point },
-      ],
-      onNextArticle: () => {
-        hideModal();
-        Linking.openURL('https://www.naver.com');
+      rewards: isLevelUp
+        ? [
+            { label: '퀴즈', value: exp, unit: 'XP' },
+            { label: '포인트', value: point, unit: 'P', tone: 'point' },
+          ]
+        : [
+            {
+              label: '경험치',
+              value: exp,
+              unit: 'XP',
+              tone: 'experience',
+            },
+            { label: '포인트', value: point, unit: 'P', tone: 'point' },
+          ],
+      primaryAction: {
+        title: isLevelUp ? '다음 글 보기' : '확인',
+        onPress: () => {
+          hideModal();
+          if (isLevelUp) {
+            Linking.openURL('https://www.naver.com');
+            return;
+          }
+          navigation.dispatch(createQuizCompleteNavigation(returnTo));
+        },
       },
-      onDismiss: () => {
-        hideModal();
-        navigation.dispatch(createQuizCompleteNavigation(returnTo));
-      },
+      dismissAction: isLevelUp
+        ? {
+            title: '지금은 괜찮아요',
+            onPress: () => {
+              hideModal();
+              navigation.dispatch(createQuizCompleteNavigation(returnTo));
+            },
+          }
+        : undefined,
     });
 
     // 레벨업 UI로 소비했으면 store를 비워 다음 진입 때 재노출되지 않게 한다.

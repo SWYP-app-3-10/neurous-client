@@ -456,6 +456,7 @@ const ArticleDetailScreen = () => {
     }
 
     showRewardModal({
+      layout: 'split',
       image:
         isLevelUp && newLevelData ? (
           newLevelData.character(styles.levelUpCharacterImage)
@@ -497,30 +498,45 @@ const ArticleDetailScreen = () => {
         ) : undefined,
       // 리워드 칩 — 이 시점에 실제로 지급되는 보상은 글 읽기 경험치 하나뿐이라
       // 그 값만 보여준다 (미션 완료/데일리 출석 등 다른 보상은 실제로 지급되지 않음)
-      rewards: [{ label: '글 읽기', value: ARTICLE_READ_EXPERIENCE }],
+      rewards: [
+        {
+          label: '글 읽기',
+          value: ARTICLE_READ_EXPERIENCE,
+          unit: 'XP',
+        },
+      ],
       // 버튼 구성은 레벨업 여부와 무관하게 동일하게 유지한다
       // (다이어그램상 글 읽기 레벨업 모달은 "다음 글 보기 / 퀴즈 풀기" 둘 다 유지 —
       //  퀴즈/출석 레벨업 모달이 버튼 1개로 줄어드는 것과는 다른 패턴)
       // "다음 글 보기" — 서버가 다음 글 id를 내려주면 그 글로 이동하도록 교체 예정.
       // 우선은 원문 버튼과 동일하게 네이버로 테스트 연결한다.
-      onNextArticle: () => {
-        hideModal();
-        Linking.openURL('https://www.naver.com');
+      primaryAction: {
+        title: '다음 글 보기',
+        onPress: () => {
+          hideModal();
+          Linking.openURL('https://www.naver.com');
+        },
       },
-      onMoreQuiz: () => {
-        hideModal();
-        logEvent('StartQuiz_Reading');
-        navigation.navigate(RouteNames.QUIZ, {
-          articleId,
-          returnTo: returnTo || 'mission',
-        });
+      secondaryAction: {
+        title: '퀴즈 풀고 더 얻기',
+        onPress: () => {
+          hideModal();
+          logEvent('StartQuiz_Reading');
+          navigation.navigate(RouteNames.QUIZ, {
+            articleId,
+            returnTo: returnTo || 'mission',
+          });
+        },
       },
       // "지금은 괜찮아요" — 모달을 닫고 원래 들어왔던 곳(홈/탐색)으로 돌아간다.
-      onDismiss: () => {
-        hideModal();
-        navigation.dispatch(
-          createQuizCompleteNavigation(returnTo || 'mission'),
-        );
+      dismissAction: {
+        title: '지금은 괜찮아요',
+        onPress: () => {
+          hideModal();
+          navigation.dispatch(
+            createQuizCompleteNavigation(returnTo || 'mission'),
+          );
+        },
       },
     });
   };

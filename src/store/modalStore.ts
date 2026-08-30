@@ -17,7 +17,7 @@ import {
   ModalButton,
   NotificationModalProps,
 } from '../components/NotificationModal';
-import { RewardChip } from '../components/RewardModal';
+import { RewardChip, RewardModalAction } from '../components/RewardModal';
 import { StyleProp, TextStyle } from 'react-native';
 import { ReactNode } from 'react';
 import { ToastPosition } from '../components/ToastModal';
@@ -121,15 +121,16 @@ interface ToastModalState {
 interface RewardModalState {
   type: 'reward';
   visible: boolean;
+  layout?: 'compact' | 'split';
   image: ReactNode; // 카드 위로 떠 있는 캐릭터/트로피 이미지 (RewardModal은 ReactNode만 받음)
   imageSize?: { width: number; height: number };
   imageTopOffset?: number;
   topContent: ReactNode; // 상단 연보라 블록 콘텐츠 (모달 종류별로 다름)
   bottomTopContent?: ReactNode; // 하단 블록에서 리워드 칩 위에 오는 선택적 콘텐츠 (레벨업의 "+25 XP" 등)
   rewards: RewardChip[]; // 실제 지급된 보상만
-  onNextArticle: () => void;
-  onMoreQuiz?: () => void; // 없으면 "퀴즈 풀고 더 얻기" 버튼 자체를 숨김 (레벨업 모달)
-  onDismiss: () => void;
+  primaryAction: RewardModalAction;
+  secondaryAction?: RewardModalAction;
+  dismissAction?: RewardModalAction;
   closeOnBackdropPress?: boolean;
 }
 
@@ -288,8 +289,7 @@ export const useModalStore = create<ModalStore>(set => ({
    *     image: <Modal_IMG />,
    *     topContent: <XpHeadline value={25} />,
    *     rewards: [{ label: '글 읽기', value: 10 }],
-   *     onNextArticle: () => {...},
-   *     onDismiss: () => {...},
+   *     primaryAction: { title: '확인', onPress: () => {...} },
    *   });
    *
    * @param config 모달 설정 (visible, type 제외)

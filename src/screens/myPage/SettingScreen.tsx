@@ -183,6 +183,7 @@ const SettingScreen = () => {
     }
 
     showRewardModal({
+      layout: 'split',
       image: previewLevelData.character(styles.levelUpCharacterImage),
       imageSize: styles.levelUpCharacterImage,
       imageTopOffset: scaleWidth(-20),
@@ -199,11 +200,17 @@ const SettingScreen = () => {
         { label: '미션', value: 5 },
         { label: '퀴즈', value: 20 },
       ],
-      onNextArticle: () => {
-        hideModal();
+      primaryAction: {
+        title: '다음 글 보기',
+        onPress: () => {
+          hideModal();
+        },
       },
-      onDismiss: () => {
-        hideModal();
+      dismissAction: {
+        title: '지금은 괜찮아요',
+        onPress: () => {
+          hideModal();
+        },
       },
     });
   };

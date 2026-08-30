@@ -24,12 +24,23 @@ export interface RewardChip {
   label: string;
   /** 실제로 지급된 값만 넘긴다 — 지급되지 않은 항목은 배열에 아예 포함하지 않는다 */
   value: number;
+  /** XP/P처럼 값 뒤에 붙는 단위. 없으면 기존 출처형 칩으로 표시한다. */
+  unit?: 'XP' | 'P';
+  /** 일반 보상 모달에서 경험치/포인트를 색으로 구분한다. */
+  tone?: 'neutral' | 'experience' | 'point';
+}
+
+export interface RewardModalAction {
+  title: string;
+  onPress: () => void;
 }
 
 export interface RewardModalProps {
   visible: boolean;
   onClose?: () => void;
   closeOnBackdropPress?: boolean;
+  /** compact: 사진 3의 단일 흰 카드, split: 사진 2·4의 2단 카드 */
+  layout?: 'compact' | 'split';
 
   /** 카드 위로 떠 있는 캐릭터/트로피 이미지 */
   image: ReactNode;
@@ -43,25 +54,25 @@ export interface RewardModalProps {
   /** 실제 지급된 보상만 담은 리워드 칩 목록 */
   rewards: RewardChip[];
 
-  onNextArticle: () => void;
-  /** 넘기지 않으면 "퀴즈 풀고 더 얻기" 버튼 자체를 표시하지 않는다 (레벨업 모달용) */
-  onMoreQuiz?: () => void;
-  onDismiss: () => void;
+  primaryAction: RewardModalAction;
+  secondaryAction?: RewardModalAction;
+  dismissAction?: RewardModalAction;
 }
 
 const RewardModal: React.FC<RewardModalProps> = ({
   visible,
   onClose,
   closeOnBackdropPress = false,
+  layout = 'split',
   image,
   imageSize = { width: scaleWidth(80), height: scaleWidth(80) },
   imageTopOffset = scaleWidth(-36),
   topContent,
   bottomTopContent,
   rewards,
-  onNextArticle,
-  onMoreQuiz,
-  onDismiss,
+  primaryAction,
+  secondaryAction,
+  dismissAction,
 }) => {
   const handleOverlayPress = () => {
     // closeOnBackdropPress가 false면 배경 클릭해도 닫지 않음
@@ -91,12 +102,26 @@ const RewardModal: React.FC<RewardModalProps> = ({
               {image}
             </View>
 
-            <View style={styles.card}>
+            <View
+              style={[styles.card, layout === 'compact' && styles.compactCard]}
+            >
               {/* 상단 연보라 블록 */}
-              <View style={styles.topBlock}>{topContent}</View>
+              <View
+                style={[
+                  styles.topBlock,
+                  layout === 'compact' && styles.compactTopBlock,
+                ]}
+              >
+                {topContent}
+              </View>
 
               {/* 하단 흰 블록: (선택) 상단 텍스트 + 리워드 칩 + 액션 버튼 */}
-              <View style={styles.bottomBlock}>
+              <View
+                style={[
+                  styles.bottomBlock,
+                  layout === 'compact' && styles.compactBottomBlock,
+                ]}
+              >
                 {bottomTopContent && (
                   <>
                     {bottomTopContent}
@@ -106,9 +131,25 @@ const RewardModal: React.FC<RewardModalProps> = ({
 
                 <View style={styles.chipRow}>
                   {rewards.map(reward => (
-                    <View key={reward.label} style={styles.chip}>
-                      <Text style={styles.chipText}>
-                        {reward.label} +{reward.value}
+                    <View
+                      key={`${reward.label}-${reward.unit ?? 'source'}`}
+                      style={[
+                        styles.chip,
+                        reward.tone === 'experience' && styles.experienceChip,
+                        reward.tone === 'point' && styles.pointChip,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          reward.tone === 'experience' &&
+                            styles.experienceChipText,
+                          reward.tone === 'point' && styles.pointChipText,
+                        ]}
+                      >
+                        {reward.label} {reward.tone ? '' : '+'}
+                        {reward.value}
+                        {reward.unit ? ` ${reward.unit}` : ''}
                       </Text>
                     </View>
                   ))}
@@ -119,34 +160,37 @@ const RewardModal: React.FC<RewardModalProps> = ({
                 <View style={styles.buttonGroup}>
                   <Button
                     variant="primary"
-                    title="다음 글 보기"
-                    onPress={onNextArticle}
+                    title={primaryAction.title}
+                    onPress={primaryAction.onPress}
                     style={styles.actionButton}
                     textStyle={styles.actionButtonText}
                   />
 
-                  {onMoreQuiz && (
+                  {secondaryAction && (
                     <>
                       <Spacer num={14} />
                       <Button
                         variant="outline"
-                        title="퀴즈 풀고 더 얻기"
-                        onPress={onMoreQuiz}
+                        title={secondaryAction.title}
+                        onPress={secondaryAction.onPress}
                         style={[styles.actionButton, styles.moreQuizButton]}
                         textStyle={styles.moreQuizButtonText}
                       />
                     </>
                   )}
 
-                  <Spacer num={14} />
-
-                  <Button
-                    variant="ghost"
-                    title="지금은 괜찮아요"
-                    onPress={onDismiss}
-                    style={styles.dismissButton}
-                    textStyle={styles.dismissButtonText}
-                  />
+                  {dismissAction && (
+                    <>
+                      <Spacer num={14} />
+                      <Button
+                        variant="ghost"
+                        title={dismissAction.title}
+                        onPress={dismissAction.onPress}
+                        style={styles.dismissButton}
+                        textStyle={styles.dismissButtonText}
+                      />
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -180,12 +224,20 @@ const styles = StyleSheet.create({
     // 위/아래 블록의 배경색이 카드 모서리 둥글기를 벗어나 삐져나오지 않도록 클리핑
     overflow: 'hidden',
   },
+  compactCard: {
+    backgroundColor: COLORS.white,
+  },
   topBlock: {
     width: '100%',
     backgroundColor: COLORS.puple[3],
     paddingTop: scaleWidth(76),
     paddingBottom: scaleWidth(16),
     alignItems: 'center',
+  },
+  compactTopBlock: {
+    backgroundColor: COLORS.white,
+    paddingTop: scaleWidth(84),
+    paddingBottom: scaleWidth(16),
   },
   bottomBlock: {
     width: '100%',
@@ -194,6 +246,9 @@ const styles = StyleSheet.create({
     paddingTop: scaleWidth(16),
     paddingBottom: scaleWidth(28),
     alignItems: 'center',
+  },
+  compactBottomBlock: {
+    paddingTop: 0,
   },
   chipRow: {
     flexDirection: 'row',
@@ -210,6 +265,18 @@ const styles = StyleSheet.create({
   chipText: {
     ...Caption_14R,
     color: COLORS.gray700,
+  },
+  experienceChip: {
+    backgroundColor: COLORS.blue[3],
+  },
+  experienceChipText: {
+    color: COLORS.blue[6],
+  },
+  pointChip: {
+    backgroundColor: COLORS.yellow[1],
+  },
+  pointChipText: {
+    color: COLORS.yellow.medium,
   },
   buttonGroup: {
     width: '100%',

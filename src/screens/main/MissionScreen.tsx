@@ -68,13 +68,11 @@ import {
 } from '../../navigation/types';
 import { RouteNames } from '../../../routes';
 import {
-  useShowModal,
   useShowToastModal,
   useShowRewardModal,
   useHideModal,
 } from '../../store/modalStore';
 import { usePointStore } from '../../store/pointStore';
-import { ExperienceModalContent } from '../../components/ArticlePointModalContent';
 import { useOnboardingStore } from '../../store/onboardingStore';
 
 import {
@@ -188,7 +186,6 @@ const MissionScreen = () => {
     entrySource: 'home',
   });
 
-  const showModal = useShowModal();
   const showToastModal = useShowToastModal();
   const showRewardModal = useShowRewardModal();
   const hideModal = useHideModal();
@@ -668,50 +665,74 @@ const MissionScreen = () => {
             // 레벨업으로 추정되면 일반 출석 팝업 대신 퀴즈와 동일한
             // 레벨업 UI(RewardModal)를 띄운다. 칩/버튼 구성만 출석에 맞게 조정.
             showRewardModal({
-              image: newLevelData.character(styles.levelUpCharacterImage),
-              imageSize: styles.levelUpCharacterImage,
+              layout: 'split',
+              image: newLevelData.character(
+                missionScreenStyles.levelUpCharacterImage,
+              ),
+              imageSize: missionScreenStyles.levelUpCharacterImage,
               imageTopOffset: scaleWidth(-20),
               closeOnBackdropPress: false,
               topContent: (
                 <>
-                  <Text style={styles.levelUpCaptionText}>
+                  <Text style={missionScreenStyles.levelUpCaptionText}>
                     축하해요! 레벨 업!
                   </Text>
                   <Spacer num={6} />
-                  <Text style={styles.levelUpTitleText}>
+                  <Text style={missionScreenStyles.levelUpTitleText}>
                     {newLevelData.title}
                   </Text>
                 </>
               ),
               bottomTopContent: (
-                <Text style={styles.levelUpXpText}>+ {totalExp} XP</Text>
+                <Text style={missionScreenStyles.levelUpXpText}>
+                  + {totalExp} XP
+                </Text>
               ),
               rewards: [
-                { label: '출석', value: totalExp },
-                { label: '포인트', value: totalPoint },
+                { label: '출석', value: totalExp, unit: 'XP' },
+                {
+                  label: '포인트',
+                  value: totalPoint,
+                  unit: 'P',
+                  tone: 'point',
+                },
               ],
-              onNextArticle: () => {
-                hideModal();
-              },
-              onDismiss: () => {
-                hideModal();
+              primaryAction: {
+                title: '확인',
+                onPress: () => {
+                  hideModal();
+                },
               },
             });
           } else {
-            // 출석 체크 모달 표시 (위클리 조건 충족 시 데일리+위클리 합산 값으로 표시)
-            showModal({
-              title: '포인트 & 경험치 획득!',
+            // 출석 체크 모달: 포인트·경험치 시안(단일 흰 카드)으로 통일한다.
+            showRewardModal({
+              layout: 'compact',
               image: <Modal_IMG />,
-              titleStyle: {
-                ...Heading_20EB_Round,
+              closeOnBackdropPress: false,
+              topContent: (
+                <Text style={missionScreenStyles.rewardModalTitleText}>
+                  포인트 &amp; 경험치 획득!
+                </Text>
+              ),
+              rewards: [
+                {
+                  label: '경험치',
+                  value: totalExp,
+                  unit: 'XP',
+                  tone: 'experience',
+                },
+                {
+                  label: '포인트',
+                  value: totalPoint,
+                  unit: 'P',
+                  tone: 'point',
+                },
+              ],
+              primaryAction: {
+                title: '확인',
+                onPress: hideModal,
               },
-              titleDescriptionGapSize: scaleWidth(20),
-              children: React.createElement(ExperienceModalContent, {
-                point: true,
-                daily: true, // 일일 출석 표시
-                weekly: isWeeklyAttendanceComplete, // 일요일이면 위클리 합산 표시로 전환
-              }),
-              primaryButton: { title: '확인', onPress: () => {} },
             });
           }
         } else {
@@ -724,7 +745,7 @@ const MissionScreen = () => {
     };
 
     checkDailyEntry();
-  }, [addExperience, addPoints, showModal, showRewardModal, hideModal]);
+  }, [addExperience, addPoints, showRewardModal, hideModal]);
 
   // ──────────────────────────────────────────────
   // UI 렌더링
@@ -999,6 +1020,11 @@ export const missionScreenStyles = StyleSheet.create({
   levelUpCaptionText: {
     ...Caption_14R,
     color: COLORS.gray800,
+    textAlign: 'center',
+  },
+  rewardModalTitleText: {
+    ...Heading_20EB_Round,
+    color: COLORS.black,
     textAlign: 'center',
   },
   levelUpTitleText: {
