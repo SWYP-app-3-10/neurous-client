@@ -23,7 +23,7 @@ import { trackEvent } from '../services/mixpanelService';
 
 interface UseDifficultySuggestionReturn {
   // 제안 수락 핸들러
-  handleAcceptSuggestion: (suggestedLevel: LevelCategory) => Promise<void>;
+  handleAcceptSuggestion: (suggestedLevel: LevelCategory) => Promise<boolean>;
 
   // 제안 거절 핸들러
   handleDeclineSuggestion: () => Promise<void>;
@@ -49,7 +49,7 @@ export function useDifficultySuggestion(): UseDifficultySuggestionReturn {
    * 제안 수락 핸들러 ("좋아요" 버튼)
    */
   const handleAcceptSuggestion = useCallback(
-    async (suggestedLevel: LevelCategory): Promise<void> => {
+    async (suggestedLevel: LevelCategory): Promise<boolean> => {
       try {
         setIsLoading(true);
 
@@ -60,7 +60,7 @@ export function useDifficultySuggestion(): UseDifficultySuggestionReturn {
             '오류',
             '사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.',
           );
-          return;
+          return false;
         }
 
         // 2. 서버 api 호출 (난이도 업데이트)
@@ -92,12 +92,14 @@ export function useDifficultySuggestion(): UseDifficultySuggestionReturn {
         // 난이도 선택 카운트 리셋
         await clearDifficultyFeedbackHistory();
         console.log('[DifficultySuggestion] 피드백 히스토리 초기화 완료');
+        return true;
       } catch (error) {
         console.error('[DifficultySuggestion] 제안 수락 실패:', error);
         Alert.alert(
           '업데이트 실패',
           '난이도 업데이트에 실패했습니다. 다시 시도해주세요.',
         );
+        return false;
       } finally {
         setIsLoading(false);
       }
