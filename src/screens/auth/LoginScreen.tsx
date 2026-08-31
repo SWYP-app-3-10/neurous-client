@@ -51,6 +51,8 @@ import { NeurousLogo } from '../../icons/commonIcons/simpleImages';
 import { logEvent, logScreenView } from '../../services/analyticsService';
 import { updateNotificationStatus } from '../../api/notificationApi';
 import { getUserInfo } from '../../services/authService';
+import { resetDifficultySubmitStatus } from '../../hooks/useDifficultySubmit';
+import { clearDifficultyFeedbackHistory } from '../../services/difficultyFeedbackService';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList>;
 
@@ -350,6 +352,12 @@ const LoginScreen = () => {
             // 기존 유저: 이용약관/온보딩 없이 바로 홈으로
             await handleNotificationModal(true);
           } else {
+            // 탈퇴 후 같은 기기에서 재가입해도 이전 계정의 일일 제출 여부와
+            // 피드백 이력을 이어받지 않도록 신규 계정 경계에서 한 번 더 초기화한다.
+            await Promise.all([
+              resetDifficultySubmitStatus(),
+              clearDifficultyFeedbackHistory(),
+            ]);
             // 신규 유저: 알림 권한 처리 후 이용약관 화면으로 이동
             await handleNotificationModal(false, provider);
           }

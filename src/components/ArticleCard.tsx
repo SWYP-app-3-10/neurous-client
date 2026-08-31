@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
 import { Heading_18EB_Round, Caption_14R } from '../styles/typography';
 import Spacer from './Spacer';
+import { normalizeCategoryName } from '../utils/categoryName';
 
 interface Article {
   id: number | string;
@@ -37,7 +38,7 @@ const ArticleCard = React.memo<ArticleCardProps>(({ article, onPress }) => {
               source={{ uri: article.imageUrl }}
               style={styles.articleImage}
               resizeMode="cover"
-              onError={(error) => {
+              onError={error => {
                 console.error('[ArticleCard] 이미지 로딩 실패:', {
                   url: article.imageUrl,
                   error: error.nativeEvent?.error || error,
@@ -50,7 +51,9 @@ const ArticleCard = React.memo<ArticleCardProps>(({ article, onPress }) => {
             <View style={styles.articleImagePlaceholder} />
           )}
           <View style={styles.articleTag}>
-            <Text style={styles.articleTagText}>{article.category}</Text>
+            <Text style={styles.articleTagText}>
+              {normalizeCategoryName(article.category)}
+            </Text>
             <Text style={styles.articleTagDivider}>|</Text>
             <Text style={styles.articleTagText}>{article.readTime}</Text>
           </View>
