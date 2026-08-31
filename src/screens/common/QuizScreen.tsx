@@ -43,6 +43,7 @@ import {
   Caption_14R,
   Heading_18EB_Round,
   Heading_20EB_Round,
+  Heading_22EB,
   Heading_24EB_Round,
   Heading_26EB_Round,
 } from '../../styles/typography';
@@ -1137,7 +1138,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   levelUpXpText: {
-    ...Heading_20EB_Round,
+    ...Heading_22EB,
     color: COLORS.puple.main,
     textAlign: 'center',
   },

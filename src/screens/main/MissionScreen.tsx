@@ -49,6 +49,7 @@ import {
   Heading_24EB_Round,
   Body_16M,
   Heading_20EB_Round,
+  Heading_22EB,
   Caption_14R,
 } from '../../styles/typography';
 import Spacer from '../../components/Spacer';
@@ -1033,7 +1034,7 @@ export const missionScreenStyles = StyleSheet.create({
     textAlign: 'center',
   },
   levelUpXpText: {
-    ...Heading_20EB_Round,
+    ...Heading_22EB,
     color: COLORS.puple.main,
     textAlign: 'center',
   },
