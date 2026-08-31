@@ -65,7 +65,12 @@ const TYPOGRAPHY = StyleSheet.create({
     letterSpacing: getLetterSpacing(24, 0),
   },
   // Figma Heading/22EB — 레벨업 모달의 "+ XP" 강조 문구
-  Heading_22EB: createTextStyle(22, 800, 150, 0),
+  Heading_22EB_Round: {
+    fontFamily: 'NanumSquareRoundEB',
+    fontSize: scaleWidth(22),
+    lineHeight: getLineHeight(22, 150),
+    letterSpacing: getLetterSpacing(22, 0),
+  },
   Heading_20EB_Round: {
     fontFamily: 'NanumSquareRoundEB',
     fontSize: scaleWidth(20),
@@ -105,7 +110,7 @@ const TYPOGRAPHY = StyleSheet.create({
 
 export const Heading_26EB_Round = TYPOGRAPHY.Heading_26EB_Round;
 export const Heading_24EB_Round = TYPOGRAPHY.Heading_24EB_Round;
-export const Heading_22EB = TYPOGRAPHY.Heading_22EB;
+export const Heading_22EB_Round = TYPOGRAPHY.Heading_22EB_Round;
 export const Heading_20EB_Round = TYPOGRAPHY.Heading_20EB_Round;
 export const Heading_18B = TYPOGRAPHY.Heading_18B;
 export const Heading_18EB_Round = TYPOGRAPHY.Heading_18EB_Round;

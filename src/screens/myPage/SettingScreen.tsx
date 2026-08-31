@@ -33,7 +33,7 @@ import {
   Caption_14R,
   Body_16SB,
   Heading_24EB_Round,
-  Heading_22EB,
+  Heading_22EB_Round,
 } from '../../styles/typography';
 import { RouteNames } from '../../../routes';
 
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   levelUpXpText: {
-    ...Heading_22EB,
+    ...Heading_22EB_Round,
     color: COLORS.puple.main,
     textAlign: 'center',
   },

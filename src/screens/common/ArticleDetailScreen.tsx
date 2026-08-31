@@ -52,7 +52,7 @@ import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
   Body_16M,
   Heading_20EB_Round,
-  Heading_22EB,
+  Heading_22EB_Round,
   Heading_26EB_Round,
   Heading_24EB_Round,
   Caption_14R,
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   levelUpXpText: {
-    ...Heading_22EB,
+    ...Heading_22EB_Round,
     color: COLORS.puple.main,
     textAlign: 'center',
   },
