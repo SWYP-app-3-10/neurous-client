@@ -192,6 +192,9 @@ const QuizScreen: React.FC = () => {
   /** 퀴즈 제출 중인지 여부 (버튼 연타로 인한 중복 제출 방지) */
   const isSubmittingQuizRef = useRef(false);
 
+  /** 난이도 평가 제출 중인지 여부 (선택지 연타로 인한 중복 제출 방지) */
+  const isSubmittingDifficultyRef = useRef(false);
+
   // ──────────────────────────────────────────────
   // Effect 1: 화면 상태에 따른 analytics 로그
   // ──────────────────────────────────────────────
@@ -302,11 +305,11 @@ const QuizScreen: React.FC = () => {
    *   2. 이미 제출했으면 모달 표시 없이 종료
    *   3. 제출하지 않았으면 난이도 선택 모달 표시
    *   4. 사용자가 난이도 선택 시:
+   *      - submitDifficultyToServer() 서버 제출 및 오늘 제출 날짜 기록
    *      - saveDifficultyFeedback() 피드백 저장
    *      - checkAfterFeedback() 즉시 분석
    *      - 조건 충족 시 난이도 제안 팝업 (LevelSuggestionModal)
-   *      - submitDifficultyToServer() API 호출
-   *      - 0.2초 후 모달 닫기
+   *      - 제안 조건 미달이면 0.2초 후 모달 닫기
    *
    * 변경 사유:
    *   - 기존: 퀴즈 완료 후 "완료" 버튼 클릭 시 표시
@@ -335,9 +338,25 @@ const QuizScreen: React.FC = () => {
           <DifficultySelectionModal
             initialDifficulty={selectedDifficulty}
             onSelect={async difficulty => {
+              if (isSubmittingDifficultyRef.current) {
+                return;
+              }
+
+              isSubmittingDifficultyRef.current = true;
               setSelectedDifficulty(difficulty);
 
-              // Step 1: 피드백 저장
+              // 평가 제출이 성공해야 일일 제출 날짜가 기록된다. 서버 전송에
+              // 실패한 선택은 로컬 제안 통계에도 포함하지 않아 재시도할 수 있게 한다.
+              const didSubmit = await submitDifficultyToServer(
+                articleId,
+                difficulty,
+              );
+              if (!didSubmit) {
+                isSubmittingDifficultyRef.current = false;
+                return;
+              }
+
+              // Step 1: 서버 제출이 완료된 피드백만 로컬 분석 이력에 저장
               let feedbackType: 'easy' | 'normal' | 'hard';
               if (difficulty === 'easy') {
                 feedbackType = 'easy';
@@ -392,16 +411,22 @@ const QuizScreen: React.FC = () => {
                       ...Heading_18EB_Round,
                     },
                     titleDescriptionGapSize: scaleWidth(16),
-                    closeOnBackdropPress: true,
+                    // 수락/거절 처리를 거치지 않고 이력 초기화를 우회하지 않도록
+                    // 제안 모달은 명시적인 버튼으로만 닫는다.
+                    closeOnBackdropPress: false,
                     children: React.createElement(LevelSuggestionModal, {
                       suggestedLevel,
                       reason: analysis.reason as 'easy' | 'hard',
                       stats: analysis.stats,
 
                       onAccept: async () => {
-                        logEvent('Accept_Level_Suggestion');
+                        const didAccept =
+                          await handleAcceptSuggestion(suggestedLevel);
+                        if (!didAccept) {
+                          return;
+                        }
 
-                        // Mixpanel: 난이도 변경 제안 수락
+                        logEvent('Accept_Level_Suggestion');
                         trackEvent('difficulty_recommendation_accepted', {
                           difficulty_before: difficultyBefore
                             ? LevelCategoryNames[difficultyBefore]
@@ -409,7 +434,6 @@ const QuizScreen: React.FC = () => {
                           difficulty_after: LevelCategoryNames[suggestedLevel],
                         });
 
-                        await handleAcceptSuggestion(suggestedLevel);
                         hideModal();
                         showToastModal({
                           message: '난이도 설정이 완료되었어요',
@@ -424,9 +448,9 @@ const QuizScreen: React.FC = () => {
                       },
 
                       onDecline: async () => {
-                        logEvent('Decline_Level_Suggestion');
+                        await handleDeclineSuggestion();
 
-                        // Mixpanel: 난이도 변경 제안 거절
+                        logEvent('Decline_Level_Suggestion');
                         trackEvent('difficulty_recommendation_dismissed', {
                           current_difficulty: difficultyBefore
                             ? LevelCategoryNames[difficultyBefore]
@@ -435,7 +459,6 @@ const QuizScreen: React.FC = () => {
                             LevelCategoryNames[suggestedLevel],
                         });
 
-                        await handleDeclineSuggestion();
                         hideModal();
                       },
                     }),
@@ -446,10 +469,7 @@ const QuizScreen: React.FC = () => {
                 return;
               }
 
-              // Step 4: 서버로 난이도 전송 후 모달 닫기
-              await submitDifficultyToServer(articleId, difficulty);
-
-              // 0.2초 지연: 사용자가 선택한 것을 시각적으로 확인할 수 있도록
+              // Step 4: 제안이 없으면 선택 상태를 잠시 보여준 뒤 모달 닫기
               setTimeout(() => {
                 hideModal();
               }, 200);
