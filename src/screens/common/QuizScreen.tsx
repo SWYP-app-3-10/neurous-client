@@ -688,6 +688,7 @@ const QuizScreen: React.FC = () => {
 
     showRewardModal({
       layout: isLevelUp ? 'split' : 'compact',
+      imagePlacement: isLevelUp ? 'levelUp' : 'reward',
       image:
         isLevelUp && newLevelData ? (
           newLevelData.character(styles.levelUpCharacterImage)
@@ -700,7 +701,6 @@ const QuizScreen: React.FC = () => {
       imageSize: isLevelUp
         ? { width: scaleWidth(120), height: scaleWidth(120) }
         : undefined,
-      imageTopOffset: isLevelUp ? scaleWidth(-20) : undefined,
       closeOnBackdropPress: false,
       topContent: isLevelUp ? (
         <>

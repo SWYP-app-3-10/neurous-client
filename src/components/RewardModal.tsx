@@ -41,6 +41,8 @@ export interface RewardModalProps {
   closeOnBackdropPress?: boolean;
   /** compact: 사진 3의 단일 흰 카드, split: 사진 2·4의 2단 카드 */
   layout?: 'compact' | 'split';
+  /** 폭죽과 레벨업 캐릭터는 카드에 걸치는 높이가 달라 별도 기준을 사용한다. */
+  imagePlacement?: 'reward' | 'levelUp';
 
   /** 카드 위로 떠 있는 캐릭터/트로피 이미지 */
   image: ReactNode;
@@ -64,9 +66,10 @@ const RewardModal: React.FC<RewardModalProps> = ({
   onClose,
   closeOnBackdropPress = false,
   layout = 'split',
+  imagePlacement = 'reward',
   image,
   imageSize = { width: scaleWidth(80), height: scaleWidth(80) },
-  imageTopOffset = scaleWidth(-36),
+  imageTopOffset,
   topContent,
   bottomTopContent,
   rewards,
@@ -74,6 +77,10 @@ const RewardModal: React.FC<RewardModalProps> = ({
   secondaryAction,
   dismissAction,
 }) => {
+  const resolvedImageTopOffset =
+    imageTopOffset ??
+    (imagePlacement === 'levelUp' ? scaleWidth(-72) : scaleWidth(-36));
+
   const handleOverlayPress = () => {
     // closeOnBackdropPress가 false면 배경 클릭해도 닫지 않음
     if (closeOnBackdropPress) {
@@ -96,7 +103,7 @@ const RewardModal: React.FC<RewardModalProps> = ({
               style={[
                 styles.imageContainer,
                 imageSize,
-                { top: imageTopOffset },
+                { top: resolvedImageTopOffset },
               ]}
             >
               {image}

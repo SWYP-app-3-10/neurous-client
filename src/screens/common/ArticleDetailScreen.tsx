@@ -457,6 +457,7 @@ const ArticleDetailScreen = () => {
 
     showRewardModal({
       layout: 'split',
+      imagePlacement: isLevelUp ? 'levelUp' : 'reward',
       image:
         isLevelUp && newLevelData ? (
           newLevelData.character(styles.levelUpCharacterImage)
@@ -465,7 +466,6 @@ const ArticleDetailScreen = () => {
         ),
       imageSize:
         isLevelUp && newLevelData ? styles.levelUpCharacterImage : undefined,
-      imageTopOffset: isLevelUp && newLevelData ? scaleWidth(-20) : undefined,
       closeOnBackdropPress: false,
       // 상단 연보라 블록: 레벨업이면 축하 문구, 아니면 기존 "+25 XP" 헤드라인
       topContent:

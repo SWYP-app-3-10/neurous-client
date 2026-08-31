@@ -184,9 +184,9 @@ const SettingScreen = () => {
 
     showRewardModal({
       layout: 'split',
+      imagePlacement: 'levelUp',
       image: previewLevelData.character(styles.levelUpCharacterImage),
       imageSize: styles.levelUpCharacterImage,
-      imageTopOffset: scaleWidth(-20),
       closeOnBackdropPress: false,
       topContent: (
         <>

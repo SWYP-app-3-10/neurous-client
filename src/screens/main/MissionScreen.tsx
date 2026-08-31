@@ -666,11 +666,11 @@ const MissionScreen = () => {
             // 레벨업 UI(RewardModal)를 띄운다. 칩/버튼 구성만 출석에 맞게 조정.
             showRewardModal({
               layout: 'split',
+              imagePlacement: 'levelUp',
               image: newLevelData.character(
                 missionScreenStyles.levelUpCharacterImage,
               ),
               imageSize: missionScreenStyles.levelUpCharacterImage,
-              imageTopOffset: scaleWidth(-20),
               closeOnBackdropPress: false,
               topContent: (
                 <>

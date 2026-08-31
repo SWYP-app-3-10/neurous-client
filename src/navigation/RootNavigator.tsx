@@ -209,6 +209,7 @@ const RootNavigatorContent: React.FC<{
         <RewardModal
           visible={modalState.visible}
           layout={modalState.layout}
+          imagePlacement={modalState.imagePlacement}
           image={modalState.image}
           imageSize={modalState.imageSize}
           imageTopOffset={modalState.imageTopOffset}

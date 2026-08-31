@@ -122,6 +122,7 @@ interface RewardModalState {
   type: 'reward';
   visible: boolean;
   layout?: 'compact' | 'split';
+  imagePlacement?: 'reward' | 'levelUp';
   image: ReactNode; // 카드 위로 떠 있는 캐릭터/트로피 이미지 (RewardModal은 ReactNode만 받음)
   imageSize?: { width: number; height: number };
   imageTopOffset?: number;
