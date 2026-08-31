@@ -14,7 +14,12 @@ import { Difficulty } from '../components/DifficultySelectionModal';
  * 마지막 난이도 전송 날짜를 저장하는 AsyncStorage 키
  * 하루 한 번 전송 제한에 사용됨
  */
-const DIFFICULTY_SUBMIT_KEY = '@difficulty_submit_date';
+export const DIFFICULTY_SUBMIT_KEY = '@difficulty_submit_date';
+
+/** 신규 가입 계정은 이전 계정의 일일 제출 여부를 이어받지 않는다. */
+export const resetDifficultySubmitStatus = async (): Promise<void> => {
+  await AsyncStorage.removeItem(DIFFICULTY_SUBMIT_KEY);
+};
 
 /**
  * 화면용 난이도 타입 → API 요청 포맷 변환
