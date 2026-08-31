@@ -12,10 +12,10 @@
 | `authApi.ts`         | 로그인 / 토큰 갱신 / 로그아웃                    |
 | `characterApi.ts`    | 캐릭터 정보 조회 및 리워드                       |
 | `contentApi.ts`      | 아티클/콘텐츠 목록·상세 조회                     |
-| `missionApi.ts`      | 미션 목록 및 완료 처리                           |
+| `missionApi.ts`      | 미션·퀴즈 처리, 콘텐츠 난이도 평가 제출          |
 | `notificationApi.ts` | 알림 조회 및 SSE 구독                            |
 | `pointHistoryApi.ts` | 포인트 내역 조회                                 |
-| `userApi.ts`         | 유저 정보 조회·수정                              |
+| `userApi.ts`         | 유저 정보 조회·수정, 사용자 콘텐츠 난이도 변경   |
 | `withdrawApi.ts`     | 회원 탈퇴                                        |
 
 ---
@@ -102,6 +102,16 @@ _retry?: boolean             // 같은 요청이 두 번 재시도 안 하도록
 ---
 
 ## 📌 핵심 원칙
+
+### 난이도 관련 API
+
+| 함수 | 엔드포인트 | 책임 |
+| --- | --- | --- |
+| `submitDifficulty` (`missionApi.ts`) | `POST /api/content/:contentId/difficulty?userId=&difficulty=` | 특정 글에 대한 체감 평가 `EASY`/`MEDIUM`/`HARD` 제출 |
+| `updateUserLevel` (`userApi.ts`) | `PATCH /api/user/update/level?userId=` | 사용자의 콘텐츠 난이도 `BEGINNER`/`INTERMEDIATE`/`ADVANCED` 변경 |
+| `fetchDifficultyInfo` (`userApi.ts`) | `GET /api/levels/:level` | 난이도별 설명·읽기 시간 가이드 조회 |
+
+API 모듈은 HTTP 요청과 응답 반환만 담당합니다. 하루 1회 제한, 로컬 평가 이력, 제안 분석, Zustand 갱신은 훅·서비스·화면 계층의 책임입니다. 전체 흐름은 `docs/DIFFICULTY_FLOW.md` 참고.
 
 > **api/ 폴더는 HTTP 통신만 담당함**  
 > 비즈니스 로직(토큰 저장, 상태 업데이트 등)은 `services/`나 `hooks/`에서 처리

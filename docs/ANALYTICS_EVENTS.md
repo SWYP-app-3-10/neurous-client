@@ -50,6 +50,8 @@
 | `search_result_click` | 검색 결과에서 글 선택 | `article_id`, `category` | `SearchScreen.tsx` 외 검색 화면 3곳 |
 | `my_page_view` | 마이페이지 탭 진입 | - | `MyPageScreen.tsx` |
 
+> 난이도 추천 수락 이벤트는 `updateUserLevel` 성공 후에만 기록한다. API 실패 시 제안 모달을 유지하고 `accepted`/`difficulty_changed` 및 성공 토스트를 발생시키지 않는다. 거절 이벤트는 피드백 이력 초기화 후 기록한다. 전체 플로우는 `docs/DIFFICULTY_FLOW.md` 참고.
+
 ### reward_source 값
 
 | 값 | 의미 | 구현 여부 |

@@ -207,6 +207,7 @@ fix(client): 소셜 로그인 API에 stale 토큰 첨부되는 문제 수정
 | [`docs/AUTH_FLOW.md`](./docs/AUTH_FLOW.md)                     | 소셜 로그인, Firebase Auth, JWT, Axios Interceptor               |
 | [`docs/NOTIFICATION.md`](./docs/NOTIFICATION.md)               | SSE, FCM, 알림 권한, 토큰 등록/해제                              |
 | [`docs/ANALYTICS_EVENTS.md`](./docs/ANALYTICS_EVENTS.md)       | Firebase Analytics / Mixpanel 이벤트 전체 목록                   |
+| [`docs/DIFFICULTY_FLOW.md`](./docs/DIFFICULTY_FLOW.md)         | 난이도 평가·누적 분석·변경 제안·계정 초기화 상세 플로우          |
 | [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md)         | Google/Kakao/Naver 로그인, iOS Archive, Node, CocoaPods 문제     |
 | [`docs/LEVEL_UP_FLOW.md`](./docs/LEVEL_UP_FLOW.md)             | 경험치/레벨업 지급 소스, 레벨업 모달 표시 흐름, 알려진 제약      |
 | [`docs/POINT_FLOW.md`](./docs/POINT_FLOW.md)                   | 포인트 지급/차감 흐름, 서버-로컬 동기화 현황, 알려진 제약        |

@@ -20,6 +20,8 @@
 | `useUpdateLevel.ts` | 레벨(난이도) 업데이트 |
 | `useDifficultyInfo.ts` | 난이도 정보 조회 |
 | `useDifficultySubmit.ts` | 난이도 제출 |
+| `useDifficultyFeedbackCheck.ts` | 최근 평가 이력 분석 및 제안 여부 확인 |
+| `useDifficultySuggestion.ts` | 제안 수락·거절과 사용자 난이도 변경 |
 | `useWithdrawUser.ts` | 회원 탈퇴 처리 |
 
 ### 📱 UI/기능 훅 (로컬 상태 기반)
@@ -96,6 +98,18 @@ prefetchCharacterAfterReward();
 - **원인**: React Query가 같은 query key(`characterKeys.me()`/`data()`)로 동시에 들어온 요청을 중복 제거하는데, 두 번째 실행 시간을 첫 요청의 완료 여부와 무관한 고정 타이머로 계산했습니다.
 - **수정**: 첫 `prefetchQuery` 묶음을 `Promise.all`로 기다린 뒤, **첫 요청 완료 시점부터 1.5초 후** 두 번째 prefetch를 실행하도록 변경했습니다. 첫 요청이 느려도 두 호출이 겹치지 않으므로 활성 상태인 캐릭터 화면에도 후속 응답이 자동 반영됩니다.
 - **관련 PR**: `fix(character, auth, article): 캐릭터 갱신 및 재가입·카테고리 오류 수정` (#125)
+
+---
+
+## 🎚️ 난이도 평가·제안 훅
+
+| 훅 | 입력 | 성공 결과 | 실패 처리 |
+| --- | --- | --- | --- |
+| `useDifficultySubmit` | 콘텐츠 ID, `easy/normal/hard` | 서버 제출 후 `@difficulty_submit_date`에 현지 날짜 저장, `true` 반환 | 날짜·로컬 통계 미저장, `false` 반환 |
+| `useDifficultyFeedbackCheck` | 로컬 최근 평가 + 현재 `LevelCategory` | 상향·하향 제안 또는 유지 결과 | `null` 반환 |
+| `useDifficultySuggestion` | 제안 난이도 또는 거절 | 수락 시 서버·Zustand 변경 후 `true`, 수락·거절 후 이력 초기화 | 수락 실패 시 `false`, 모달 유지 가능 |
+
+처리 순서는 `서버 평가 제출 → 로컬 이력 저장 → 누적 분석 → 제안`이다. 제안이 발생해도 평가 제출이 누락되지 않아야 한다. 상세 흐름은 `docs/DIFFICULTY_FLOW.md` 참고.
 
 ---
 

@@ -21,7 +21,7 @@
 | ----------------------------- | -------------------------- |
 | `ArticleDetailScreen.tsx`     | 아티클 상세 보기 (읽는 중) |
 | `ReadArticleDetailScreen.tsx` | 이미 읽은 아티클 다시 보기 |
-| `QuizScreen.tsx`              | 아티클 독해 퀴즈           |
+| `QuizScreen.tsx`              | 아티클 독해 퀴즈, 일일 난이도 평가 및 변경 제안 플로우 조정 |
 
 ### 🎮 캐릭터 성장 화면
 
@@ -134,6 +134,20 @@ useNotificationPermission()  →  알림 권한 요청
 | 상황 | 처음 읽는 아티클            | 이미 읽은 아티클 재열람 |
 | 퀴즈 | 완료 후 QuizScreen으로 이동 | 퀴즈 재도전 가능        |
 | EXP  | 완료 시 경험치 부여         | 경험치 없음             |
+
+### QuizScreen 난이도 평가 흐름
+
+```text
+화면 진입 → 오늘 평가 여부 확인
+  → 미평가: 평가 모달
+  → 서버 제출 성공: 로컬 이력 저장·분석
+    → 조건 미달: 평가 모달 종료
+    → 조건 충족: 난이도 제안 모달
+      → 수락 성공: 서버·로컬 난이도 변경
+      → 거절: 현재 난이도 유지
+```
+
+화면은 순서를 조정하지만 API·분석·저장은 각각 `useDifficultySubmit`, `useDifficultyFeedbackCheck`, `useDifficultySuggestion`, `difficultyFeedbackService`에 위임한다. 자세한 실패 분기와 저장 키는 `docs/DIFFICULTY_FLOW.md` 참고.
 
 ---
 
