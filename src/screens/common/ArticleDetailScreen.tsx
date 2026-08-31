@@ -606,16 +606,18 @@ const ArticleDetailScreen = () => {
           textStyle={Body_16M}
         />
 
-        <Spacer num={48} />
+        <Spacer num={44} />
       </ScrollView>
 
       {/* "다 읽었어요" — 누르면 다음 행동 선택 모달(다음 글 보기 / 퀴즈 풀고 더 얻기 / 지금은 괜찮아요) 표시 */}
-      <Button
-        title="다 읽었어요"
-        onPress={handlePressDoneReadingButton}
-        variant="primary"
-        style={styles.doneReadingButton}
-      />
+      <View style={styles.doneReadingButtonContainer}>
+        <Button
+          title="다 읽었어요"
+          onPress={handlePressDoneReadingButton}
+          variant="primary"
+          style={styles.doneReadingButton}
+        />
+      </View>
     </SafeAreaView>
   );
 };
@@ -664,6 +666,12 @@ const styles = StyleSheet.create({
     paddingVertical: scaleWidth(12),
     borderRadius: BORDER_RADIUS[12],
     backgroundColor: COLORS.puple[3],
+  },
+
+  /** 하단 "다 읽었어요" 버튼 영역 — Safe Area를 제외한 Figma 상하 여백 */
+  doneReadingButtonContainer: {
+    paddingTop: scaleWidth(4),
+    paddingBottom: scaleWidth(8),
   },
 
   /** 하단 "다 읽었어요" 버튼 */
