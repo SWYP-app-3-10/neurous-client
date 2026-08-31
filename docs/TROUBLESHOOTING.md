@@ -142,6 +142,15 @@
 - **해결**: 로그아웃·탈퇴 시 두 키를 모두 삭제하고, 서버가 `newUser`로 판정한 신규 가입 로그인에서도 두 값을 다시 초기화해 이전 계정 상태가 재가입 계정으로 넘어가지 않도록 이중 방어
 - **수정 파일**: `src/services/authService.ts`, `src/screens/auth/LoginScreen.tsx`, `src/hooks/useDifficultySubmit.ts`
 
+### 난이도 제안이 뜬 평가가 서버에 제출되지 않음
+
+- **증상**: 제안 조건을 충족하면 난이도 변경 제안 모달은 표시되지만, 같은 날 다른 글에서도 평가 모달이 다시 나타날 수 있고 해당 글의 평가가 서버에 남지 않음
+- **원인**: 기존 순서가 `로컬 이력 저장 → 제안 분석 → 조건 충족 시 return → 서버 제출`이라 제안 분기에서 `submitDifficultyToServer()`와 `@difficulty_submit_date` 저장에 도달하지 못함. QA 임계값이 낮을 때는 제안 모달 자체가 보여 정상처럼 보였고, 운영 임계값(쉬움 13/어려움 8)에서는 분기 진입 빈도가 낮아 잠재 오류가 늦게 발견됨
+- **해결**: `서버 제출 성공 → 오늘 날짜 저장 → 로컬 이력 저장 → 제안 분석`으로 순서를 변경. 서버 실패 시 로컬 이력과 날짜를 저장하지 않고 평가 모달에서 재선택 가능하도록 처리
+- **추가 방어**: 제안 수락 API가 `boolean`을 반환하게 해 성공한 경우에만 모달 종료·이벤트·토스트 실행. 제안 모달의 배경 종료와 버튼 연타를 차단
+- **수정 파일**: `src/screens/common/QuizScreen.tsx`, `src/hooks/useDifficultySubmit.ts`, `src/hooks/useDifficultySuggestion.ts`, `src/components/LevelSuggestionModal.tsx`
+- **상세 문서**: `docs/DIFFICULTY_FLOW.md`
+
 ### IT 카테고리가 `IT/`로 잘려 표시됨
 
 - **증상**: 일부 아티클 카드의 카테고리 배지가 정식 명칭 `IT/과학` 대신 `IT/` 또는 `IT`로 표시됨
