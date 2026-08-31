@@ -14,6 +14,7 @@
 | `socialLoginService.ts` | Google/Kakao/Naver/Apple 소셜 로그인 SDK 연동 |
 | `onboardingService.ts` | 온보딩 상태 AsyncStorage 저장/조회 |
 | `analyticsService.ts` | 앱 분석 이벤트 트래킹 |
+| `difficultyFeedbackService.ts` | 최근 난이도 평가 최대 20개 저장·조회·초기화 |
 
 ---
 
@@ -30,6 +31,8 @@
 @auth_token       ← Access Token (JWT)
 @refresh_token    ← Refresh Token
 @user_info        ← { userId, name, email, profileImage, provider, ... }
+@difficulty_submit_date      ← 난이도 평가를 마지막으로 제출한 현지 날짜
+@difficulty_feedback_history ← 난이도 제안 분석용 최근 평가 최대 20개
 ```
 
 ### `logout()` 흐름
@@ -71,6 +74,15 @@
 
 > 4번도 `logout()`과 동일한 이유로 로컬 토큰 삭제 전에 완료를 기다립니다.
 
+로그아웃·탈퇴 시 인증 데이터와 함께 `@difficulty_submit_date`, `@difficulty_feedback_history`도 삭제합니다. 신규 가입 로그인에서도 두 키를 다시 초기화해 탈퇴 전 계정의 평가 상태가 재가입 계정으로 넘어가지 않도록 합니다.
+
+### difficultyFeedbackService.ts
+
+- 서버 제출에 성공한 체감 평가만 저장합니다.
+- `easy`/`normal`/`hard`와 평가 당시 사용자 난이도, 콘텐츠 ID, 시각을 기록합니다.
+- 최근 20개만 유지하며 난이도 제안 수락·거절 시 전체 이력을 초기화합니다.
+- 상세 생명주기와 분석 기준은 `docs/DIFFICULTY_FLOW.md` 참고.
+
 ---
 
 ## 📱 socialLoginService.ts — 소셜 로그인
@@ -111,8 +123,8 @@ onboardingStore.completeOnboarding() or setStep()
 ```
 @onboarding_completed   ← 'true' / 'false'
 @onboarding_step        ← 'login' | 'interests' | 'difficulty' | 'completed'
-@user_interests         ← JSON (관심사 데이터)
-@user_difficulty        ← 'EASY' | 'MEDIUM' | 'HARD'
+@onboarding_interests   ← JSON (관심사 데이터)
+@onboarding_difficulty  ← 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' JSON
 ```
 
 ### Store-Service 분리 패턴
