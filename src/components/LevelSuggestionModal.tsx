@@ -9,7 +9,7 @@
  *   3. 제안 거절 ("지금은 괜찮아요" 버튼)
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
 import {
@@ -42,10 +42,10 @@ interface LevelSuggestionModalProps {
   };
 
   /** 수락 핸들러 */
-  onAccept: () => void;
+  onAccept: () => void | Promise<void>;
 
   /** 거절 핸들러 */
-  onDecline: () => void;
+  onDecline: () => void | Promise<void>;
 }
 
 // ──────────────────────────────────────────────
@@ -69,6 +69,8 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
   onAccept,
   onDecline,
 }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const suggestionMessage = useMemo(() => {
     const suggestedLevelText = LEVEL_TEXT_MAP[suggestedLevel];
 
@@ -98,6 +100,19 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
     };
   }, [suggestedLevel, reason]);
 
+  const handlePress = async (action: () => void | Promise<void>) => {
+    if (isProcessing) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await action();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* 난이도 배지 */}
@@ -120,7 +135,8 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
         <Button
           variant="primary"
           title="좋아요"
-          onPress={onAccept}
+          onPress={() => handlePress(onAccept)}
+          disabled={isProcessing}
           style={styles.acceptButton}
           textStyle={styles.acceptButtonText}
         />
@@ -130,7 +146,8 @@ const LevelSuggestionModal: React.FC<LevelSuggestionModalProps> = ({
         <Button
           variant="ghost"
           title="지금은 괜찮아요"
-          onPress={onDecline}
+          onPress={() => handlePress(onDecline)}
+          disabled={isProcessing}
           style={styles.declineButton}
           textStyle={styles.declineButtonText}
         />

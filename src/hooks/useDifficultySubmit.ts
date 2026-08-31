@@ -6,6 +6,7 @@
  */
 import { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import dayjs from 'dayjs';
 import { submitDifficulty } from '../api/missionApi';
 import { getUserInfo } from '../services/authService';
 import { Difficulty } from '../components/DifficultySelectionModal';
@@ -56,7 +57,8 @@ const convertDifficultyToApiFormat = (
  */
 export const checkCanSubmitDifficulty = async (): Promise<boolean> => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // UTC가 아닌 기기 현지 날짜를 사용해 자정 기준으로 일일 제한을 갱신한다.
+    const today = dayjs().format('YYYY-MM-DD');
     const lastSubmitDate = await AsyncStorage.getItem(DIFFICULTY_SUBMIT_KEY);
     return lastSubmitDate !== today;
   } catch (error) {
@@ -110,7 +112,7 @@ export const useDifficultySubmit = () => {
         console.log('[useDifficultySubmit] 난이도 전송 성공:', response);
 
         // 전송 성공 시 오늘 날짜 기록 (하루 한 번 제한 적용)
-        const today = new Date().toISOString().split('T')[0];
+        const today = dayjs().format('YYYY-MM-DD');
         await AsyncStorage.setItem(DIFFICULTY_SUBMIT_KEY, today);
 
         return true;

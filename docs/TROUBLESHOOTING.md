@@ -131,6 +131,23 @@
 - **수정 파일**: `src/navigation/RootNavigator.tsx`, `src/hooks/useCharacter.ts`
 - **후속 조치 (신규 가입 등 서버 반영 자체가 늦는 케이스 대비)**: 위 조치는 "캐릭터 탭에 들어갈 때마다 다시 요청"하는 것까진 보장하지만, 그 요청 시점에 서버가 아직 보상을 반영 못 했으면 여전히 낡은 값을 받아옴. 이를 완화하기 위해 포인트/경험치 지급 직후(일일 출석 체크·글 읽기 보상·퀴즈 보상) 캐릭터 탭 진입 전에 미리 백그라운드로 조회해두는 `prefetchCharacterAfterReward()`를 추가. 캐시 존재 여부와 무관하게 항상 요청이 나가야 해서 `refetchQueries`가 아닌 `prefetchQuery`를 사용했고, 서버 반영 지연 대비 즉시 1회 + 1.5초 뒤 1회 더 요청함
 - **후속 조치 수정 파일**: `src/hooks/useCharacter.ts`(`prefetchCharacterAfterReward` 추가), `src/screens/main/MissionScreen.tsx`, `src/screens/common/ArticleDetailScreen.tsx`, `src/screens/common/QuizScreen.tsx`
+- **2026-08-31 추가 발견**: 위 prefetch를 적용한 뒤에도 보상 직후 캐릭터 탭에 들어가면 출석·포인트가 갱신되지 않고, 다른 탭에 다녀와야 반영되는 현상이 남아 있었음. 즉시 요청이 1.5초 이상 진행되면 고정 타이머로 시작한 후속 prefetch와 캐릭터 탭 focus refetch가 동일 query key의 진행 중 요청으로 합쳐져, 서버 반영 전 첫 응답만 공유되고 실제 두 번째 네트워크 요청은 실행되지 않는 것이 원인이었음
+- **2026-08-31 해결**: 즉시 실행하는 `me()`/`data()` prefetch를 `Promise.all`로 완료까지 기다린 뒤, 그 완료 시점부터 1.5초 후 두 번째 prefetch를 시작하도록 변경. 첫 요청 속도와 무관하게 후속 요청이 독립적으로 실행되고, 캐릭터 화면이 이미 활성화돼 있어도 React Query 캐시 갱신이 화면에 반영됨
+- **관련 PR**: `fix(character, auth, article): 캐릭터 갱신 및 재가입·카테고리 오류 수정` (#125)
+
+### 탈퇴 후 재가입 시 첫 난이도 평가 팝업 미노출
+
+- **증상**: 같은 기기에서 탈퇴 후 재가입하고 첫 글의 퀴즈에 진입해도 난이도 평가 팝업이 나타나지 않음
+- **원인**: 하루 한 번 노출을 제어하는 `@difficulty_submit_date`와 누적 제안 분석용 `@difficulty_feedback_history`가 계정 생명주기와 분리된 기기 전역 AsyncStorage 값이라, 이전 계정의 기록이 남으면 새 계정도 이미 평가한 것으로 판단할 수 있었음
+- **해결**: 로그아웃·탈퇴 시 두 키를 모두 삭제하고, 서버가 `newUser`로 판정한 신규 가입 로그인에서도 두 값을 다시 초기화해 이전 계정 상태가 재가입 계정으로 넘어가지 않도록 이중 방어
+- **수정 파일**: `src/services/authService.ts`, `src/screens/auth/LoginScreen.tsx`, `src/hooks/useDifficultySubmit.ts`
+
+### IT 카테고리가 `IT/`로 잘려 표시됨
+
+- **증상**: 일부 아티클 카드의 카테고리 배지가 정식 명칭 `IT/과학` 대신 `IT/` 또는 `IT`로 표시됨
+- **원인**: 서버 응답의 간헐적인 카테고리 표기 편차를 `ArticleCard`가 별도 보정 없이 그대로 렌더링함
+- **해결**: `normalizeCategoryName()` 경계를 추가해 `IT`, `IT/`, 공백이 섞인 `IT / 과학`을 모두 `IT/과학`으로 정규화하고, 다른 카테고리는 앞뒤 공백만 제거해 유지. 관련 단위 테스트 6건 추가
+- **수정 파일**: `src/utils/categoryName.ts`, `src/components/ArticleCard.tsx`, `src/utils/__tests__/categoryName.test.ts`
 
 ### 로그인 화면 문구를 코드에서 수정해도 반영되지 않음
 
