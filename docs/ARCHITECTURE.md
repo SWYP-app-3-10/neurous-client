@@ -601,6 +601,23 @@ flowchart TD
 
 ## 아키텍처 특징 요약
 
+### 난이도 평가·변경 제안
+
+퀴즈 진입 시 하루 한 번 노출되는 난이도 평가는 `QuizScreen`이 전체 순서를 조정하고, 제출·분석·제안 책임은 각 훅과 서비스로 분리한다.
+
+```mermaid
+flowchart LR
+    Quiz[QuizScreen] --> Submit[useDifficultySubmit<br/>서버 평가 제출 + 일일 날짜]
+    Submit --> History[difficultyFeedbackService<br/>최근 20개 로컬 이력]
+    History --> Analyze[useDifficultyFeedbackCheck<br/>difficultyAnalysis]
+    Analyze -->|조건 충족| Modal[LevelSuggestionModal]
+    Modal --> Suggest[useDifficultySuggestion]
+    Suggest --> API[updateUserLevel API]
+    Suggest --> Store[onboardingStore]
+```
+
+서버 제출 성공 전에는 로컬 이력을 쌓지 않는다. 제안 수락은 서버 난이도 변경 성공 후에만 Zustand 갱신·성공 이벤트·토스트로 이어지고, 수락 또는 거절 후 누적 피드백 이력을 초기화한다. 전체 시퀀스와 임계값, 저장 키, 실패 처리는 `docs/DIFFICULTY_FLOW.md` 참고.
+
 ### 계층 분리 (Layered Architecture)
 
 - **Presentation**: React Native 화면 컴포넌트
