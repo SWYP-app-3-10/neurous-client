@@ -49,13 +49,16 @@ import {
   Heading_24EB_Round,
   Body_16M,
   Heading_20EB_Round,
+  Heading_22EB_Round,
+  Caption_14R,
 } from '../../styles/typography';
 import Spacer from '../../components/Spacer';
 import { useMissions } from '../../hooks/useMissions';
 import { prefetchCharacterAfterReward } from '../../hooks/useCharacter';
 import { prefetchPointHistoryAfterReward } from '../../hooks/usePointHistory';
 // 위클리 출석 완료 여부를 서버 출석 기록(월~토)으로 판단하기 위해 직접 조회
-import { fetchCharacterMe } from '../../api/characterApi';
+// fetchCharacterData: 출석 보상이 레벨업을 유발하는지 임시로 추정하기 위해 조회
+import { fetchCharacterMe, fetchCharacterData } from '../../api/characterApi';
 import { MissionCard, ArticleCard } from '../../components';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useArticleNavigation } from '../../hooks/useArticleNavigation';
@@ -65,9 +68,12 @@ import {
   MissionStackParamList,
 } from '../../navigation/types';
 import { RouteNames } from '../../../routes';
-import { useShowModal, useShowToastModal } from '../../store/modalStore';
+import {
+  useShowToastModal,
+  useShowRewardModal,
+  useHideModal,
+} from '../../store/modalStore';
 import { usePointStore } from '../../store/pointStore';
-import { ExperienceModalContent } from '../../components/ArticlePointModalContent';
 import { useOnboardingStore } from '../../store/onboardingStore';
 
 import {
@@ -79,6 +85,8 @@ import {
 import { useExperienceStore } from '../../store/experienceStore';
 import IconButton from '../../components/IconButton';
 import { AlarmIcon, Modal_IMG } from '../../icons';
+// 출석 레벨업 임시 감지용 로컬 레벨 표시 정보(캐릭터 이미지/타이틀)
+import { levelList } from '../character/criteria/level/levelData';
 import { logEvent, logScreenView } from '../../services/analyticsService';
 import { trackEvent } from '../../services/mixpanelService';
 import { getLocalDateKey } from '../../utils/dateUtils';
@@ -179,8 +187,9 @@ const MissionScreen = () => {
     entrySource: 'home',
   });
 
-  const showModal = useShowModal();
   const showToastModal = useShowToastModal();
+  const showRewardModal = useShowRewardModal();
+  const hideModal = useHideModal();
   const { addPoints } = usePointStore();
   const { addExperience } = useExperienceStore();
 
@@ -572,15 +581,60 @@ const MissionScreen = () => {
             }
           }
 
-          // 포인트 및 경험치 지급 (위클리 조건 충족 시 데일리 + 위클리 합산)
-          addPoints(
+          // 이번에 지급될 포인트/경험치 (위클리 조건 충족 시 데일리 + 위클리 합산)
+          const totalPoint =
             DAILY_ATTENDANCE_POINT +
-              (isWeeklyAttendanceComplete ? WEEKLY_ATTENDANCE_POINT : 0),
-          );
-          addExperience(
+            (isWeeklyAttendanceComplete ? WEEKLY_ATTENDANCE_POINT : 0);
+          const totalExp =
             DAILY_ATTENDANCE_EXPERIENCE +
-              (isWeeklyAttendanceComplete ? WEEKLY_ATTENDANCE_EXPERIENCE : 0),
-          );
+            (isWeeklyAttendanceComplete ? WEEKLY_ATTENDANCE_EXPERIENCE : 0);
+
+          // 출석 보상으로 레벨업이 발생하는지 임시로 추정한다.
+          //
+          // 출석은 퀴즈와 달리 서버에 보상 지급을 알리는 API 자체가 없어서
+          // (docs/LEVEL_UP_FLOW.md 참고) 서버가 레벨업 여부를 알려줄 방법이 없다.
+          // 그래서 서버가 알고 있는 "현재" 경험치(fetchCharacterData)에 이번에
+          // 지급될 경험치를 더한 값으로 레벨 기준(levelStandard)을 다시 계산해서
+          // 레벨 경계를 넘는지 클라이언트에서 미리 추정한다.
+          // 정식 해결은 출석 보상 API가 퀴즈처럼 레벨업 정보를 내려주는 것이고,
+          // 이건 그 전까지의 임시 조치다.
+          let isLevelUp = false;
+          let predictedLevelId: number | null = null;
+          try {
+            const { currentLevel, currentExp, levelStandard } =
+              await fetchCharacterData();
+            if (levelStandard && levelStandard.length > 0) {
+              const predictedExp = currentExp + totalExp;
+              let predictedStandard: (typeof levelStandard)[number] | null =
+                null;
+              // levelStandard는 오름차순 배열 → 역순 순회해 predictedExp가
+              // 처음으로 >= exp를 만족하는 항목이 예상 레벨
+              for (let i = levelStandard.length - 1; i >= 0; i--) {
+                if (predictedExp >= levelStandard[i].exp) {
+                  predictedStandard = levelStandard[i];
+                  break;
+                }
+              }
+              const match =
+                predictedStandard?.characterLevel.match(/LEVEL_(\d+)/);
+              const predictedLevel = match ? parseInt(match[1], 10) : null;
+              if (predictedLevel && predictedLevel > currentLevel) {
+                isLevelUp = true;
+                predictedLevelId = predictedLevel;
+              }
+            }
+          } catch (error) {
+            // 추정 실패 시에는 레벨업이 아닌 것으로 간주 (기존 출석 팝업 유지).
+            // 포인트/경험치 지급 자체는 막지 않는다.
+            console.error('출석 레벨업 추정 실패:', error);
+          }
+          const newLevelData = predictedLevelId
+            ? levelList.find(level => level.id === predictedLevelId)
+            : undefined;
+
+          // 포인트 및 경험치 지급
+          addPoints(totalPoint);
+          addExperience(totalExp);
 
           // 캐릭터 탭 진입 전 미리 최신 정보를 백그라운드로 받아둠
           // (여기서 지급하는 출석 보상은 로컬 store에만 반영되고 서버 동기화가
@@ -608,21 +662,80 @@ const MissionScreen = () => {
             });
           }
 
-          // 출석 체크 모달 표시 (위클리 조건 충족 시 데일리+위클리 합산 값으로 표시)
-          showModal({
-            title: '포인트 & 경험치 획득!',
-            image: <Modal_IMG />,
-            titleStyle: {
-              ...Heading_20EB_Round,
-            },
-            titleDescriptionGapSize: scaleWidth(20),
-            children: React.createElement(ExperienceModalContent, {
-              point: true,
-              daily: true, // 일일 출석 표시
-              weekly: isWeeklyAttendanceComplete, // 일요일이면 위클리 합산 표시로 전환
-            }),
-            primaryButton: { title: '확인', onPress: () => {} },
-          });
+          if (isLevelUp && newLevelData) {
+            // 레벨업으로 추정되면 일반 출석 팝업 대신 퀴즈와 동일한
+            // 레벨업 UI(RewardModal)를 띄운다. 칩/버튼 구성만 출석에 맞게 조정.
+            showRewardModal({
+              layout: 'split',
+              imagePlacement: 'levelUp',
+              image: newLevelData.character(
+                missionScreenStyles.levelUpCharacterImage,
+              ),
+              imageSize: missionScreenStyles.levelUpCharacterImage,
+              closeOnBackdropPress: false,
+              topContent: (
+                <>
+                  <Text style={missionScreenStyles.levelUpCaptionText}>
+                    축하해요! 레벨 업!
+                  </Text>
+                  <Spacer num={6} />
+                  <Text style={missionScreenStyles.levelUpTitleText}>
+                    {newLevelData.title}
+                  </Text>
+                </>
+              ),
+              bottomTopContent: (
+                <Text style={missionScreenStyles.levelUpXpText}>
+                  + {totalExp} XP
+                </Text>
+              ),
+              rewards: [
+                { label: '출석', value: totalExp, unit: 'XP' },
+                {
+                  label: '포인트',
+                  value: totalPoint,
+                  unit: 'P',
+                  tone: 'point',
+                },
+              ],
+              primaryAction: {
+                title: '확인',
+                onPress: () => {
+                  hideModal();
+                },
+              },
+            });
+          } else {
+            // 출석 체크 모달: 포인트·경험치 시안(단일 흰 카드)으로 통일한다.
+            showRewardModal({
+              layout: 'compact',
+              image: <Modal_IMG />,
+              closeOnBackdropPress: false,
+              topContent: (
+                <Text style={missionScreenStyles.rewardModalTitleText}>
+                  포인트 &amp; 경험치 획득!
+                </Text>
+              ),
+              rewards: [
+                {
+                  label: '경험치',
+                  value: totalExp,
+                  unit: 'XP',
+                  tone: 'experience',
+                },
+                {
+                  label: '포인트',
+                  value: totalPoint,
+                  unit: 'P',
+                  tone: 'point',
+                },
+              ],
+              primaryAction: {
+                title: '확인',
+                onPress: hideModal,
+              },
+            });
+          }
         } else {
           // 오늘 이미 진입했음
           hasCheckedDailyEntryRef.current = true;
@@ -633,7 +746,7 @@ const MissionScreen = () => {
     };
 
     checkDailyEntry();
-  }, [addExperience, addPoints, showModal]);
+  }, [addExperience, addPoints, showRewardModal, hideModal]);
 
   // ──────────────────────────────────────────────
   // UI 렌더링
@@ -903,6 +1016,31 @@ export const missionScreenStyles = StyleSheet.create({
   emptyText: {
     ...Body_16M,
     color: COLORS.gray600,
+  },
+  // 출석 레벨업(임시 조치) 전용 스타일 — QuizScreen의 레벨업 RewardModal과 동일한 값
+  levelUpCaptionText: {
+    ...Caption_14R,
+    color: COLORS.gray800,
+    textAlign: 'center',
+  },
+  rewardModalTitleText: {
+    ...Heading_20EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
+  },
+  levelUpTitleText: {
+    ...Heading_24EB_Round,
+    color: COLORS.black,
+    textAlign: 'center',
+  },
+  levelUpXpText: {
+    ...Heading_22EB_Round,
+    color: COLORS.puple.main,
+    textAlign: 'center',
+  },
+  levelUpCharacterImage: {
+    width: scaleWidth(120),
+    height: scaleWidth(120),
   },
 });
 
