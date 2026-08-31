@@ -134,22 +134,29 @@ export const useCharacterMe = () => {
  *         퀴즈 보상(QuizScreen) — 포인트/경험치 지급 직후 호출
  */
 export const prefetchCharacterAfterReward = () => {
-  const run = () => {
+  const run = async () => {
     // prefetchQuery는 에러가 나도 throw하지 않아 화면 로직에 영향을 주지 않는다.
-    queryClient.prefetchQuery({
-      queryKey: characterKeys.me(),
-      queryFn: fetchCharacterMe,
-      staleTime: 0, // 캐시 신선도 무시하고 항상 새로 요청
-    });
-    queryClient.prefetchQuery({
-      queryKey: characterKeys.data(),
-      queryFn: fetchCharacterData,
-      staleTime: 0,
-    });
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: characterKeys.me(),
+        queryFn: fetchCharacterMe,
+        staleTime: 0, // 캐시 신선도 무시하고 항상 새로 요청
+      }),
+      queryClient.prefetchQuery({
+        queryKey: characterKeys.data(),
+        queryFn: fetchCharacterData,
+        staleTime: 0,
+      }),
+    ]);
   };
 
-  run();
-  setTimeout(run, 1500);
+  run().finally(() => {
+    // 첫 요청이 끝난 뒤부터 지연 시간을 센다. 이전에는 고정 1.5초 타이머라
+    // 첫 요청이 느리면 두 호출이 하나로 합쳐져 후속 갱신이 사라질 수 있었다.
+    setTimeout(() => {
+      run();
+    }, 1500);
+  });
 };
 
 // ─────────────────────────────────────────────────────────────
