@@ -81,6 +81,8 @@ type NotificationItem = {
 
 > **앱 최초 실행 흐름** (로그인 → 관심사 선택 → 난이도 선택 → 완료)을 관리하는 핵심 Store
 
+`difficulty`는 온보딩뿐 아니라 난이도 변경 제안을 수락했을 때도 갱신됩니다. `useDifficultySuggestion`이 서버의 `updateUserLevel` 성공을 확인한 후 `setDifficulty()`를 호출하며, Zustand 상태와 `@onboarding_difficulty`를 함께 변경합니다. 이 값은 최근 피드백을 상향·하향 어느 방향으로 분석할지 결정하는 현재 난이도 기준입니다. 캐릭터 성장 레벨과는 별개이며 상세 흐름은 `docs/DIFFICULTY_FLOW.md` 참고.
+
 ```
 currentStep: 'login' → 'interests' → 'difficulty' → 'completed'
 ```
