@@ -179,6 +179,16 @@ LoginScreen(버튼) → 소셜 계정 선택 → 서버 로그인(POST /api/auth
 - 값이 없으면(응답 필드 누락 등) `socialLoginService.ts`의 각 제공자별 로그인 함수가 `newUser ?? true`로 신규 유저 취급합니다(약관을 건너뛰는 쪽보다 한 번 더 보여주는 쪽이 안전하다는 판단).
 - 분기 지점: `LoginScreen.tsx`의 `handleSocialLogin` — `result.newUser === false`만 기존 유저로 취급하고, 그 외에는 전부 신규 유저 취급합니다.
 
+### 계정 전환과 난이도 평가 로컬 상태
+
+난이도 평가의 하루 1회 키(`@difficulty_submit_date`)와 제안 분석 이력(`@difficulty_feedback_history`)은 기기 AsyncStorage 값입니다. 이전 계정의 상태가 다른 계정 또는 탈퇴 후 재가입 계정으로 넘어가지 않도록 다음 시점에 삭제합니다.
+
+- `authService.logout()` 완료 시
+- `authService.withdraw()` 완료 시
+- 소셜 로그인 응답이 신규 가입(`newUser !== false`)일 때 약관·온보딩으로 이동하기 전
+
+인증 토큰과 마찬가지로 계정 생명주기에 맞춰 정리하지만, 이 두 키는 인증 수단이 아니라 난이도 평가 UX 상태입니다. 상세 플로우는 `docs/DIFFICULTY_FLOW.md` 참고.
+
 ### 약관 동의 없이 이탈 시 자동 로그아웃
 
 `TermsAgreementScreen`에 도달한 시점에는 이미 소셜 로그인 + 서버 로그인이 끝난 상태입니다(서버에는 이미 계정이 생성되어 있음). 이 화면에서 뒤로가기 등으로 동의 없이 이탈하면, 서버 계정과 클라이언트 로그인 상태가 어긋나는 것을 막기 위해 `logout()`을 자동 호출해 로컬 토큰을 즉시 삭제합니다(`TermsAgreementScreen.tsx`의 unmount effect, `hasAgreedRef`로 정상 진행과 구분). 다음 실행 시에는 다시 로그인 화면부터 시작합니다.
