@@ -134,7 +134,7 @@ const InquiryScreen = () => {
           <Text style={styles.sectionLabel}>문의 내용</Text>
 
           <Input
-            placeholder="문의 사항을 입력해주세요"
+            placeholder="문의 내용을 10자 이상 작성해주세요."
             value={content}
             onChangeText={setContent}
             variant="outline"
