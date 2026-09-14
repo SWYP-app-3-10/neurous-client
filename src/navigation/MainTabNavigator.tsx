@@ -7,7 +7,8 @@ import SearchStackNavigator from './SearchStackNavigator';
 import MyPageStackNavigator from './MyPageStackNavigator';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CharacterIcon, HomeIcon, Search_tab_Icon, MyPageIcon } from '../icons';
-import { COLORS } from '../styles/global';
+import { COLORS, scaleWidth } from '../styles/global';
+import { Caption_12M } from '../styles/typography';
 import { logEvent } from '../services/analyticsService';
 
 const Tab = createBottomTabNavigator();
@@ -26,6 +27,14 @@ const MainTabNavigator = () => {
       headerShown: false,
       tabBarActiveTintColor: COLORS.puple.main,
       tabBarInactiveTintColor: COLORS.gray400,
+      tabBarStyle: {
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+      },
+      tabBarLabelStyle: {
+        ...Caption_12M,
+        marginTop: scaleWidth(2),
+      },
     }),
     [],
   );
@@ -39,6 +48,7 @@ const MainTabNavigator = () => {
         name={RouteNames.MISSION_TAB}
         component={MissionStackNavigator}
         options={{
+          tabBarLabel: '홈',
           tabBarIcon: createTabBarIcon(HomeIcon),
         }}
         listeners={{
@@ -51,6 +61,7 @@ const MainTabNavigator = () => {
         name={RouteNames.CHARACTER_TAB}
         component={CharacterStackNavigator}
         options={{
+          tabBarLabel: '캐릭터',
           tabBarIcon: createTabBarIcon(CharacterIcon),
         }}
         listeners={{
@@ -63,6 +74,7 @@ const MainTabNavigator = () => {
         name={RouteNames.SEARCH_TAB}
         component={SearchStackNavigator}
         options={{
+          tabBarLabel: '탐색',
           tabBarIcon: createTabBarIcon(Search_tab_Icon),
         }}
         listeners={{
@@ -75,6 +87,7 @@ const MainTabNavigator = () => {
         name={RouteNames.MY_PAGE_TAB}
         component={MyPageStackNavigator}
         options={{
+          tabBarLabel: '마이',
           tabBarIcon: createTabBarIcon(MyPageIcon),
         }}
         listeners={{
