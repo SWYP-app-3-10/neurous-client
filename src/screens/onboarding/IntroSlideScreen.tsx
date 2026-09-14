@@ -47,7 +47,7 @@ const INTRO_SLIDES: IntroSlide[] = [
     id: 0,
     title: '미션과 추천 글로\n읽기를 시작해보세요',
     description:
-      '관심 있는 분야의 글을 추천받고, 오늘의\n미션을 수행하며 읽기를 이어가 보세요.',
+      '관심 있는 분야의 글을 추천받고 오늘의\n미션을 수행하며 읽기를 이어가 보세요.',
     eventName: 'Next_Onboarding_Function01_CardList',
     Illustration: Intro_CardList,
   },
