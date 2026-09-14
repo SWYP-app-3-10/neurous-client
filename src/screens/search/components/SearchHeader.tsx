@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInputProps,
   Pressable,
-  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -146,7 +145,7 @@ const styles = StyleSheet.create({
     height: SEARCH_BAR_HEIGHT,
     borderRadius: BORDER_RADIUS[16],
     backgroundColor: COLORS.gray100,
-    paddingHorizontal: scaleWidth(25),
+    paddingHorizontal: scaleWidth(20),
     justifyContent: 'center',
   },
 
@@ -158,6 +157,7 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: scaleWidth(8),
     height: '100%',
   },
 
@@ -167,22 +167,17 @@ const styles = StyleSheet.create({
     ...Body_16M,
     color: COLORS.black,
 
-    height: '100%',
+    height: scaleWidth(24),
     paddingVertical: 0,
     paddingHorizontal: 0,
     padding: 0,
-
-    ...(Platform.OS === 'android'
-      ? {
-          includeFontPadding: false,
-          textAlignVertical: 'center',
-        }
-      : {}),
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   clearBtn: {
-    width: scaleWidth(28),
-    height: scaleWidth(28),
+    width: scaleWidth(24),
+    height: scaleWidth(24),
     alignItems: 'center',
     justifyContent: 'center',
   },

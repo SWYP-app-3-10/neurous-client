@@ -186,7 +186,8 @@ const styles = StyleSheet.create({
     position: 'relative', // 오버레이 기준이 되는 부모
   },
   sectionTitle: {
-    marginVertical: scaleWidth(20),
+    marginTop: scaleWidth(28),
+    marginBottom: scaleWidth(16),
     ...Heading_18SB,
     color: COLORS.gray800,
   },

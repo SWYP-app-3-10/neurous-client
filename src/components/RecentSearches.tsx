@@ -7,6 +7,7 @@ import Spacer from './Spacer';
 
 import XSearchIcon from '../assets/svg/X_Search.svg';
 import { scaleWidth, BORDER_RADIUS, COLORS } from '../styles/global';
+import { Body_16M } from '../styles/typography';
 import { logEvent } from '../services/analyticsService';
 
 type Props = {
@@ -85,7 +86,7 @@ const RecentSearches = ({
         {/* 검색어 텍스트 */}
         <View style={{ flexShrink: 1 }}>
           <Text
-            style={{ color: COLORS.gray800 }}
+            style={{ ...Body_16M, color: COLORS.gray800 }}
             numberOfLines={1}
             ellipsizeMode="clip" // 우리가 만든 '…'만 보이게, RN이 다시 말줄임하지 않게
           >
@@ -98,8 +99,8 @@ const RecentSearches = ({
         {/* 삭제 버튼 */}
         <IconButton onPress={() => removeSearchRecord(item.searchName)}>
           <XSearchIcon
-            width={scaleWidth(18)}
-            height={scaleWidth(18)}
+            width={scaleWidth(16)}
+            height={scaleWidth(16)}
             color={closeIconColor ?? COLORS.gray500}
           />
         </IconButton>
