@@ -314,7 +314,9 @@ const SettingScreen = () => {
       {/* 메뉴 리스트 */}
       <View style={styles.container}>
         {/* 회원정보 섹션 */}
-        <Text style={styles.sectionLabel}>회원정보</Text>
+        <Text style={[styles.sectionLabel, styles.firstSectionLabel]}>
+          회원정보
+        </Text>
         <Pressable
           style={styles.row}
           onPress={() => navigation.navigate(RouteNames.LOGIN_INFO)}
@@ -401,7 +403,10 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: scaleWidth(20),
-    paddingTop: scaleWidth(5),
+    paddingTop: scaleWidth(20),
+  },
+  firstSectionLabel: {
+    marginTop: 0,
   },
   sectionLabel: {
     ...Caption_14R,
@@ -418,6 +423,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: COLORS.gray200,
+    marginHorizontal: -scaleWidth(20),
     marginTop: scaleWidth(12),
   },
   alarmRow: {
@@ -435,7 +441,7 @@ const styles = StyleSheet.create({
   rowDesc: {
     ...Caption_14R,
     color: COLORS.gray700,
-    marginTop: scaleWidth(4),
+    marginTop: scaleWidth(8),
   },
   // 레벨업 모달 미리보기 전용 스타일 — QuizScreen의 레벨업 RewardModal과 동일한 값
   levelUpCaptionText: {
