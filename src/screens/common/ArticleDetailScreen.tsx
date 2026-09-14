@@ -639,7 +639,9 @@ const styles = StyleSheet.create({
   },
 
   /** ScrollView 내부 컨텐츠 영역 */
-  content: {},
+  content: {
+    paddingBottom: scaleWidth(48),
+  },
 
   /** 로딩 화면 컨테이너 */
   loadingContainer: {
@@ -670,7 +672,9 @@ const styles = StyleSheet.create({
 
   /** 하단 "다 읽었어요" 버튼 영역 — Safe Area를 제외한 Figma 상하 여백 */
   doneReadingButtonContainer: {
-    paddingTop: scaleWidth(4),
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray200,
+    paddingTop: scaleWidth(12),
     paddingBottom: scaleWidth(8),
   },
 
