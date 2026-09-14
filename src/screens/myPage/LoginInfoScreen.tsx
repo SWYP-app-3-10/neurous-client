@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
 
   rowWithDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray100,
+    borderBottomColor: COLORS.gray200,
   },
 
   rowTitle: {
