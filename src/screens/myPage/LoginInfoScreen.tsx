@@ -162,7 +162,7 @@ const LoginInfoScreen = () => {
         }}
       >
         <Text style={styles.modalDesc}>
-          탈퇴하면 계정정보와 보유 중인 포인트,{'\n'}
+          탈퇴하면 계정 정보와 보유 중인 포인트,{'\n'}
           현재 레벨이 모두 삭제되며 복구할 수 없어요.
         </Text>
       </NotificationModal>
@@ -194,7 +194,6 @@ const styles = StyleSheet.create({
   rowTitle: {
     ...Body_16SB,
     color: COLORS.black,
-    fontWeight: '500',
   },
 
   modalDesc: {
