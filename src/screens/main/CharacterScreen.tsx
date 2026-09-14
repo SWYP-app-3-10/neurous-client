@@ -567,7 +567,9 @@ const CharacterScreen = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: tabBarHeight }} // 탭바 높이만큼 패딩
+        contentContainerStyle={{
+          paddingBottom: tabBarHeight + scaleWidth(48),
+        }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
