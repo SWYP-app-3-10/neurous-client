@@ -120,12 +120,16 @@ const MissionCard = React.memo(
           style={[
             styles.container,
             {
-              opacity: isNotStarted ? 0.3 : 1,
               borderRadius: BORDER_RADIUS[16],
             },
           ]}
         >
-          <View style={styles.whiteCardBackground}>
+          <View
+            style={[
+              styles.whiteCardBackground,
+              isNotStarted && styles.lockedCardBackground,
+            ]}
+          >
             {renderCardContent()}
             {/* 보더 뷰: absolute로 위에 덮어씌움 */}
             <View style={styles.whiteCardBorder} />
@@ -146,13 +150,17 @@ const MissionCard = React.memo(
         style={[
           styles.container,
           {
-            opacity: isNotStarted ? 0.3 : 1,
             borderRadius: BORDER_RADIUS[16],
             height: scaleWidth(74),
           },
         ]}
       >
-        <View style={styles.whiteCardBackground}>
+        <View
+          style={[
+            styles.whiteCardBackground,
+            isNotStarted && styles.lockedCardBackground,
+          ]}
+        >
           {renderCardContent()}
           {/* 보더 뷰: absolute로 위에 덮어씌움 */}
           <View style={styles.whiteCardBorder} />
@@ -194,6 +202,9 @@ const styles = StyleSheet.create({
   whiteCardBackground: {
     flex: 1,
     backgroundColor: COLORS.white,
+  },
+  lockedCardBackground: {
+    opacity: 0.3,
   },
 
   whiteCardBorder: {
