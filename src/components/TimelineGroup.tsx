@@ -239,8 +239,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: scaleWidth(20),
     borderRadius: BORDER_RADIUS[16],
     backgroundColor: COLORS.white,
-    borderWidth: scaleWidth(1),
-    borderColor: COLORS.gray300,
     gap: scaleWidth(19),
   },
   articleCardLast: {
@@ -281,6 +279,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.red[3],
   },
   quizBadgeText: {
+    // TODO(QA): Figma 마이 화면 기준 정답/오답 태그 텍스트 크기 확인 필요
     ...Caption_12M,
   },
   quizBadgeTextCorrect: {
