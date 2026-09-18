@@ -19,7 +19,7 @@ type TabKey = 'LEVEL' | 'POINT';
 /**
  * CriteriaCheckScreen
  *
- * - "기준 확인하기" 진입 화면
+ * - "성장 가이드" 진입 화면
  * - 상단: 공통 Header (뒤로가기 아이콘 + 타이틀)
  * - 중단: 세그먼트 탭(레벨 / 경험치·포인트)
  * - 하단: 탭에 따라 LevelCriteriaScreen 또는 PointCriteriaScreen 렌더링
@@ -43,7 +43,7 @@ const CriteriaCheckScreen = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* 공통 헤더 */}
       <Header
-        title="기준 확인하기"
+        title="성장 가이드"
         backEventName={
           tab === 'LEVEL'
             ? 'Back_ConfirmStandard_Level'
@@ -111,7 +111,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
-    paddingBottom: scaleWidth(48),
   },
 
   // 헤더 래퍼

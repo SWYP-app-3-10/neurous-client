@@ -181,6 +181,7 @@ function XpSummaryCard({
             onLayout={tooltip.onLayoutIcon}
           >
             <InfoIcon
+              // TODO(QA): Figma ConfirmStandard_Level 기준 툴팁 아이콘 width/height 값 확인 필요
               width={scaleWidth(22)}
               height={scaleWidth(22)}
               color={COLORS.gray400}
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   listContent: {
     marginHorizontal: scaleWidth(20),
     paddingTop: scaleWidth(32),
-    paddingBottom: scaleWidth(64),
+    paddingBottom: scaleWidth(48),
   },
 
   headerSpace: {

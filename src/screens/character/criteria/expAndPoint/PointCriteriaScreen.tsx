@@ -2,9 +2,6 @@
 import React, { memo, useEffect } from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 
-// 공통 컴포넌트
-import { Spacer } from '../../../../components';
-
 // 공통 디자인 시스템 (색/스케일/라운드/타이포)
 import { COLORS, BORDER_RADIUS, scaleWidth } from '../../../../styles/global';
 import {
@@ -160,8 +157,6 @@ const PointCriteriaScreen = () => {
           />
         ))}
       </View>
-
-      <Spacer num={24} />
     </ScrollView>
   );
 };
@@ -183,8 +178,9 @@ const styles = StyleSheet.create({
     marginHorizontal: scaleWidth(20),
   },
   content: {
+    // TODO(QA): Figma ConfirmStandard_Xp_Point 기준 상단 탭바 bottom부터 포인트 & 경험치란? title top까지 간격 확인 필요
     paddingTop: scaleWidth(20),
-    paddingBottom: scaleWidth(50),
+    paddingBottom: scaleWidth(48),
   },
   // 화면 메인 타이틀
   title: {
