@@ -171,12 +171,12 @@ const PointHistoryScreen = () => {
               <View style={styles.badgeLine}>
                 {hasXp && (
                   <Text style={[styles.badgeText, styles.badgeXp]}>
-                    {item.xpSum} XP
+                    + {item.xpSum} XP
                   </Text>
                 )}
                 {hasPt && (
                   <Text style={[styles.badgeText, styles.badgePt]}>
-                    {item.ptSum} P
+                    + {item.ptSum} P
                   </Text>
                 )}
               </View>
@@ -203,12 +203,12 @@ const PointHistoryScreen = () => {
           <View style={styles.sheetBadgeLine}>
             {hasXp && (
               <Text style={[styles.sheetBadgeText, styles.badgeXp]}>
-                {item.xpDelta} XP
+                + {item.xpDelta} XP
               </Text>
             )}
             {hasPt && (
               <Text style={[styles.sheetBadgeText, styles.badgePt]}>
-                {item.ptDelta} P
+                + {item.ptDelta} P
               </Text>
             )}
           </View>
@@ -280,6 +280,7 @@ const styles = StyleSheet.create({
   separator: {
     height: scaleWidth(1),
     backgroundColor: COLORS.gray200,
+    marginHorizontal: -scaleWidth(20),
   },
   rowPressable: {
     borderRadius: BORDER_RADIUS[12],
@@ -303,14 +304,17 @@ const styles = StyleSheet.create({
   icon: {
     width: ICON_SIZE,
     height: ICON_SIZE,
+    // TODO(QA): Figma ConfirmEarnedHistory 기준 아이콘과 XP/P 텍스트 사이 간격 확인 필요
     marginRight: scaleWidth(6),
   },
   badgeLine: {
     flexDirection: 'row',
     alignItems: 'center',
+    // TODO(QA): Figma ConfirmEarnedHistory 기준 XP와 P 사이 간격 확인 필요
     gap: scaleWidth(4),
   },
   badgeText: {
+    // TODO(QA): Figma ConfirmEarnedHistory 기준 + 아이콘 및 XP/P 폰트 크기 확인 필요
     ...Heading_18SB,
   },
   // 시안 컬러: XP(블루), P(옐로)
@@ -328,6 +332,7 @@ const styles = StyleSheet.create({
 
   /* ================= 바텀시트 ================= */
   sheetContainer: {
+    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 리스트 하단 여백 확인 필요
     paddingBottom: scaleWidth(0),
   },
   sheetSeparator: {
@@ -335,6 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.gray200,
   },
   sheetItem: {
+    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 항목 상하 padding 확인 필요
     paddingVertical: scaleWidth(18),
   },
   sheetItemTop: {
@@ -348,6 +354,7 @@ const styles = StyleSheet.create({
     gap: scaleWidth(6),
   },
   sheetBadgeText: {
+    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 XP/P 폰트 크기 확인 필요
     ...Heading_18SB,
   },
   sheetRightDate: {
@@ -355,6 +362,7 @@ const styles = StyleSheet.create({
     color: COLORS.gray600,
   },
   sheetItemTitle: {
+    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 XP/P와 서브 설명 사이 간격 확인 필요
     marginTop: scaleWidth(10),
     ...Body_16M,
     color: COLORS.black,
