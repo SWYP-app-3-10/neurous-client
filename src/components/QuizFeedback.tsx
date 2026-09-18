@@ -36,6 +36,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
 
       {showFeedbackMessage && (
         <>
+          {/* TODO(QA): Figma ReadingDetails_QuizCorrect/Incorrect 기준 퀴즈 제목과 정답/오답 태그 사이 간격 수치 확인 필요 */}
           <Spacer num={16} />
           {/* 피드백 메시지 */}
           <View
@@ -60,6 +61,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
         </>
       )}
 
+      {/* TODO(QA): Figma ReadingDetails_QuizCorrect/Incorrect 기준 정답/오답 태그와 정답 리스트 사이 간격 수치 확인 필요 */}
       <Spacer num={40} />
 
       {/* 선택지 */}
@@ -73,6 +75,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
               option={option}
               isCorrect={correct}
             />
+            {/* TODO(QA): Figma ReadingDetails_QuizCorrect/Incorrect 기준 퀴즈 정답 리스트 항목 간 간격 수치 확인 필요 */}
             {index !== options.length - 1 && <Spacer num={16} />}
           </View>
         );
