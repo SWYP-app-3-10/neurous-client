@@ -59,10 +59,11 @@ export const levelList: LevelCriteria[] = [
   },
   {
     id: 3,
-    title: 'Lv. 3 괴물 뭉게',
+    title: 'Lv. 3 리틀 몽키',
     requiredExp: 500,
     summaryTitle: '경험치 500',
     summaryDesc: '퀴즈를 25개 풀면 달성할 수 있어요!',
+    // TODO(QA): Figma ConfirmStandard_Level 기준 정수리에 잎사귀가 있는 Lv.3 리틀 몽키 에셋 교체 필요
     character: createCharacterRenderer(Level_3_Profile, {
       width: scaleWidth(84.4),
       height: scaleWidth(95.45),
