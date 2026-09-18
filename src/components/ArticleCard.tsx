@@ -54,7 +54,7 @@ const ArticleCard = React.memo<ArticleCardProps>(({ article, onPress }) => {
             <Text style={styles.articleTagText}>
               {normalizeCategoryName(article.category)}
             </Text>
-            <Text style={styles.articleTagDivider}>|</Text>
+            <Text style={styles.articleTagDivider}>·</Text>
             <Text style={styles.articleTagText}>{article.readTime}</Text>
           </View>
         </View>
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
   articleCardWrapper: {
     backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS[16],
+    // TODO(QA): Figma Home 기준 콘텐츠 카드 그림자 offset, opacity, radius, elevation 값 확인 필요
     // iOS 그림자
     shadowColor: COLORS.shadow,
     shadowOffset: {
@@ -110,15 +111,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: scaleWidth(20),
     right: scaleWidth(20),
+    // TODO(QA): Figma Home 기준 분야/소요시간 태그의 padding, height, 위치 값 확인 필요
     paddingHorizontal: scaleWidth(12),
     paddingVertical: scaleWidth(8),
     backgroundColor: COLORS.puple[3],
     borderRadius: BORDER_RADIUS[30],
     flexDirection: 'row',
+    alignItems: 'center',
   },
   articleTagDivider: {
     ...Caption_14R,
-    color: COLORS.gray700,
+    color: COLORS.puple.main,
     marginHorizontal: scaleWidth(8),
   },
   articleTagText: {
