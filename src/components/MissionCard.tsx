@@ -195,6 +195,9 @@ const styles = StyleSheet.create({
   },
   // 홈 카드 전용: 하단 Row가 없어 상단 Row 하나만 세로 중앙 정렬
   cardPaddingWrapperHome: {
+    // TODO(QA): Figma Home 미션 카드 기준 상하/좌우 padding 및 0/1 카운트 영역 간격 확인 필요
+    paddingHorizontal: scaleWidth(20),
+    paddingVertical: scaleWidth(16),
     justifyContent: 'center',
   },
 
