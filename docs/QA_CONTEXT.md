@@ -8,14 +8,18 @@
 - 현재 브랜치에서 확인한 QA:
   - 화면명: `읽은 글 상세 (ReadingDetails_QuizCorrect, ReadingDetails_QuizIncorrect)`
   - 항목: `퀴즈 제목 & 정답/오답 태그 & 퀴즈 정답 리스트 사이 간격 수정 필요`
+  - 항목: `1. 본문 텍스트 & 퀴즈의 Q 사이 간격 수정 필요`
+  - 항목: `끝까지 스크롤 시,콘텐츠와 하단 탭바와의 간격 → 하단에 글 보기 버튼이 있는 경우에는 146, 없는 경우에는 48px로 수정`
 - 처리 내용:
   - `src/components/QuizFeedback.tsx`에 피그마 수치 확인이 필요한 간격 위치를 `TODO(QA)`로 표시했다.
-  - 정확한 수치가 없는 상태라 코드 값은 임의 변경하지 않았다.
+  - `src/screens/common/ReadArticleDetailScreen.tsx`에 본문 텍스트와 퀴즈 Q 사이 간격 확인 위치를 `TODO(QA)`로 표시했다.
+  - 읽은 글 상세 하단 콘텐츠 여백은 노션 기준 수치인 글 보기 버튼 있음 `146`, 버튼 없음 `48`을 반영했다.
 - Notion 상태 처리 기준:
-  - 이 항목은 수치 확인이 필요하므로 `Resolved`가 아니라 `보류` 대상이다.
+  - 간격 수치 확인이 필요한 항목은 `Resolved`가 아니라 `보류` 대상이다.
+  - 하단 여백 항목은 노션에 수치가 있으므로 `Resolved` 대상이다.
 - 남은 확인:
-  - Notion `Query Data Source` 사용량 제한 때문에 open/null QA 전체 재조회가 막힌 상태였다.
-  - 사용량이 풀리면 QA Issues에서 `Open` 또는 status가 비어 있는 항목을 다시 조회해야 한다.
+  - Notion `Query Data Source`는 2026-09-20에 재조회 가능 상태로 확인했다.
+  - 커밋 전이면 현재 브랜치의 변경 파일을 확인한 뒤 범위별로 커밋한다.
 
 ## QA 소스 기준
 
