@@ -60,16 +60,11 @@ import { LevelCategoryNames } from '../../types/interests';
 // 상수 정의
 // ──────────────────────────────────────────────
 
-/**
- * 플랫폼별 하단 버튼 영역 높이
- *
- * iOS와 Android에서 Safe Area 처리 방식이 달라서
- * 버튼 영역 높이를 다르게 설정한다.
- *
- * - iOS: 246 (Safe Area Insets가 더 큼)
- * - Android: 267 (네비게이션 바 높이 고려)
- */
-const BUTTON_WRAPPER_HEIGHT = Platform.OS === 'ios' ? 246 : 267;
+/** 하단에 글 보기 버튼이 있는 경우 콘텐츠 하단 여백 */
+const BOTTOM_SPACING_WITH_BUTTON = 146;
+
+/** 하단에 글 보기 버튼이 없는 경우 콘텐츠 하단 여백 */
+const BOTTOM_SPACING_WITHOUT_BUTTON = 48;
 
 const ReadArticleDetailScreen = () => {
   const route =
@@ -266,23 +261,26 @@ const ReadArticleDetailScreen = () => {
   /**
    * ScrollView 콘텐츠의 하단 패딩 계산
    *
-   * 플로팅 버튼이 콘텐츠를 가리지 않도록
-   * 버튼 높이 + Safe Area 하단 여백만큼 패딩을 추가한다.
+   * 플로팅 버튼 또는 하단 탭바가 콘텐츠를 가리지 않도록
+   * QA 기준 하단 여백만큼 패딩을 추가한다.
    *
    * 계산식:
-   *   paddingBottom = BUTTON_WRAPPER_HEIGHT + safeAreaBottom
+   *   - 글 보기 버튼 있음: 146
+   *   - 글 보기 버튼 없음: 48
    *
    * 퀴즈를 풀지 않은 글(quiz === undefined)은 플로팅 버튼 자체를 렌더링하지 않으므로,
-   * 버튼 높이만큼의 여백 없이 Safe Area 여백만 적용한다 (불필요한 하단 공백 방지).
+   * 버튼이 없는 상태의 하단 여백만 적용한다.
    *
    * useMemo를 사용하는 이유:
-   *   - safeAreaBottom·quiz 여부가 변경될 때만 재계산
+   *   - quiz 여부가 변경될 때만 재계산
    *   - 불필요한 스타일 재생성 방지
    */
   const contentPaddingBottom = useMemo(
     () =>
-      quiz ? scaleWidth(BUTTON_WRAPPER_HEIGHT) + safeAreaBottom : safeAreaBottom,
-    [safeAreaBottom, quiz],
+      scaleWidth(
+        quiz ? BOTTOM_SPACING_WITH_BUTTON : BOTTOM_SPACING_WITHOUT_BUTTON,
+      ),
+    [quiz],
   );
 
   // ──────────────────────────────────────────────
@@ -333,6 +331,7 @@ const ReadArticleDetailScreen = () => {
       >
         {/* 글 내용 */}
         <ArticleContent content={contentDetail.content} />
+        {/* TODO(QA): Figma ReadingDetails 기준 본문 텍스트와 퀴즈 Q 사이 간격 수치 확인 필요 */}
         <Spacer num={12} />
 
         {/* 퀴즈 섹션 (정답/오답 피드백 포함) */}
@@ -393,7 +392,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    // paddingBottom은 동적으로 계산됨 (버튼 높이 + safeAreaBottom)
+    // paddingBottom은 동적으로 계산됨 (QA 기준 하단 여백)
   },
   errorContainer: {
     flex: 1,
