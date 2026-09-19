@@ -14,7 +14,12 @@ import Header from '../../components/Header';
 import Spacer from '../../components/Spacer';
 import { NoNotificationsIcon } from '../../icons';
 import { COLORS, scaleWidth } from '../../styles/global';
-import { Body_16M } from '../../styles/typography';
+import {
+  Body_16M,
+  Body_16SB,
+  Caption_14R,
+  Caption_12M,
+} from '../../styles/typography';
 
 import {
   useNotifications,
@@ -140,6 +145,7 @@ const NotificationScreen = () => {
         ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            {/* TODO(QA): Figma Alarm_Empty 기준 빈 상태 일러스트 크기와 위치 수치 확인 필요 */}
             <NoNotificationsIcon />
             <Spacer num={16} />
             <Text style={styles.emptyText}>아직 도착한 알림이 없어요</Text>
@@ -165,47 +171,47 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
-    paddingBottom: scaleWidth(48),
   },
   listContent: {
-    paddingTop: 8,
-    paddingBottom: 16,
+    // TODO(QA): Figma Alarm 기준 리스트 상단 패딩과 아이템 간격 수치 확인 필요
+    paddingTop: scaleWidth(8),
+    paddingBottom: scaleWidth(16),
   },
   listContentEmpty: {
     flexGrow: 1,
   },
   row: {
-    paddingHorizontal: 20,
-    paddingVertical: 25,
+    // TODO(QA): Figma Alarm 기준 알림 리스트 아이템 패딩 수치 확인 필요
+    paddingHorizontal: scaleWidth(20),
+    paddingVertical: scaleWidth(25),
     backgroundColor: COLORS.white,
   },
   rowUnread: {
     backgroundColor: COLORS.puple[3],
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...Body_16SB,
     color: COLORS.black,
   },
   titleUnread: {
     fontWeight: '800',
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: scaleWidth(6),
+    ...Caption_14R,
     color: COLORS.gray600,
   },
   date: {
-    marginTop: 13,
-    fontSize: 12,
+    marginTop: scaleWidth(13),
+    ...Caption_12M,
     color: COLORS.gray500,
   },
   footer: {
-    paddingVertical: 22,
+    paddingVertical: scaleWidth(22),
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
+    ...Caption_12M,
     color: COLORS.gray500,
   },
   // 로딩 상태
@@ -244,6 +250,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...Body_16M,
+    // TODO(QA): Figma Alarm_Empty 기준 빈 상태 텍스트 크기와 위치 수치 확인 필요
     color: COLORS.gray600,
   },
 });
