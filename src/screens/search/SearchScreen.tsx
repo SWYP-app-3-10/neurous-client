@@ -216,7 +216,6 @@ export default function SearchScreen() {
               }
             }}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={() => <View style={{ height: 20 }} />}
             ListEmptyComponent={
               <Text style={styles.empty}>
                 {isError
