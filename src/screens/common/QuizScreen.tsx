@@ -958,6 +958,7 @@ const QuizScreen: React.FC = () => {
         iconColor={COLORS.gray800}
         backEventName="Back_ConfirmStandard_Quiz"
       />
+      {/* TODO(QA): Figma Quiz 기준 상단 네비바와 Q 사이 전체 간격 수치 확인 필요 */}
       <Spacer num={32} />
       <ScrollView
         bounces={false}
@@ -1007,6 +1008,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: scaleWidth(20),
+    // TODO(QA): Figma Quiz 기준 상단 네비바와 Q 사이 간격 확정 후 Header 아래 Spacer와 함께 조정 필요
     paddingTop: scaleWidth(20),
     paddingBottom: scaleWidth(100),
   },
