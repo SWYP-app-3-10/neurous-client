@@ -82,9 +82,9 @@ const InquiryScreen = () => {
   const emailError = useMemo(() => getEmailDomainError(email), [email]);
 
   const isSubmitEnabled = useMemo(() => {
-    // 문의 내용 10자 이상 + 이메일 입력 및 형식 검증 통과 시에만 활성화
+    // 문의 내용 + 이메일 입력 및 형식 검증 통과 시에만 활성화
     return (
-      content.trim().length >= 10 &&
+      content.trim().length > 0 &&
       email.trim().length > 0 &&
       emailError === ''
     );
@@ -126,6 +126,7 @@ const InquiryScreen = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* TODO(QA): Figma Inquiry_Default 기준 안내 문구 행간 수치 확인 필요 */}
           <Text style={styles.title}>
             뉴로스 이용 중 불편한 점이나{'\n'}
             궁금한 점이 있다면 말씀해주세요.
@@ -141,7 +142,7 @@ const InquiryScreen = () => {
             multiline
             textAlignVertical="top"
             containerStyle={styles.textareaContainer}
-            style={styles.textareaInput}
+            style={styles.inputText}
           />
 
           <Text style={[styles.sectionLabel, styles.sectionLabelWithTop]}>
@@ -157,7 +158,7 @@ const InquiryScreen = () => {
             autoCapitalize="none"
             error={emailError}
             containerStyle={styles.emailContainer}
-            style={styles.textareaInput}
+            style={styles.inputText}
           />
           {/* 이메일 도메인 형식이 잘못된 경우 케이스별 안내 메시지 표시 */}
           {emailError ? (
@@ -218,6 +219,7 @@ const styles = StyleSheet.create({
   title: {
     ...Heading_20EB_Round,
     color: COLORS.black,
+    // TODO(QA): Figma Inquiry_Default 기준 안내 문구 lineHeight 확인 필요
     lineHeight: scaleWidth(35),
     marginBottom: scaleWidth(52),
   },
@@ -229,12 +231,14 @@ const styles = StyleSheet.create({
   textareaContainer: {
     height: scaleWidth(207),
     alignItems: 'flex-start',
+    // TODO(QA): Figma Inquiry_Default 기준 문의 내용 텍스트 박스 내부 패딩 확인 필요
     padding: scaleWidth(18),
     borderRadius: BORDER_RADIUS[16],
     borderColor: COLORS.gray300,
   },
   emailContainer: {
     height: scaleWidth(60),
+    // TODO(QA): Figma Inquiry_Default 기준 이메일 텍스트 박스 내부 패딩 확인 필요
     borderColor: COLORS.gray300,
   },
   emailErrorText: {
@@ -242,11 +246,12 @@ const styles = StyleSheet.create({
     color: COLORS.red.main,
     marginTop: -scaleWidth(8),
   },
-  textareaInput: {
+  inputText: {
     ...Body_16M,
-    color: COLORS.gray600,
+    color: COLORS.black,
   },
   sectionLabelWithTop: {
+    // TODO(QA): Figma Inquiry_Default 기준 문의 내용 텍스트 박스와 답변 받을 이메일 사이 간격 수치 확인 필요
     marginTop: scaleWidth(32),
   },
   bottom: {
