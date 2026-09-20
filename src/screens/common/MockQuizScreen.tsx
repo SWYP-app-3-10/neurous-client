@@ -26,6 +26,7 @@ import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import { Body_16M } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+import BottomCtaBar from '../../components/BottomCtaBar';
 import QuizOptionCard from '../../components/QuizOptionCard';
 import QuizQuestion from '../../components/QuizQuestion';
 import Spacer from '../../components/Spacer';
@@ -141,14 +142,15 @@ const MockQuizScreen: React.FC = () => {
         <Spacer num={48} />
       </ScrollView>
 
-      {/* 하단 버튼 */}
-      <Button
-        title={quizState === 'question' ? '다음' : '완료'}
-        onPress={quizState === 'question' ? handleNext : handleComplete}
-        variant="primary"
-        style={styles.actionButton}
-        disabled={quizState === 'question' && !selectedOptionId}
-      />
+      {/* 하단 버튼 (공통 CTA 컨테이너) */}
+      <BottomCtaBar>
+        <Button
+          title={quizState === 'question' ? '다음' : '완료'}
+          onPress={quizState === 'question' ? handleNext : handleComplete}
+          variant="primary"
+          disabled={quizState === 'question' && !selectedOptionId}
+        />
+      </BottomCtaBar>
     </SafeAreaView>
   );
 };
@@ -196,9 +198,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: BORDER_RADIUS[99],
     backgroundColor: COLORS.gray300,
-  },
-  actionButton: {
-    marginHorizontal: scaleWidth(20),
   },
 });
 
