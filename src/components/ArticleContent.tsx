@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
   },
   categoryContainer: {
     alignSelf: 'flex-start',
+    // TODO(QA): Figma 글 상세(Reading) 기준 카테고리 태그의 좌우 padding, height 값 확인 필요
     paddingHorizontal: scaleWidth(12),
     height: scaleWidth(35),
     backgroundColor: COLORS.puple[3],
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   category: {
+    // TODO(QA): Figma 글 상세(Reading) 기준 카테고리 태그 텍스트 사이즈(typography 토큰) 확인 필요
     ...Caption_14R,
     color: COLORS.puple.main,
   },
