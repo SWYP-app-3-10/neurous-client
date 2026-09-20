@@ -4,6 +4,35 @@
 
 ## 현재 진행 상태
 
+- 브랜치: `fix/popup-toast-common`
+- 확인한 QA:
+  - 화면명: `로그인 정보 - 탈퇴 팝업(Modal_Account_Confirm)` (모든 팝업 컴포넌트에 동일 적용)
+  - 항목: `서브 설명 행간, 자간 수정 필요`
+  - 항목: `버튼 사이즈 및 행간 팝업 패딩 수정 필요`
+  - 화면명: `난이도 평가 팝업 (Popup_Difficulty)`
+  - 항목: `팝업 패딩 수정 필요, 전체 길이 확인 필요`
+  - 화면명: `관심분야 설정하기 - 토스트(EditInterest_MaxSelectionToast)`
+  - 항목: `토스트 사이즈, 패딩 수정 필요`
+  - 화면명: `난이도 수정 모달 - 난이도 변경 후 노출되는 토스트 (EditLevel_Modal)`
+  - 항목: `토스트 디자인 Figma node 2-2560으로 통일 필요`
+  - 화면명: `글 상세 (Reading)`
+  - 항목: `무료 열람권 사용 시 토스트 문구 다름, 사이즈, 패딩, 위치 확인 필요`
+- 처리 내용:
+  - `src/styles/popup.ts`를 추가해 팝업 서브 설명 텍스트(행간/자간), 버튼 높이, 내부 padding을 한 곳에서 관리하도록 했다.
+  - `NotificationModal.tsx`, `LevelSuggestionModal.tsx`가 `popup.ts` 값을 사용하도록 변경했다.
+  - `DifficultySelectionModal.tsx`에 상단 여백, 선택지 높이/좌우 padding/간격 위치를 `TODO(QA)`로 표시했다.
+  - `src/components/toastPresets.ts`를 추가해 완료 토스트(`SUCCESS_TOAST_PRESET`)와 안내 토스트(`NOTICE_TOAST_PRESET`) 스타일을 공통화했다.
+  - 완료 토스트: `MyPageScreen.tsx`(난이도 설정 완료), `QuizScreen.tsx`(추천 난이도 적용), `InquiryScreen.tsx`(문의 전달 완료)
+  - 안내 토스트: `InterestsScreen.tsx`(최대 선택 안내), `ArticleDetailScreen.tsx`(열람권 사용 안내)
+  - Figma 수치를 확인할 수 없어 기존 값을 임시값으로 유지하거나 임의 수치를 넣고 `TODO(QA)`로 표시했다.
+- Notion 상태 처리 기준:
+  - 모두 수치/문구 확인이 필요하므로 `보류` 대상이다.
+- 남은 확인:
+  - 글 상세 열람권 토스트의 정확한 문구는 노션에 명시되지 않아 Figma에서 확인이 필요하다.
+  - 팝업 서브 설명 행간은 임시로 14px * 150%(21)를 넣었다.
+
+## 이전 진행 상태 7
+
 - 브랜치: `fix/common-cta-nav`
 - 확인한 QA:
   - 화면명: `cta 네비게이션 (메뉴있는 탭바 제외 전체 통일)`
