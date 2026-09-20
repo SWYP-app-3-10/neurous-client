@@ -5,6 +5,7 @@ import {
   Body_16R,
   Caption_14R,
   Caption_11M,
+  Caption_12M,
   Heading_20EB_Round,
 } from '../styles/typography';
 import Spacer from './Spacer';
@@ -105,17 +106,15 @@ const styles = StyleSheet.create({
   },
   categoryContainer: {
     alignSelf: 'flex-start',
-    // TODO(QA): Figma 글 상세(Reading) 기준 카테고리 태그의 좌우 padding, height 값 확인 필요
-    paddingHorizontal: scaleWidth(12),
-    height: scaleWidth(35),
+    paddingHorizontal: scaleWidth(10),
+    paddingVertical: scaleWidth(6),
     backgroundColor: COLORS.puple[3],
     borderRadius: BORDER_RADIUS[30],
     justifyContent: 'center',
     alignItems: 'center',
   },
   category: {
-    // TODO(QA): Figma 글 상세(Reading) 기준 카테고리 태그 텍스트 사이즈(typography 토큰) 확인 필요
-    ...Caption_14R,
+    ...Caption_12M,
     color: COLORS.puple.main,
   },
   title: {
