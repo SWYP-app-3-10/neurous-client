@@ -12,10 +12,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
+import { POPUP_BUTTON_HEIGHT, POPUP_DESCRIPTION_TEXT } from '../styles/popup';
 import {
   Body_16SB,
   Caption_12M,
-  Caption_14R,
   Heading_16B,
   Heading_24EB_Round,
 } from '../styles/typography';
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   description: {
-    ...Caption_14R,
+    ...POPUP_DESCRIPTION_TEXT,
     width: '100%',
     color: COLORS.gray600,
     textAlign: 'center',
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     width: '100%',
-    height: scaleWidth(48),
+    height: POPUP_BUTTON_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   declineButton: {
     width: '100%',
-    height: scaleWidth(48),
+    height: POPUP_BUTTON_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.white,

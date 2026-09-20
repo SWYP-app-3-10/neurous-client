@@ -13,7 +13,12 @@ import {
   TextStyle,
 } from 'react-native';
 import { BORDER_RADIUS, COLORS, scaleWidth } from '../styles/global';
-import { Heading_18EB_Round, Caption_14R } from '../styles/typography';
+import {
+  POPUP_BUTTON_HEIGHT,
+  POPUP_DESCRIPTION_TEXT,
+  POPUP_PADDING,
+} from '../styles/popup';
+import { Heading_18EB_Round } from '../styles/typography';
 import Button, { ButtonVariant } from './Button';
 import IconButton from './IconButton';
 import { CloseIcon } from '../icons';
@@ -235,8 +240,8 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    paddingHorizontal: scaleWidth(24),
-    paddingBottom: scaleWidth(24),
+    paddingHorizontal: POPUP_PADDING.horizontal,
+    paddingBottom: POPUP_PADDING.bottom,
     alignItems: 'center',
   },
   closeButtonContainer: {
@@ -250,8 +255,9 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     textAlign: 'center',
   },
+  // 서브 설명: 모든 팝업 공통 텍스트 스타일(행간/자간) 사용
   description: {
-    ...Caption_14R,
+    ...POPUP_DESCRIPTION_TEXT,
     textAlign: 'center',
   },
 
@@ -265,11 +271,11 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    height: scaleWidth(48),
+    height: POPUP_BUTTON_HEIGHT,
   },
   singleButton: {
     width: '100%',
-    height: scaleWidth(48),
+    height: POPUP_BUTTON_HEIGHT,
   },
   childrenContainer: {
     justifyContent: 'center',
