@@ -99,9 +99,14 @@ const OnboardingNavigator = () => {
 
       {/* 온보딩 설정 화면들 */}
       <Stack.Screen name={RouteNames.INTERESTS} component={InterestsScreen} />
+      {/*
+        관심분야 → 난이도 전환은 화면 전체가 옆으로 밀리지 않고 제자리에서 페이드로 바뀌게 한다.
+        (두 화면의 헤더/프로그레스 바 위치가 같아, 프로그레스 바는 그대로 있고 내용만 바뀌는 것처럼 보임)
+      */}
       <Stack.Screen
         name={RouteNames.DIFFICULTY_SETTING}
         component={DifficultySettingScreen}
+        options={{ animation: 'fade' }}
       />
 
       {/* 약관 상세 화면 */}

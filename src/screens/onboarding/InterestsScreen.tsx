@@ -39,7 +39,8 @@ import {
 import { NOTICE_TOAST_PRESET } from '../../components/toastPresets';
 import Spacer from '../../components/Spacer';
 import ProgressBar from '../../components/ProgressBar';
-import { Button } from '../../components';
+import { BottomCtaBar, Button } from '../../components';
+import { BOTTOM_CTA_PADDING } from '../../components/BottomCtaBar';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { useShowToastModal } from '../../store/modalStore';
 import {
@@ -378,9 +379,9 @@ const InterestsScreen = () => {
                 ...NOTICE_TOAST_PRESET,
                 message: '최대 3순위까지 선택할 수 있어요',
                 // 하단 CTA 버튼(기본 높이 63) 상단과 16px 간격을 두기 위한 값
-                // = 버튼 높이(63) + 요청된 간격(16)
-                // footer가 별도 세로 padding 없이 safe area에 바로 붙어있어 이렇게 계산됨.
-                bottomOffset: scaleWidth(63 + 16),
+                // = 버튼 높이(63) + CTA 컨테이너 하단 padding + 요청된 간격(16)
+                bottomOffset:
+                  scaleWidth(63) + BOTTOM_CTA_PADDING.bottom + scaleWidth(16),
               });
             }, 0);
             return prev; // 변경 없이 이전 상태 반환
@@ -517,6 +518,7 @@ const InterestsScreen = () => {
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* TODO(QA): Figma Onboarding_Interest_Default 기준 프로그레스 바와 헤더 텍스트 사이 간격 값 확인 필요 */}
         <Spacer num={editMode ? 54 : 92} />
 
         {/* 타이틀 */}
@@ -566,8 +568,8 @@ const InterestsScreen = () => {
         </View>
       </ScrollView>
 
-      {/* 하단 버튼 */}
-      <View style={styles.footer}>
+      {/* 하단 버튼 (공통 CTA 컨테이너) */}
+      <BottomCtaBar>
         <Button
           variant="primary"
           title={editMode ? '완료' : '다음'}
@@ -576,7 +578,7 @@ const InterestsScreen = () => {
           // 편집 모드에서는 항상 활성화
           disabled={!editMode && !isNextButtonActive}
         />
-      </View>
+      </BottomCtaBar>
     </SafeAreaView>
   );
 };
@@ -676,10 +678,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: BORDER_RADIUS[99],
     backgroundColor: COLORS.white,
-  },
-
-  footer: {
-    paddingHorizontal: scaleWidth(20),
   },
 });
 

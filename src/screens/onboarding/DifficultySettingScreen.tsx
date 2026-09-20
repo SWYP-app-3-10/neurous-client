@@ -20,8 +20,15 @@
  * 진행률: 2/2 (ProgressBar fill=2)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Animated,
+} from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -32,7 +39,7 @@ import {
   useOnboardingStore,
 } from '../../store/onboardingStore';
 import { LevelCategory, LevelCategoryNames } from '../../types/interests';
-import { ProgressBar } from '../../components';
+import { BottomCtaBar, ProgressBar } from '../../components';
 import {
   Body_15M,
   Body_16M,
@@ -95,6 +102,21 @@ const DifficultySettingScreen = () => {
    * 선택된 난이도가 변경될 때마다 자동으로 새로운 정보를 가져온다.
    */
   const { difficultyInfo, isLoading } = useDifficultyInfo(selectedDifficulty);
+
+  /**
+   * 난이도 설명 영역 투명도 (페이드 전환용)
+   *
+   * 난이도를 바꿀 때 "불러오는 중..." 문구로 교체하면 영역 높이가 출렁이고 화면이 깜빡여 어색해 보였다.
+   * 영역 자체는 그대로 두고, 로딩 중에는 투명하게 → 로딩이 끝나면 다시 보이게 페이드 전환한다.
+   */
+  const descriptionOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(descriptionOpacity, {
+      toValue: isLoading ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isLoading, descriptionOpacity]);
 
   // ──────────────────────────────────────────────
   // 이벤트 핸들러
@@ -247,6 +269,7 @@ const DifficultySettingScreen = () => {
         contentContainerStyle={{ paddingBottom: bottom }}
         showsVerticalScrollIndicator={false}
       >
+        {/* TODO(QA): Figma Onboarding_Difficulty 기준 프로그레스 바와 헤더 텍스트 사이 간격 값 확인 필요 */}
         <Spacer num={92} />
 
         {/* 타이틀 */}
@@ -330,44 +353,30 @@ const DifficultySettingScreen = () => {
 
         <Spacer num={32} />
 
-        {/* 선택된 난이도 설명 */}
-        {isLoading ? (
-          // 로딩 중
-          <View>
-            <Text style={styles.descriptionText}>
-              난이도 정보를 불러오는 중...
-            </Text>
+        {/* 선택된 난이도 설명 (로딩 중에는 투명 처리해 영역 높이를 유지) */}
+        <Animated.View style={{ opacity: descriptionOpacity }}>
+          {/* 난이도 라벨 및 예상 시간 */}
+          <View style={styles.descriptionTitleContainer}>
+            <Text style={styles.descriptionTitle}>{selectedInfo.label}</Text>
+            <Text style={styles.descriptionLabelTime}>{selectedInfo.time}</Text>
           </View>
-        ) : (
-          // 난이도 정보 표시
-          <View>
-            {/* 난이도 라벨 및 예상 시간 */}
-            <View style={styles.descriptionTitleContainer}>
-              <Text style={styles.descriptionTitle}>{selectedInfo.label}</Text>
-              <Text style={styles.descriptionLabelTime}>
-                {selectedInfo.time}
-              </Text>
-            </View>
 
-            <Spacer num={20} />
+          <Spacer num={20} />
 
-            {/* 난이도 설명 */}
-            <Text style={styles.descriptionText}>
-              {selectedInfo.description}
-            </Text>
-          </View>
-        )}
+          {/* 난이도 설명 */}
+          <Text style={styles.descriptionText}>{selectedInfo.description}</Text>
+        </Animated.View>
       </ScrollView>
 
-      {/* 하단 다음 버튼 */}
-      <View style={styles.footer}>
+      {/* 하단 다음 버튼 (공통 CTA 컨테이너) */}
+      <BottomCtaBar>
         <Button
           variant="primary"
           title="다음"
           onPress={handleNext}
           // disabled={!isNextButtonActive} // 항상 활성화 (난이도 선택 필수)
         />
-      </View>
+      </BottomCtaBar>
     </SafeAreaView>
   );
 };
@@ -465,11 +474,6 @@ const styles = StyleSheet.create({
   descriptionText: {
     ...Body_16R,
     color: COLORS.black,
-  },
-
-  // ────── 하단 버튼 영역 ──────
-  footer: {
-    paddingHorizontal: scaleWidth(20),
   },
 });
 

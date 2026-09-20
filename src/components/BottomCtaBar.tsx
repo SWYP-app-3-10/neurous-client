@@ -15,16 +15,26 @@ interface BottomCtaBarProps {
  * - 상단 스트로크가 없는 형태가 기본이다.
  *   (글 상세 CTA, 하단 탭바는 상단 스트로크가 필요해 이 컴포넌트를 사용하지 않는다.)
  */
+/**
+ * CTA 컨테이너 여백 값
+ * - 컨테이너 밖(예: CTA 위에 띄우는 토스트 위치 계산)에서도 같은 값을 쓰도록 export한다.
+ */
+export const BOTTOM_CTA_PADDING = {
+  // TODO(QA): Figma CTA 네비게이션(node 2-4003) 기준 상하/좌우 padding 값 확인 필요 (현재 글 상세 CTA 여백 기준 임시값)
+  horizontal: scaleWidth(20),
+  top: scaleWidth(12),
+  bottom: scaleWidth(8),
+};
+
 const BottomCtaBar: React.FC<BottomCtaBarProps> = ({ children, style }) => {
   return <View style={[styles.container, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({
   container: {
-    // TODO(QA): Figma CTA 네비게이션(node 2-4003) 기준 상하/좌우 padding 값 확인 필요 (현재 글 상세 CTA 여백 기준 임시값)
-    paddingHorizontal: scaleWidth(20),
-    paddingTop: scaleWidth(12),
-    paddingBottom: scaleWidth(8),
+    paddingHorizontal: BOTTOM_CTA_PADDING.horizontal,
+    paddingTop: BOTTOM_CTA_PADDING.top,
+    paddingBottom: BOTTOM_CTA_PADDING.bottom,
     backgroundColor: COLORS.white,
   },
 });
