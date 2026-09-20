@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
+import { SUCCESS_TOAST_PRESET } from '../../components/toastPresets';
 import Header from '../../components/Header';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
@@ -94,14 +95,9 @@ const InquiryScreen = () => {
   const onPressSubmit = () => {
     console.log('[Inquiry] submit', { content, email });
     showToastModal({
+      ...SUCCESS_TOAST_PRESET,
       message: '문의 전달이 완료되었어요',
       icon: <LevelChangeCheckIcon />,
-      position: 'bottom',
-      marginHorizontal: scaleWidth(20),
-      paddingHorizontal: scaleWidth(20),
-      paddingVertical: scaleWidth(14),
-      borderRadius: BORDER_RADIUS[99],
-      duration: 2000,
     });
     navigation.goBack();
   };

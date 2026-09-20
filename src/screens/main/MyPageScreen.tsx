@@ -38,6 +38,7 @@ import {
   Heading_18SB,
 } from '../../styles/typography';
 
+import { SUCCESS_TOAST_PRESET } from '../../components/toastPresets';
 import Spacer from '../../components/Spacer';
 import { TimelineGroup } from '../../components/TimelineGroup';
 import IconButton from '../../components/IconButton';
@@ -189,14 +190,9 @@ const MyPageScreen = () => {
     onSuccess: () => {
       hideModal();
       showToastModal({
+        ...SUCCESS_TOAST_PRESET,
         message: '난이도 설정이 완료되었어요',
         icon: <LevelChangeCheckIcon />,
-        position: 'bottom',
-        marginHorizontal: scaleWidth(20),
-        paddingHorizontal: scaleWidth(20),
-        paddingVertical: scaleWidth(14),
-        borderRadius: BORDER_RADIUS[99],
-        duration: 2000,
       });
     },
     onError: () => hideModal(),

@@ -47,6 +47,7 @@ import {
   Heading_24EB_Round,
   Heading_26EB_Round,
 } from '../../styles/typography';
+import { SUCCESS_TOAST_PRESET } from '../../components/toastPresets';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import BottomCtaBar from '../../components/BottomCtaBar';
@@ -437,14 +438,9 @@ const QuizScreen: React.FC = () => {
 
                         hideModal();
                         showToastModal({
+                          ...SUCCESS_TOAST_PRESET,
                           message: '난이도 설정이 완료되었어요',
                           icon: <LevelChangeCheckIcon />,
-                          position: 'bottom',
-                          marginHorizontal: scaleWidth(20),
-                          paddingHorizontal: scaleWidth(20),
-                          paddingVertical: scaleWidth(14),
-                          borderRadius: BORDER_RADIUS[99],
-                          duration: 2000,
                         });
                       },
 
