@@ -29,7 +29,6 @@ import { scaleWidth, COLORS, BORDER_RADIUS } from '../../styles/global';
 import {
   Heading_24EB_Round,
   Body_15M,
-  Body_16M,
   Body_18M,
   Heading_18SB,
 } from '../../styles/typography';
@@ -37,6 +36,7 @@ import {
   MainTabNavigationProp,
   OnboardingStackParamList,
 } from '../../navigation/types';
+import { NOTICE_TOAST_PRESET } from '../../components/toastPresets';
 import Spacer from '../../components/Spacer';
 import ProgressBar from '../../components/ProgressBar';
 import { Button } from '../../components';
@@ -375,22 +375,12 @@ const InterestsScreen = () => {
           if (newSelected.size >= 3) {
             setTimeout(() => {
               showToastModal({
+                ...NOTICE_TOAST_PRESET,
                 message: '최대 3순위까지 선택할 수 있어요',
-                position: 'bottom',
-                backgroundColor: COLORS.gray800,
-                marginHorizontal: scaleWidth(20),
-                paddingHorizontal: scaleWidth(20),
-                paddingVertical: scaleWidth(14),
-                borderRadius: BORDER_RADIUS[16],
                 // 하단 CTA 버튼(기본 높이 63) 상단과 16px 간격을 두기 위한 값
                 // = 버튼 높이(63) + 요청된 간격(16)
                 // footer가 별도 세로 padding 없이 safe area에 바로 붙어있어 이렇게 계산됨.
                 bottomOffset: scaleWidth(63 + 16),
-                messageStyle: {
-                  ...Body_16M,
-                  color: COLORS.white,
-                  textAlign: 'left',
-                },
               });
             }, 0);
             return prev; // 변경 없이 이전 상태 반환
