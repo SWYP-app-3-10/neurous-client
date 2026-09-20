@@ -117,8 +117,13 @@ const LevelSelectionContent: React.FC<LevelSelectionContentProps> = ({
 
 const styles = StyleSheet.create({
   optionsContainer: {},
+  // 옵션 행 높이는 선택 여부와 상관없이 항상 같게 고정한다.
+  // (선택 시 체크 아이콘/굵은 텍스트가 붙으면서 행 높이가 달라져 바텀시트 높이·위치가 흔들리던 문제 방지)
+  // 3개 옵션 x 59 = 177 (QA-016-01 기준 각 옵션 59px)
+  // TODO(QA): Figma EditLevel_Modal(node 2:3627) 기준 바텀시트 전체 높이 289 (핸들 영역 + 옵션 3개 + 하단 여백) 확인 필요
   option: {
-    paddingVertical: scaleWidth(16),
+    height: scaleWidth(59),
+    justifyContent: 'center',
     paddingHorizontal: scaleWidth(20),
   },
   optionSelected: {
