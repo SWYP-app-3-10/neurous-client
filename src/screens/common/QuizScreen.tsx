@@ -49,6 +49,7 @@ import {
 } from '../../styles/typography';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+import BottomCtaBar from '../../components/BottomCtaBar';
 import QuizOptionCard from '../../components/QuizOptionCard';
 import QuizQuestion from '../../components/QuizQuestion';
 import Spacer from '../../components/Spacer';
@@ -985,15 +986,16 @@ const QuizScreen: React.FC = () => {
         <Spacer num={48} />
       </ScrollView>
 
-      {/* 하단 버튼 */}
-      <Button
-        title={quizState === 'question' ? '다음' : '완료'}
-        onPress={quizState === 'question' ? handleNext : handleComplete}
-        variant="primary"
-        style={styles.actionButton}
-        // 문제 화면에서 선택지를 선택하지 않으면 버튼 비활성화
-        disabled={quizState === 'question' && !selectedOptionId}
-      />
+      {/* 하단 버튼 (공통 CTA 컨테이너) */}
+      <BottomCtaBar>
+        <Button
+          title={quizState === 'question' ? '다음' : '완료'}
+          onPress={quizState === 'question' ? handleNext : handleComplete}
+          variant="primary"
+          // 문제 화면에서 선택지를 선택하지 않으면 버튼 비활성화
+          disabled={quizState === 'question' && !selectedOptionId}
+        />
+      </BottomCtaBar>
     </SafeAreaView>
   );
 };
@@ -1108,9 +1110,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.gray200,
-  },
-  actionButton: {
-    marginHorizontal: scaleWidth(20),
   },
   difficultyOptionsContainer: {
     width: '100%',
