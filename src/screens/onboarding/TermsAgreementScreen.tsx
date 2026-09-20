@@ -9,7 +9,7 @@ import { OnboardingStackParamList } from '../../navigation/types';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
   Heading_24EB_Round,
-  Heading_18B,
+  Body_16SB,
   Body_16M,
 } from '../../styles/typography';
 
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
 
   allText: {
-    ...Heading_18B, // 텍스트 폰트 스타일
+    ...Body_16SB, // 텍스트 폰트 스타일
     color: COLORS.gray800, // 텍스트 색상
   },
 
