@@ -5,8 +5,6 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -16,14 +14,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RouteNames } from '../../../routes';
 import { OnboardingStackParamList } from '../../navigation/types';
-import { BORDER_RADIUS, COLORS, scaleWidth } from '../../styles/global';
+import { COLORS, scaleWidth } from '../../styles/global';
 import Spacer from '../../components/Spacer';
+import Button from '../../components/Button';
+import BottomCtaBar from '../../components/BottomCtaBar';
 import ActivityIndicator from '../../components/ActivityIndicator';
-import {
-  Body_15M,
-  Heading_18EB_Round,
-  Heading_24EB_Round,
-} from '../../styles/typography';
+import { Body_15M, Heading_24EB_Round } from '../../styles/typography';
 import {
   Intro_CardList,
   Intro_Function,
@@ -167,6 +163,7 @@ const IntroSlidesScreen = () => {
       {/* 텍스트 영역 - 고정, fade 전환 */}
       <View style={styles.textSection}>
         <Spacer num={scaleWidth(48)} />
+        {/* TODO(QA): Figma Onboarding_Function01~03 기준 헤더(타이틀) 폰트 사이즈 확인 필요 */}
         <Animated.Text
           style={[
             Heading_24EB_Round,
@@ -177,6 +174,7 @@ const IntroSlidesScreen = () => {
           {currentSlide.title}
         </Animated.Text>
         <Spacer num={scaleWidth(20)} />
+        {/* TODO(QA): Figma Onboarding_Function01~03 기준 서브 텍스트 폰트 사이즈 확인 필요 */}
         <Animated.Text
           style={[Body_15M, { color: COLORS.gray600 }, { opacity: fadeAnim }]}
         >
@@ -206,12 +204,11 @@ const IntroSlidesScreen = () => {
       <Spacer num={scaleWidth(70)} />
       <ActivityIndicator activeIndex={currentIndex} />
 
-      <Spacer num={scaleWidth(24)} />
-
-      {/* 다음 버튼 */}
-      <TouchableOpacity style={styles.button} onPress={handleNext}>
-        <Text style={[Heading_18EB_Round, { color: COLORS.white }]}>다음</Text>
-      </TouchableOpacity>
+      {/* 다음 버튼 (공통 CTA 컨테이너 — 컨테이너 상단 padding이 인디케이터와의 간격을 함께 만든다) */}
+      <Spacer num={scaleWidth(12)} />
+      <BottomCtaBar>
+        <Button variant="primary" title="다음" onPress={handleNext} />
+      </BottomCtaBar>
     </SafeAreaView>
   );
 };
@@ -231,14 +228,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  button: {
-    height: scaleWidth(56),
-    borderRadius: BORDER_RADIUS[16],
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.puple.main,
-    marginHorizontal: scaleWidth(20),
   },
 });
 
