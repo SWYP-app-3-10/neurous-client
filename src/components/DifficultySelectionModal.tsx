@@ -47,6 +47,7 @@ const DifficultySelectionModal: React.FC<DifficultySelectionModalProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* TODO(QA): Figma Popup_Difficulty 기준 팝업 상단 여백(제목과 첫 선택지 사이) 값 확인 필요 */}
       <Spacer num={24} />
       {difficultyOptions.map((option, index) => {
         const isSelected = selectedDifficulty === option.value;
@@ -77,6 +78,7 @@ const DifficultySelectionModal: React.FC<DifficultySelectionModalProps> = ({
                 <CheckIcon color={isSelected ? COLORS.white : COLORS.gray100} />
               </View>
             </TouchableOpacity>
+            {/* TODO(QA): Figma Popup_Difficulty 기준 선택지 사이 간격 값 확인 필요 */}
             {index < difficultyOptions.length - 1 && <Spacer num={12} />}
           </View>
         );
@@ -94,7 +96,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
+    // TODO(QA): Figma Popup_Difficulty 기준 선택지 높이(팝업 전체 길이에 영향) 값 확인 필요
     height: scaleWidth(52),
+    // TODO(QA): Figma Popup_Difficulty 기준 선택지 좌우 padding 값 확인 필요
     paddingHorizontal: scaleWidth(32),
     borderRadius: BORDER_RADIUS[12],
     backgroundColor: COLORS.gray100,

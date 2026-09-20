@@ -57,6 +57,7 @@ import {
   Heading_24EB_Round,
   Caption_14R,
 } from '../../styles/typography';
+import { NOTICE_TOAST_PRESET } from '../../components/toastPresets';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import Spacer from '../../components/Spacer';
@@ -376,21 +377,11 @@ const ArticleDetailScreen = () => {
     }
 
     showToastModal({
+      ...NOTICE_TOAST_PRESET,
+      // TODO(QA): Figma 글 상세(Reading) 열람권 사용 토스트 기준 문구 확인 필요 (위 message 값)
       message,
-      position: 'bottom',
       duration: 2200,
-      backgroundColor: COLORS.gray800,
-      borderColor: COLORS.gray800Stroke,
-      borderWidth: 1,
-      width: scaleWidth(353),
-      borderRadius: BORDER_RADIUS[16],
-      paddingVertical: scaleWidth(18),
-      paddingHorizontal: scaleWidth(20),
-      messageStyle: {
-        ...Body_16M,
-        color: COLORS.white,
-        textAlign: 'left',
-      },
+      // TODO(QA): Figma 글 상세(Reading) 열람권 사용 토스트 기준 하단 위치(bottomOffset) 확인 필요
       bottomOffset: scaleWidth(20),
     });
   }, [openType, showToastModal]);
