@@ -19,7 +19,7 @@ import Spacer from '../../components/Spacer';
 import Button from '../../components/Button';
 import BottomCtaBar from '../../components/BottomCtaBar';
 import ActivityIndicator from '../../components/ActivityIndicator';
-import { Body_15M, Heading_24EB_Round } from '../../styles/typography';
+import { Body_16M, Heading_24EB_Round } from '../../styles/typography';
 import {
   Intro_CardList,
   Intro_Function,
@@ -163,7 +163,8 @@ const IntroSlidesScreen = () => {
       {/* 텍스트 영역 - 고정, fade 전환 */}
       <View style={styles.textSection}>
         <Spacer num={scaleWidth(48)} />
-        {/* TODO(QA): Figma Onboarding_Function01~03 기준 헤더(타이틀) 폰트 사이즈 확인 필요 */}
+        {/* TODO(QA): Figma Onboarding_Function01~03 기준 헤더(타이틀) 폰트 사이즈 확인 필요 
+        ❓ 24EB로 잘 설정되어 있음*/}
         <Animated.Text
           style={[
             Heading_24EB_Round,
@@ -174,9 +175,8 @@ const IntroSlidesScreen = () => {
           {currentSlide.title}
         </Animated.Text>
         <Spacer num={scaleWidth(20)} />
-        {/* TODO(QA): Figma Onboarding_Function01~03 기준 서브 텍스트 폰트 사이즈 확인 필요 */}
         <Animated.Text
-          style={[Body_15M, { color: COLORS.gray600 }, { opacity: fadeAnim }]}
+          style={[Body_16M, { color: COLORS.gray600 }, { opacity: fadeAnim }]}
         >
           {currentSlide.description}
         </Animated.Text>
