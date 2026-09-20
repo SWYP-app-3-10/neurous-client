@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import Header from '../../components/Header';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import BottomCtaBar from '../../components/BottomCtaBar';
 
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 
@@ -166,7 +167,8 @@ const InquiryScreen = () => {
           ) : null}
         </ScrollView>
 
-        <View style={styles.bottom}>
+        {/* 하단 버튼 (공통 CTA 컨테이너) */}
+        <BottomCtaBar>
           <Button
             title="전달하기"
             onPress={onPressSubmit}
@@ -174,7 +176,7 @@ const InquiryScreen = () => {
             variant="primary"
             style={styles.submitButton}
           />
-        </View>
+        </BottomCtaBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -253,14 +255,6 @@ const styles = StyleSheet.create({
   sectionLabelWithTop: {
     // TODO(QA): Figma Inquiry_Default 기준 문의 내용 텍스트 박스와 답변 받을 이메일 사이 간격 수치 확인 필요
     marginTop: scaleWidth(32),
-  },
-  bottom: {
-    // 고정 height 대신 상/하 padding으로 버튼 높이에 맞춰 자연스럽게 영역이 결정되도록 변경
-    // (Android에서 키보드-CTA 간격이 어색하면 paddingBottom 값을 조정)
-    paddingTop: scaleWidth(8),
-    paddingBottom: scaleWidth(16),
-    paddingHorizontal: scaleWidth(20),
-    backgroundColor: COLORS.white,
   },
   submitButton: {
     width: '100%',
