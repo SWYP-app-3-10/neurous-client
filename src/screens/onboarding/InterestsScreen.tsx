@@ -526,6 +526,7 @@ const InterestsScreen = () => {
         <Spacer num={4} />
 
         {/* 서브타이틀 */}
+        {/* TODO(QA): Figma EditInterest_Selected 기준 서브 설명 글씨 크기, 자간 확인 필요 (현재 Body_15M) */}
         <Text style={[Body_15M, { color: COLORS.gray600 }]}>
           홈 화면에서 나의 관심분야 글을 확인할 수 있어요
         </Text>
@@ -604,6 +605,7 @@ const styles = StyleSheet.create({
 
   // ────── 관심분야 태그 레이아웃 ──────
   tagsWrapper: {
+    // TODO(QA): Figma EditInterest_Selected 기준 태그 줄 사이 세로 간격 값 확인 필요
     gap: scaleWidth(8),
   },
   tagsRow: {
@@ -623,6 +625,7 @@ const styles = StyleSheet.create({
    * 우선순위 배지를 표시할 공간 확보
    */
   tagSpacer: {
+    // TODO(QA): Figma EditInterest_Selected 기준 선택된 태그 위 우선순위 배지 영역 높이(세로 간격) 값 확인 필요
     height: scaleWidth(50),
   },
 
