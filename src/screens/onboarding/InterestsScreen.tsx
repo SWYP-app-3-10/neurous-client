@@ -519,7 +519,7 @@ const InterestsScreen = () => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* TODO(QA): Figma Onboarding_Interest_Default 기준 프로그레스 바와 헤더 텍스트 사이 간격 값 확인 필요 */}
-        <Spacer num={editMode ? 54 : 92} />
+        <Spacer num={92} />
 
         {/* 타이틀 */}
         <Text style={styles.title}>관심분야를 선택해주세요</Text>

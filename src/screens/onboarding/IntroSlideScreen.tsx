@@ -163,8 +163,6 @@ const IntroSlidesScreen = () => {
       {/* 텍스트 영역 - 고정, fade 전환 */}
       <View style={styles.textSection}>
         <Spacer num={scaleWidth(48)} />
-        {/* TODO(QA): Figma Onboarding_Function01~03 기준 헤더(타이틀) 폰트 사이즈 확인 필요 
-        ❓ 24EB로 잘 설정되어 있음*/}
         <Animated.Text
           style={[
             Heading_24EB_Round,
