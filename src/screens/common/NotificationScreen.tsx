@@ -25,14 +25,14 @@ import {
   useNotifications,
   useMarkNotificationAsRead,
 } from '../../hooks/useNotifications';
-import { formatRelativeDate } from '../../utils/dateUtils';
+import { formatNotificationDate } from '../../utils/dateUtils';
 
 /**
  * NotificationScreen
  *
  * - 백엔드 API에서 알림 목록 조회
  * - 알림 클릭 시 읽음 처리 (PUT API 호출)
- * - 날짜를 "n일 전" 형식으로 표시
+ * - 날짜는 서버가 준 displayDate를 그대로 표시 ("0일 전"만 "오늘"로 변환)
  * - 읽지 않은 알림은 배경색으로 강조 표시
  */
 const NotificationScreen = () => {
@@ -84,8 +84,10 @@ const NotificationScreen = () => {
 
         <Text style={styles.subtitle}>{item.message}</Text>
 
-        {/* n일 전 형식으로 표시 */}
-        <Text style={styles.date}>{formatRelativeDate(item.createdAt)}</Text>
+        {/* 서버 displayDate 표시 ("0일 전"만 "오늘") */}
+        <Text style={styles.date}>
+          {formatNotificationDate(item.createdAt)}
+        </Text>
       </Pressable>
     );
   };
