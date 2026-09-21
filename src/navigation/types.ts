@@ -261,11 +261,13 @@ export type FullScreenStackParamList = {
   /**
    * 퀴즈 화면 (글 읽기 완료 후 "퀴즈 풀기" 버튼 클릭 시)
    * @param articleId - 퀴즈를 풀 글 ID (필수)
-   * @param returnTo - 퀴즈 완료 후 돌아갈 화면 ('mission' | 'search', 선택)
+   * @param returnTo - 퀴즈 완료 후 돌아갈 화면 (선택)
+   *   - 'mission' | 'search': 홈/탐색 탭으로 복귀
+   *   - 'read': 마이페이지 > 읽은 글 상세로 복귀 (퀴즈를 안 푼 읽은 글에서 진입한 경우)
    */
   [RouteNames.QUIZ]: {
     articleId: number;
-    returnTo?: 'mission' | 'search';
+    returnTo?: 'mission' | 'search' | 'read';
   };
 
   /**
