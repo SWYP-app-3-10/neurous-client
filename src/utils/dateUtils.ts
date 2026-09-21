@@ -3,36 +3,17 @@
  */
 
 /**
- * ISO 날짜를 "n일 전" 형식으로 변환
+ * 알림 목록의 날짜 표시 문자열을 화면용으로 변환
  *
- * @param isoDateString ISO 8601 형식 날짜
- * @returns "오늘", "1일 전", "2일 전", ...
+ * 서버가 `displayDate`를 이미 표시용 문자열("0일 전", "1일 전", "09.17" 등)로
+ * 내려주므로 날짜 계산은 하지 않는다. 오늘 받은 알림("0일 전")만 "오늘"로
+ * 바꾸고, 나머지는 서버에서 받은 값을 그대로 반환한다.
+ *
+ * @param displayDate 서버가 내려준 표시용 날짜 문자열
+ * @returns "오늘" 또는 서버 값 그대로 ("1일 전", "09.17", ...)
  */
-export function formatRelativeDate(isoDateString: string): string {
-  const now = new Date();
-  const targetDate = new Date(isoDateString);
-
-  // 시간 제거 (날짜만 비교)
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const targetStart = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
-  );
-
-  // 일 수 차이 계산
-  const diffTime = todayStart.getTime() - targetStart.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return '오늘';
-  } else if (diffDays === 1) {
-    return '1일 전';
-  } else if (diffDays > 1) {
-    return `${diffDays}일 전`;
-  } else {
-    return '오늘';
-  }
+export function formatNotificationDate(displayDate: string): string {
+  return displayDate === '0일 전' ? '오늘' : displayDate;
 }
 
 /**
