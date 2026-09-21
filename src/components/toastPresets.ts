@@ -33,9 +33,8 @@ export const NOTICE_TOAST_PRESET: ToastPreset = {
   position: 'bottom',
   backgroundColor: COLORS.gray800,
   // TODO(QA): Figma 텍스트 토스트 기준 좌우 margin, padding, radius 값 확인 필요
-  marginHorizontal: scaleWidth(20),
   paddingHorizontal: scaleWidth(20),
-  paddingVertical: scaleWidth(14),
+  paddingVertical: scaleWidth(18),
   borderRadius: BORDER_RADIUS[16],
   messageStyle: {
     ...Body_16M,

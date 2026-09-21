@@ -381,8 +381,6 @@ const ArticleDetailScreen = () => {
       // TODO(QA): Figma 글 상세(Reading) 열람권 사용 토스트 기준 문구 확인 필요 (위 message 값)
       message,
       duration: 2200,
-      // TODO(QA): Figma 글 상세(Reading) 열람권 사용 토스트 기준 하단 위치(bottomOffset) 확인 필요
-      bottomOffset: scaleWidth(20),
     });
   }, [openType, showToastModal]);
 
