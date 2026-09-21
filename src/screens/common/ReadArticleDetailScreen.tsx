@@ -9,11 +9,13 @@
  *   2. 풀었던 퀴즈와 정답/오답 피드백 표시 (퀴즈를 푼 글에서만)
  *   3. 스크롤에 따라 "퀴즈 보기" / "맨 위로" 버튼 자동 전환 (퀴즈를 푼 글에서만)
  *   4. 플로팅 버튼으로 퀴즈 섹션으로 빠르게 이동
+ *   5. 퀴즈를 안 푼 글은 하단 "퀴즈 풀기" 버튼으로 퀴즈 화면에 진입 (완료 후 이 화면으로 복귀)
  *
  * 주의:
  *   - 읽기만 하고 퀴즈를 안 푼 글은 API 응답의 quiz가 undefined이며,
- *     이 경우 퀴즈 섹션과 하단 플로팅 버튼을 모두 렌더링하지 않는다
+ *     이 경우 퀴즈 섹션과 하단 플로팅 버튼을 렌더링하지 않는다
  *     (이동할 퀴즈 섹션이 없는데 "퀴즈 보기" 버튼만 떠 있는 문제 방지).
+ *     대신 ArticleDetailScreen의 "다 읽었어요"와 동일한 형태의 하단 "퀴즈 풀기" 버튼을 표시한다.
  *
  * ArticleDetailScreen과의 차이점:
  *   - ArticleDetailScreen: 처음 읽는 글 (경험치 획득, 퀴즈 풀기)
@@ -39,7 +41,8 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BORDER_RADIUS, COLORS, scaleWidth } from '../../styles/global';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -48,11 +51,15 @@ import QuizFeedback from '../../components/QuizFeedback';
 import Spacer from '../../components/Spacer';
 import { useScrollToQuiz } from '../../hooks/useScrollToQuiz';
 import { useQuizButton } from '../../hooks/useQuizButton';
-import { FullScreenStackRouteProp } from '../../navigation/types';
+import {
+  FullScreenStackParamList,
+  FullScreenStackRouteProp,
+} from '../../navigation/types';
 import { RouteNames } from '../../../routes';
 import { fetchReadContentDetail, ReadContentDetail } from '../../api/userApi';
 import { getUserInfo } from '../../services/authService';
 import { trackEvent } from '../../services/mixpanelService';
+import { logEvent } from '../../services/analyticsService';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { LevelCategoryNames } from '../../types/interests';
 
@@ -66,7 +73,10 @@ const BOTTOM_SPACING_WITH_BUTTON = 146;
 /** 하단에 글 보기 버튼이 없는 경우 콘텐츠 하단 여백 */
 const BOTTOM_SPACING_WITHOUT_BUTTON = 48;
 
+type NavigationProp = NativeStackNavigationProp<FullScreenStackParamList>;
+
 const ReadArticleDetailScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
   const route =
     useRoute<FullScreenStackRouteProp<typeof RouteNames.READ_ARTICLE_DETAIL>>();
   const { bottom: safeAreaBottom } = useSafeAreaInsets();
@@ -255,6 +265,30 @@ const ReadArticleDetailScreen = () => {
   });
 
   // ──────────────────────────────────────────────
+  // 핸들러
+  // ──────────────────────────────────────────────
+
+  /**
+   * 하단 "퀴즈 풀기" 버튼 클릭 핸들러 (퀴즈를 안 푼 글에서만 노출)
+   *
+   * 퀴즈 화면으로 이동하며, returnTo를 'read'로 넘겨서
+   * 퀴즈 완료 후 이 화면(읽은 글 상세)으로 돌아와 방금 푼 결과를 바로 확인할 수 있게 한다.
+   *
+   * TODO: 읽은 글 상세에서 진입한 경우를 구분하는 전용 분석 이벤트 추가 필요
+   *       (현재는 글 상세의 "퀴즈 풀고 더 얻기"와 같은 StartQuiz_Reading 이벤트를 재사용)
+   */
+  const handlePressSolveQuizButton = () => {
+    if (!contentId) {
+      return;
+    }
+    logEvent('StartQuiz_Reading');
+    navigation.navigate(RouteNames.QUIZ, {
+      articleId: contentId,
+      returnTo: 'read',
+    });
+  };
+
+  // ──────────────────────────────────────────────
   // 동적 스타일 계산
   // ──────────────────────────────────────────────
 
@@ -379,6 +413,22 @@ const ReadArticleDetailScreen = () => {
           </View>
         </View>
       )}
+
+      {/*
+        하단 "퀴즈 풀기" 버튼 — 퀴즈를 안 푼 글에서만 표시한다.
+        ArticleDetailScreen의 "다 읽었어요" 영역과 동일한 스타일(상단 구분선 + 좌우 20 여백).
+        스크롤 영역 아래에 일반 레이아웃으로 배치되므로 본문을 가리지 않는다.
+      */}
+      {!quiz && (
+        <View style={styles.solveQuizButtonContainer}>
+          <Button
+            title="퀴즈 풀기"
+            onPress={handlePressSolveQuizButton}
+            variant="primary"
+            style={styles.solveQuizButton}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -399,6 +449,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: scaleWidth(20),
+  },
+  /** 하단 "퀴즈 풀기" 버튼 영역 (ArticleDetailScreen의 "다 읽었어요" 영역과 동일) */
+  solveQuizButtonContainer: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray200,
+    paddingTop: scaleWidth(12),
+    paddingBottom: scaleWidth(8),
+  },
+  /** 하단 "퀴즈 풀기" 버튼 */
+  solveQuizButton: {
+    marginHorizontal: scaleWidth(20),
   },
   /** 하단 플로팅 버튼 컨테이너 (절대 위치) */
   fixedButtonContainer: {
