@@ -8,18 +8,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import Header from '../../components/Header';
 import Spacer from '../../components/Spacer';
 import { NoNotificationsIcon } from '../../icons';
 import { COLORS, scaleWidth } from '../../styles/global';
-import {
-  Body_16M,
-  Body_16SB,
-  Caption_14R,
-  Caption_12M,
-} from '../../styles/typography';
+import { Body_16M, Body_16SB, Caption_14R } from '../../styles/typography';
 
 import {
   useNotifications,
@@ -37,6 +35,8 @@ import { formatNotificationDate } from '../../utils/dateUtils';
  */
 const NotificationScreen = () => {
   const navigation = useNavigation<any>();
+  // 하단 시스템 바(제스처 바/내비게이션 바) 높이
+  const insets = useSafeAreaInsets();
 
   // 알림 목록 조회
   const {
@@ -78,9 +78,7 @@ const NotificationScreen = () => {
         onPress={() => onPressItem(item.notificationId, item.isRead)}
         style={[styles.row, isUnread && styles.rowUnread]}
       >
-        <Text style={[styles.title, isUnread && styles.titleUnread]}>
-          {item.title}
-        </Text>
+        <Text style={styles.title}>{item.title}</Text>
 
         <Text style={styles.subtitle}>{item.message}</Text>
 
@@ -144,10 +142,12 @@ const NotificationScreen = () => {
         contentContainerStyle={[
           styles.listContent,
           notifications.length === 0 && styles.listContentEmpty,
+          // 빈 상태/목록 모두: 하단 바 높이 + 48만큼 띄워 푸터가 가려지지 않게 함
+          { paddingBottom: insets.bottom + scaleWidth(48) },
         ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            {/* TODO(QA): Figma Alarm_Empty 기준 빈 상태 일러스트 크기와 위치 수치 확인 필요 */}
+            {/* 빈 상태 일러스트 76x76, 텍스트와 간격 16 (Figma Alarm_Empty) */}
             <NoNotificationsIcon />
             <Spacer num={16} />
             <Text style={styles.emptyText}>아직 도착한 알림이 없어요</Text>
@@ -175,17 +175,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   listContent: {
-    // TODO(QA): Figma Alarm 기준 리스트 상단 패딩과 아이템 간격 수치 확인 필요
-    paddingTop: scaleWidth(8),
-    paddingBottom: scaleWidth(16),
+    // 헤더와 첫 알림 사이 간격 12 (Figma Alarm)
+    // 하단 여백은 시스템 바 높이가 필요해 contentContainerStyle에서 동적으로 지정
+    paddingTop: scaleWidth(12),
   },
   listContentEmpty: {
     flexGrow: 1,
   },
   row: {
-    // TODO(QA): Figma Alarm 기준 알림 리스트 아이템 패딩 수치 확인 필요
+    // 알림 아이템 패딩: 좌우 20, 상하 24 (Figma List_*_Alarm)
     paddingHorizontal: scaleWidth(20),
-    paddingVertical: scaleWidth(25),
+    paddingVertical: scaleWidth(24),
     backgroundColor: COLORS.white,
   },
   rowUnread: {
@@ -195,26 +195,26 @@ const styles = StyleSheet.create({
     ...Body_16SB,
     color: COLORS.black,
   },
-  titleUnread: {
-    fontWeight: '800',
-  },
   subtitle: {
-    marginTop: scaleWidth(6),
+    // 제목과 내용 간격 4, 색상 gray700 (Figma)
+    marginTop: scaleWidth(4),
+    ...Caption_14R,
+    color: COLORS.gray700,
+  },
+  date: {
+    // 내용과 날짜 간격 16, 14R gray600 (Figma)
+    marginTop: scaleWidth(16),
     ...Caption_14R,
     color: COLORS.gray600,
   },
-  date: {
-    marginTop: scaleWidth(13),
-    ...Caption_12M,
-    color: COLORS.gray500,
-  },
   footer: {
-    paddingVertical: scaleWidth(22),
+    // 마지막 알림 아이템과 안내 문구 사이 간격 24 (하단 여백은 listContent에서 처리)
+    paddingTop: scaleWidth(24),
     alignItems: 'center',
   },
   footerText: {
-    ...Caption_12M,
-    color: COLORS.gray500,
+    ...Caption_14R,
+    color: COLORS.gray600,
   },
   // 로딩 상태
   loadingContainer: {
@@ -251,8 +251,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    ...Body_16M,
-    // TODO(QA): Figma Alarm_Empty 기준 빈 상태 텍스트 크기와 위치 수치 확인 필요
+    // 빈 상태 안내 문구 14pt (Figma Alarm_Empty)
+    ...Caption_14R,
     color: COLORS.gray600,
   },
 });
