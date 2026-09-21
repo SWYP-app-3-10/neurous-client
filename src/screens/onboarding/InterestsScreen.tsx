@@ -378,10 +378,11 @@ const InterestsScreen = () => {
               showToastModal({
                 ...NOTICE_TOAST_PRESET,
                 message: '최대 3순위까지 선택할 수 있어요',
-                // 하단 CTA 버튼(기본 높이 63) 상단과 16px 간격을 두기 위한 값
-                // = 버튼 높이(63) + CTA 컨테이너 하단 padding + 요청된 간격(16)
+                // 하단 CTA 버튼(기본 높이 63) 상단과 16px 간격을 두기 위한 값 (디자인 시안 기준)
+                // = 버튼 높이(63) + CTA 컨테이너 상하 padding(vertical) + 버튼-토스트 간격(16)
+                // ※ BOTTOM_CTA_PADDING은 vertical 하나로 상하 여백을 관리하므로 vertical 사용
                 bottomOffset:
-                  scaleWidth(63) + BOTTOM_CTA_PADDING.bottom + scaleWidth(16),
+                  scaleWidth(63) + BOTTOM_CTA_PADDING.vertical + scaleWidth(16),
               });
             }, 0);
             return prev; // 변경 없이 이전 상태 반환
@@ -519,7 +520,7 @@ const InterestsScreen = () => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* TODO(QA): Figma Onboarding_Interest_Default 기준 프로그레스 바와 헤더 텍스트 사이 간격 값 확인 필요 */}
-        <Spacer num={editMode ? 54 : 92} />
+        <Spacer num={92} />
 
         {/* 타이틀 */}
         <Text style={styles.title}>관심분야를 선택해주세요</Text>

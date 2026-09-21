@@ -86,9 +86,7 @@ const InquiryScreen = () => {
   const isSubmitEnabled = useMemo(() => {
     // 문의 내용 + 이메일 입력 및 형식 검증 통과 시에만 활성화
     return (
-      content.trim().length > 0 &&
-      email.trim().length > 0 &&
-      emailError === ''
+      content.trim().length > 0 && email.trim().length > 0 && emailError === ''
     );
   }, [content, email, emailError]);
 
@@ -184,7 +182,6 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: COLORS.white,
-    paddingBottom: scaleWidth(20),
   },
   headerWrap: {
     position: 'relative',
