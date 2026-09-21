@@ -126,7 +126,7 @@ const QuizScreen: React.FC = () => {
   /** 퀴즈를 풀 글 ID */
   const articleId = route.params.articleId;
 
-  /** 퀴즈 완료 후 돌아갈 화면 ('mission' | 'search') */
+  /** 퀴즈 완료 후 돌아갈 화면 ('mission' | 'search' | 'read') */
   const returnTo = route.params.returnTo || 'mission';
 
   // ──────────────────────────────────────────────
@@ -761,7 +761,9 @@ const QuizScreen: React.FC = () => {
             Linking.openURL('https://www.naver.com');
             return;
           }
-          navigation.dispatch(createQuizCompleteNavigation(returnTo));
+          navigation.dispatch(
+            createQuizCompleteNavigation(returnTo, articleId),
+          );
         },
       },
       dismissAction: isLevelUp
@@ -769,7 +771,9 @@ const QuizScreen: React.FC = () => {
             title: '지금은 괜찮아요',
             onPress: () => {
               hideModal();
-              navigation.dispatch(createQuizCompleteNavigation(returnTo));
+              navigation.dispatch(
+                createQuizCompleteNavigation(returnTo, articleId),
+              );
             },
           }
         : undefined,
