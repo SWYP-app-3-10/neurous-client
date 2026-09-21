@@ -20,10 +20,8 @@ interface BottomCtaBarProps {
  * - 컨테이너 밖(예: CTA 위에 띄우는 토스트 위치 계산)에서도 같은 값을 쓰도록 export한다.
  */
 export const BOTTOM_CTA_PADDING = {
-  // TODO(QA): Figma CTA 네비게이션(node 2-4003) 기준 상하/좌우 padding 값 확인 필요 (현재 글 상세 CTA 여백 기준 임시값)
-  horizontal: scaleWidth(20),
-  top: scaleWidth(12),
-  bottom: scaleWidth(8),
+  horizontal: scaleWidth(33),
+  vertical: scaleWidth(8),
 };
 
 const BottomCtaBar: React.FC<BottomCtaBarProps> = ({ children, style }) => {
@@ -33,8 +31,7 @@ const BottomCtaBar: React.FC<BottomCtaBarProps> = ({ children, style }) => {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: BOTTOM_CTA_PADDING.horizontal,
-    paddingTop: BOTTOM_CTA_PADDING.top,
-    paddingBottom: BOTTOM_CTA_PADDING.bottom,
+    paddingVertical: BOTTOM_CTA_PADDING.vertical,
     backgroundColor: COLORS.white,
   },
 });
