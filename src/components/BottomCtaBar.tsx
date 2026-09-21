@@ -20,7 +20,8 @@ interface BottomCtaBarProps {
  * - 컨테이너 밖(예: CTA 위에 띄우는 토스트 위치 계산)에서도 같은 값을 쓰도록 export한다.
  */
 export const BOTTOM_CTA_PADDING = {
-  horizontal: scaleWidth(33),
+  // 디자인 시안 기준 CTA 버튼 좌우 여백 20 (기존 33은 시안과 달라 수정)
+  horizontal: scaleWidth(20),
   vertical: scaleWidth(8),
 };
 
