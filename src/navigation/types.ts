@@ -56,8 +56,12 @@ export type OnboardingStackParamList = {
    */
   [RouteNames.TERMS_AGREEMENT]: { provider: SocialLoginProvider };
 
-  /** 온보딩 인트로 1 - 미션 소개 */
-  [RouteNames.INTRO_CARDLIST]: undefined;
+  /**
+   * 온보딩 인트로 1 - 미션 소개 (인트로 슬라이드 3장이 한 화면에서 전환됨)
+   * @param previewMode - 설정 > "온보딩 다시 보기"로 진입했는지 여부.
+   *   true이면 온보딩 상태·서버 저장·analytics 없이 화면만 다시 보여준다.
+   */
+  [RouteNames.INTRO_CARDLIST]: { previewMode?: boolean } | undefined;
 
   /** 온보딩 인트로 2 - 캐릭터 성장 소개 */
   [RouteNames.INTRO_FUNCTION]: undefined;
@@ -68,11 +72,15 @@ export type OnboardingStackParamList = {
   /**
    * 관심분야 선택 화면
    * @param editMode - 온보딩 중인지(false) 마이페이지에서 수정하는지(true) 구분
+   * @param previewMode - 설정 > "온보딩 다시 보기"로 진입했는지 여부 (저장·이벤트 없이 화면만 표시)
    */
-  [RouteNames.INTERESTS]: { editMode?: boolean };
+  [RouteNames.INTERESTS]: { editMode?: boolean; previewMode?: boolean };
 
-  /** 난이도 설정 화면 (온보딩 마지막 단계) */
-  [RouteNames.DIFFICULTY_SETTING]: undefined;
+  /**
+   * 난이도 설정 화면 (온보딩 마지막 단계)
+   * @param previewMode - 설정 > "온보딩 다시 보기"로 진입했는지 여부 (저장·온보딩 완료 처리 없이 화면만 표시)
+   */
+  [RouteNames.DIFFICULTY_SETTING]: { previewMode?: boolean } | undefined;
 
   /** 이용약관 상세 화면 */
   [RouteNames.TERMS_OF_SERVICE]: undefined;
