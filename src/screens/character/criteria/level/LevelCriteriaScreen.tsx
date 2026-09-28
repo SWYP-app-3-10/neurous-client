@@ -1,5 +1,11 @@
 // LevelCriteriaScreen.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -180,10 +186,15 @@ function XpSummaryCard({
             // iconXInRow/iconW 확보(row 기준)
             onLayout={tooltip.onLayoutIcon}
           >
+            {/*
+              Info.svg는 viewBox 18x18에 테두리 stroke까지 포함된 원본이라,
+              18로 렌더링해야 시안의 아이콘(16 + stroke)과 같은 크기로 보인다.
+              (16으로 주면 stroke까지 함께 축소되어 시안보다 작아 보임)
+              바깥 wrapper(xpInfoIcon)는 패딩 포함 28x28 (Figma 시안 기준)
+            */}
             <InfoIcon
-              // TODO(QA): Figma ConfirmStandard_Level 기준 툴팁 아이콘 width/height 값 확인 필요
-              width={scaleWidth(22)}
-              height={scaleWidth(22)}
+              width={scaleWidth(18)}
+              height={scaleWidth(18)}
               color={COLORS.gray400}
             />
           </View>
@@ -195,7 +206,7 @@ function XpSummaryCard({
           ) : (
             <>
               다음 단계 달성을 위해서는{'\n'}
-              <Text style={styles.xpHintStrong}>{needXp}XP</Text>가 더 필요해요
+              <Text style={styles.xpHintStrong}>{needXp} XP</Text>가 더 필요해요
             </>
           )}
         </Text>
@@ -214,10 +225,6 @@ function XpSummaryCard({
               left: tooltip.tooltipLeft,
               width: TOOLTIP_W,
               height: TOOLTIP_H,
-              backgroundColor: 'transparent',
-              paddingHorizontal: 0,
-              paddingVertical: 0,
-              borderRadius: 0,
               maxWidth: undefined,
             },
           ]}
@@ -377,10 +384,14 @@ const styles = StyleSheet.create({
     color: COLORS.black,
   },
 
+  // 툴팁 아이콘 영역: 아이콘 + 패딩 = 28x28 (Figma 시안 기준)
+  // 툴팁 꼬리 위치는 이 영역의 중앙(onLayoutIcon의 x + width/2)을 기준으로 계산된다
   xpInfoIcon: {
-    marginLeft: scaleWidth(12),
-    width: scaleWidth(22),
-    height: scaleWidth(22),
+    // 28x28 영역 자체에 패딩이 있어 "XP" 텍스트와 아이콘 사이 간격(시안 약 7px)이 이미 확보됨
+    // TODO(QA): Figma ConfirmStandard_Level 기준 "XP" 텍스트와 아이콘 영역 사이 간격 확인 필요 (시안 캡처 기준 추정값 0)
+    marginLeft: 0,
+    width: scaleWidth(28),
+    height: scaleWidth(28),
     alignItems: 'center',
     justifyContent: 'center',
   },
