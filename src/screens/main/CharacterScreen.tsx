@@ -230,62 +230,20 @@ const CharacterScreen = () => {
   );
 
   /**
-   * 미션 목록 변환 및 정렬
+   * 미션 목록 변환 (서버 응답 순서 그대로)
    *
-   * 정렬 순서:
-   *   1. 진행 중 (status === '진행 중')
-   *   2. 완료 (status === '완료')
-   *   3. 잠김 (status === null)
-   *
-   * 이유:
-   *   - 사용자가 현재 진행할 수 있는 미션을 먼저 보여주기 위함
-   *   - 완료된 미션은 중간에, 잠긴 미션은 맨 아래
+   * 상태(진행 중/완료/잠김)로 재정렬하지 않는다.
+   *   - 미션 순서가 고정되어 있어 상태가 바뀌어도 카드 위치가 바뀌지 않음
+   *   - 홈 화면의 미션 캐러셀과 동일한 순서 기준을 사용
    */
   const missions = useMemo(() => {
     if (!characterMeData?.missions) {
       return [];
     }
 
-    const convertedMissions = characterMeData.missions.map((mission, index) =>
+    return characterMeData.missions.map((mission, index) =>
       convertCharacterMissionToMission(mission, index),
     );
-
-    // 정렬: 진행 중 → 완료 → 잠긴
-    return convertedMissions.sort((a, b) => {
-      // 진행 중 (status === '진행 중') 우선
-      if (a.status === '진행 중' && b.status !== '진행 중') {
-        return -1;
-      }
-      if (b.status === '진행 중' && a.status !== '진행 중') {
-        return 1;
-      }
-
-      // 완료 (status === '완료') 다음
-      if (
-        a.status === '완료' &&
-        b.status !== '완료' &&
-        b.status !== '진행 중'
-      ) {
-        return -1;
-      }
-      if (
-        b.status === '완료' &&
-        a.status !== '완료' &&
-        a.status !== '진행 중'
-      ) {
-        return 1;
-      }
-
-      // 잠긴 (status === null) 마지막
-      if (a.status === null && b.status !== null) {
-        return 1;
-      }
-      if (b.status === null && a.status !== null) {
-        return -1;
-      }
-
-      return 0;
-    });
   }, [characterMeData?.missions]);
 
   // ──────────────────────────────────────────────
@@ -568,7 +526,8 @@ const CharacterScreen = () => {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingBottom: tabBarHeight + scaleWidth(48),
+          // 마지막 미션 카드의 하단 margin(16)이 함께 더해지므로 32로 설정 → 탭바와 총 48 간격
+          paddingBottom: tabBarHeight + scaleWidth(32),
         }}
         refreshControl={
           <RefreshControl
@@ -725,10 +684,10 @@ const CharacterScreen = () => {
           </Text>
           <Spacer num={32} />
 
-          {/* 미션 카드 목록 (정렬: 진행 중 → 완료 → 잠김) */}
+          {/* 미션 카드 목록 (서버 응답 순서 그대로) */}
           {missions.map((mission: any) => (
             <View key={mission.id} style={styles.missionCardWrapper}>
-              <MissionCard mission={mission} myPage={false} />
+              <MissionCard mission={mission} myLevelPage={false} />
             </View>
           ))}
         </View>

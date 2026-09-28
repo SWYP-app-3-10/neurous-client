@@ -15,6 +15,8 @@
  *   - 중간 카드: 348px 너비
  *   - 카드 간격: 10px
  *   - Snap 효과: 각 카드가 화면 중앙에 정렬
+ *   - 카드 순서: 서버 응답 순서 그대로 고정 (상태가 바뀌어도 위치 불변)
+ *   - 초기 포커스: 진행 중인 미션 카드가 처음부터 화면 중앙에 보이도록 위치
  *
  * 온보딩 리셋 조건:
  *   - 컨텐츠가 빈 배열이고
@@ -166,6 +168,16 @@ const MissionScreen = () => {
    */
   const hasCheckedEmptyContentsRef = useRef(false);
 
+  /**
+   * 진행 중 미션으로의 초기 스크롤 대기 플래그
+   *
+   * 캐러셀의 콘텐츠 레이아웃이 끝나기 전에 scrollTo를 호출하면
+   * (특히 Android에서) 무시될 수 있어, 레이아웃 완료 시점
+   * (onContentSizeChange)에 한 번 더 스크롤하기 위해 사용한다.
+   * 사용자가 직접 스와이프를 시작하면 해제되어 사용자 조작을 덮어쓰지 않는다.
+   */
+  const pendingFocusRef = useRef(false);
+
   // ──────────────────────────────────────────────
   // State
   // ──────────────────────────────────────────────
@@ -289,62 +301,21 @@ const MissionScreen = () => {
   );
 
   // ──────────────────────────────────────────────
-  // 데이터 변환 및 정렬
+  // 데이터 변환
   // ──────────────────────────────────────────────
 
   /**
-   * 미션 목록 정렬
+   * 미션 목록 (서버 응답 순서 그대로)
    *
-   * 정렬 순서:
-   *   1. 진행 중 (status === '진행 중')
-   *   2. 완료 (status === '완료')
-   *   3. 잠김 (status === null)
-   *
-   * 이유:
-   *   - 사용자가 현재 진행할 수 있는 미션을 먼저 보여주기 위함
-   *   - 캐러셀에서 진행 중인 미션이 앞에 위치
+   * 상태(진행 중/완료/잠김)로 재정렬하지 않는다.
+   *   - 미션 순서가 고정되어 있어 상태가 바뀌어도 카드 위치가 바뀌지 않음
+   *   - 현재 진행 중인 미션은 정렬 대신 "초기 스크롤 포커스"로 강조한다
+   *     (아래 focusIndex, scrollToFocusedMission 참고)
    */
-  const missions = useMemo(() => {
-    if (!missionData?.missions) {
-      return [];
-    }
-
-    return [...missionData.missions].sort((a, b) => {
-      // 진행 중 우선
-      if (a.status === '진행 중' && b.status !== '진행 중') {
-        return -1;
-      }
-      if (b.status === '진행 중' && a.status !== '진행 중') {
-        return 1;
-      }
-
-      // 완료 다음
-      if (
-        a.status === '완료' &&
-        b.status !== '완료' &&
-        b.status !== '진행 중'
-      ) {
-        return -1;
-      }
-      if (
-        b.status === '완료' &&
-        a.status !== '완료' &&
-        a.status !== '진행 중'
-      ) {
-        return 1;
-      }
-
-      // 잠김 마지막
-      if (a.status === null && b.status !== null) {
-        return 1;
-      }
-      if (b.status === null && a.status !== null) {
-        return -1;
-      }
-
-      return 0;
-    });
-  }, [missionData?.missions]);
+  const missions = useMemo(
+    () => missionData?.missions ?? [],
+    [missionData?.missions],
+  );
 
   /** 추천 아티클 목록 */
   const contents = useMemo(
@@ -386,6 +357,66 @@ const MissionScreen = () => {
 
     return offsets;
   }, [missions]);
+
+  // ──────────────────────────────────────────────
+  // 진행 중 미션 포커스
+  // ──────────────────────────────────────────────
+
+  /**
+   * 포커스할 카드 인덱스
+   *
+   * 진행 중 미션은 항상 1개만 열리지만, 혹시 여러 개면 첫 번째 카드를 사용한다.
+   * 진행 중 미션이 없으면(전부 완료/잠김) 맨 앞 카드(0)로 둔다.
+   */
+  const focusIndex = useMemo(() => {
+    const index = missions.findIndex(mission => mission.status === '진행 중');
+    return index >= 0 ? index : 0;
+  }, [missions]);
+
+  /**
+   * 캐러셀을 진행 중 미션 카드 위치로 즉시 이동 (애니메이션 없음)
+   *
+   * 처음부터 그 위치에 있었던 것처럼 보이도록 animated: false를 사용한다.
+   * 인디케이터 점도 같은 카드로 맞춘다.
+   */
+  const scrollToFocusedMission = useCallback(() => {
+    if (snapOffsets.length === 0) {
+      return;
+    }
+    scrollViewRef.current?.scrollTo({
+      x: snapOffsets[focusIndex] ?? 0,
+      y: 0,
+      animated: false,
+    });
+    setCurrentIndex(focusIndex);
+  }, [snapOffsets, focusIndex]);
+
+  /**
+   * 탭에 진입할 때, 그리고 포커스 대상이 바뀔 때(미션 진행 상태 갱신) 실행
+   *
+   * - 탭 진입: 캐러셀을 진행 중 카드 위치로 되돌림
+   * - refetch로 진행 중 미션이 바뀌면 callback이 갱신되어 새 위치로 다시 이동
+   * - 최초 마운트 시에는 레이아웃 전일 수 있으므로 pendingFocusRef를 켜서
+   *   onContentSizeChange에서 한 번 더 이동시킨다
+   */
+  useFocusEffect(
+    useCallback(() => {
+      pendingFocusRef.current = true;
+      scrollToFocusedMission();
+    }, [scrollToFocusedMission]),
+  );
+
+  /** 캐러셀 레이아웃 완료 시, 대기 중이면 진행 중 카드로 이동 */
+  const handleCarouselContentSizeChange = useCallback(() => {
+    if (pendingFocusRef.current) {
+      scrollToFocusedMission();
+    }
+  }, [scrollToFocusedMission]);
+
+  /** 사용자가 직접 스와이프하기 시작하면 자동 이동 대기를 해제 */
+  const handleCarouselScrollBeginDrag = useCallback(() => {
+    pendingFocusRef.current = false;
+  }, []);
 
   // ──────────────────────────────────────────────
   // 이벤트 핸들러
@@ -804,6 +835,8 @@ const MissionScreen = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 onScroll={handleScroll}
+                onScrollBeginDrag={handleCarouselScrollBeginDrag} // 사용자 조작 시 자동 이동 해제
+                onContentSizeChange={handleCarouselContentSizeChange} // 레이아웃 후 진행 중 카드로 이동
                 scrollEventThrottle={SCROLL_EVENT_THROTTLE}
                 decelerationRate="fast" // 빠른 감속 (Snap 효과 향상)
                 snapToOffsets={snapOffsets} // 각 카드 위치에 Snap

@@ -94,7 +94,8 @@ const MainTabNavigator = () => {
         name={RouteNames.CHARACTER_TAB}
         component={CharacterStackNavigator}
         options={{
-          tabBarLabel: '캐릭터',
+          // 탭 이름: 캐릭터 → 나의 레벨
+          tabBarLabel: '나의 레벨',
           tabBarIcon: createTabBarIcon(CharacterIcon),
         }}
         listeners={{
