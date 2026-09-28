@@ -7,7 +7,7 @@
  *   1. 회원정보 관리 (로그인 정보)
  *   2. 알림 설정 (OS 권한 연동)
  *   3. 약관 및 정책 확인
- *   4. 도움말 (문의하기, 레벨업 모달 다시 보기)
+ *   4. 도움말 (문의하기, 레벨업 모달 다시 보기, 온보딩 다시 보기)
  *
  * 알림 설정 동작:
  *   - 토글 ON: OS 권한이 허용된 경우 앱 내부 알림만 활성화
@@ -216,6 +216,22 @@ const SettingScreen = () => {
   };
 
   /**
+   * "온보딩 다시 보기" 핸들러
+   *
+   * 신규 가입 때와 같은 온보딩 흐름(인트로 슬라이드 3장 → 관심분야 → 난이도)을
+   * 처음부터 다시 보여준다. 마이페이지 관심분야 편집(editMode)과 같은 방식으로
+   * 루트 스택의 ONBOARDING 화면을 재사용하되, previewMode를 넘겨
+   * 온보딩 상태 변경·서버 저장·analytics 전송이 일어나지 않게 한다.
+   * 난이도 화면에서 "완료"를 누르거나 첫 화면에서 뒤로가기하면 설정 화면으로 돌아온다.
+   */
+  const handlePressOnboardingPreview = () => {
+    navigation.navigate(RouteNames.ONBOARDING, {
+      screen: RouteNames.INTRO_CARDLIST,
+      params: { previewMode: true },
+    });
+  };
+
+  /**
    * 알림 설정 토글 핸들러
    *
    * 동작 흐름:
@@ -371,6 +387,10 @@ const SettingScreen = () => {
         </Pressable>
         <Pressable style={styles.row} onPress={handlePressLevelUpPreview}>
           <Text style={styles.rowTitle}>레벨업 모달 다시 보기</Text>
+          <RightArrow color={COLORS.gray700} />
+        </Pressable>
+        <Pressable style={styles.row} onPress={handlePressOnboardingPreview}>
+          <Text style={styles.rowTitle}>온보딩 다시 보기</Text>
           <RightArrow color={COLORS.gray700} />
         </Pressable>
       </View>
