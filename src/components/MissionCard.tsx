@@ -12,7 +12,13 @@ import {
 import { LockIcon } from '../icons/commonIcons/simpleImages';
 
 const MissionCard = React.memo(
-  ({ mission, myPage = false }: { mission: any; myPage?: boolean }) => {
+  ({
+    mission,
+    myLevelPage = false,
+  }: {
+    mission: any;
+    myLevelPage?: boolean;
+  }) => {
     const current = Number(mission.current) || 0;
     const total = Number(mission.total) || 1;
     const isNotStarted = mission.status === null;
@@ -28,7 +34,9 @@ const MissionCard = React.memo(
       <View
         style={[
           styles.cardPaddingWrapper,
-          !myPage && styles.cardPaddingWrapperHome,
+          !myLevelPage && styles.cardPaddingWrapperHome,
+          // 잠김 카드: 제목/배지/진행바 텍스트만 30% 투명도로 흐리게 (자물쇠는 별도 레이어라 투명 처리 안 됨)
+          isNotStarted && styles.lockedContent,
         ]}
       >
         {/* 상단 Row */}
@@ -36,8 +44,9 @@ const MissionCard = React.memo(
           <Text
             style={[
               styles.missionCardTitle,
+              myLevelPage && styles.missionCardTitleMyLevelPage,
+              // 완료 색상(#767C91)이 나의 레벨 탭 스타일에 덮이지 않도록 마지막에 적용
               isCompleted && styles.missionCardTitleCompleted,
-              myPage && styles.missionCardTitleMyPage,
             ]}
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -45,7 +54,7 @@ const MissionCard = React.memo(
             {mission.title}
           </Text>
           {mission.status && (
-            // 상태 배지는 홈/마이페이지 구분 없이 동일한 스타일(연보라/회색 필)을 사용한다
+            // 상태 배지는 홈/나의 레벨 탭 구분 없이 동일한 스타일(연보라/회색 필)을 사용한다
             <View
               style={[
                 styles.statusBadge,
@@ -57,7 +66,8 @@ const MissionCard = React.memo(
               <Text
                 style={[
                   styles.statusText,
-                  { color: isCompleted ? COLORS.gray700 : COLORS.puple.main },
+                  // 완료: 시안 기준 #767C91 (gray800), 진행 중: 메인 보라
+                  { color: isCompleted ? COLORS.gray800 : COLORS.puple.main },
                 ]}
               >
                 {mission.status}
@@ -66,16 +76,16 @@ const MissionCard = React.memo(
           )}
         </View>
 
-        {/* 하단 Row (프로그래스 바)는 마이페이지(캐릭터 탭) 카드에서만 표시하고,
+        {/* 하단 Row (프로그래스 바)는 나의 레벨 탭(myLevelPage) 카드에서만 표시하고,
             홈 카드는 제목+상태만 보여준다. */}
-        {myPage && (
+        {myLevelPage && (
           <View style={styles.bottomRow}>
             <View
               style={[
                 styles.progressBarTrack,
                 isNotStarted && styles.trackNotStarted,
                 isCompleted && styles.trackCompleted,
-                myPage && styles.trackMyPageCompleted,
+                myLevelPage && styles.trackMyLevelPageCompleted,
               ]}
             >
               {!isNotStarted && (
@@ -102,7 +112,7 @@ const MissionCard = React.memo(
                 style={[
                   styles.countText,
                   isCompleted && styles.countTextCompleted,
-                  myPage && styles.countTextMyPage,
+                  myLevelPage && styles.countTextMyLevelPage,
                 ]}
               >
                 {current}/{total}
@@ -113,14 +123,32 @@ const MissionCard = React.memo(
       </View>
     );
 
-    // --- 1. 마이페이지 (흰색 카드, 보더 있음, 둥글기 16) ---
-    if (myPage) {
+    /**
+     * 잠김 카드의 자물쇠 아이콘
+     *
+     * 제목/배지 레이아웃과 무관하게 카드 전체 기준 가로 정중앙 + 시안 상하
+     * padding(위 17 / 아래 17.5)에 맞춰 absolute로 겹쳐 그린다.
+     * 제목/배지와 달리 자물쇠 자체는 투명 처리하지 않는다(시안 기준).
+     */
+    const renderLockOverlay = () =>
+      isNotStarted && (
+        <View style={styles.lockOverlayCenter}>
+          {/* 자물쇠 크기: 시안 기준 가로 33 / 세로 37.95 (공용 LockIcon 기본 크기를 카드에서 override) */}
+          <LockIcon
+            style={{ width: scaleWidth(33), height: scaleWidth(37.95) }}
+          />
+        </View>
+      );
+
+    // --- 1. 나의 레벨 탭 (흰색 카드, 보더 있음, 둥글기 16) ---
+    if (myLevelPage) {
       return (
         <View
           style={[
             styles.container,
             {
               borderRadius: BORDER_RADIUS[16],
+              height: scaleWidth(72), // 시안 기준 배너 높이 72
             },
           ]}
         >
@@ -131,27 +159,23 @@ const MissionCard = React.memo(
             ]}
           >
             {renderCardContent()}
-            {/* 보더 뷰: absolute로 위에 덮어씌움 */}
+            {/* 보더 뷰: absolute로 위에 덮어씌움 (투명도 미적용) */}
             <View style={styles.whiteCardBorder} />
           </View>
-          {isNotStarted && (
-            <View style={styles.lockOverlay}>
-              <LockIcon />
-            </View>
-          )}
+          {renderLockOverlay()}
         </View>
       );
     }
 
     // --- 2. 홈 화면 (흰색 카드, 보더 있음, 진행바 없음) ---
-    // 마이페이지 카드와 동일한 흰색 카드 스타일을 사용하되 진행바/카운트는 표시하지 않는다.
+    // 나의 레벨 탭 카드와 동일한 흰색 카드 스타일을 사용하되 진행바/카운트는 표시하지 않는다.
     return (
       <View
         style={[
           styles.container,
           {
             borderRadius: BORDER_RADIUS[16],
-            height: scaleWidth(74),
+            height: scaleWidth(72), // 시안 기준 배너 높이 72
           },
         ]}
       >
@@ -162,14 +186,10 @@ const MissionCard = React.memo(
           ]}
         >
           {renderCardContent()}
-          {/* 보더 뷰: absolute로 위에 덮어씌움 */}
+          {/* 보더 뷰: absolute로 위에 덮어씌움 (투명도 미적용) */}
           <View style={styles.whiteCardBorder} />
         </View>
-        {isNotStarted && (
-          <View style={[styles.lockOverlay, styles.lockOverlayHome]}>
-            <LockIcon />
-          </View>
-        )}
+        {renderLockOverlay()}
       </View>
     );
   },
@@ -183,7 +203,7 @@ const styles = StyleSheet.create({
     height: scaleWidth(105),
     overflow: 'hidden',
     position: 'relative',
-    // borderRadius는 inline style로 제어함 (myPage ? 16 : 20)
+    // borderRadius는 inline style로 제어함 (myLevelPage: 16, 홈: 20)
   },
 
   // 내부 패딩 및 배치
@@ -195,9 +215,10 @@ const styles = StyleSheet.create({
   },
   // 홈 카드 전용: 하단 Row가 없어 상단 Row 하나만 세로 중앙 정렬
   cardPaddingWrapperHome: {
-    // TODO(QA): Figma Home 미션 카드 기준 상하/좌우 padding 및 0/1 카운트 영역 간격 확인 필요
+    // 시안 기준 상하 padding: 위 17 / 아래 17.5 (카드 높이 72 기준)
     paddingHorizontal: scaleWidth(20),
-    paddingVertical: scaleWidth(16),
+    paddingTop: scaleWidth(17),
+    paddingBottom: scaleWidth(17.5),
     justifyContent: 'center',
   },
 
@@ -206,7 +227,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
   },
+  // 잠김 카드 배경: 시안 기준 #FBFBFC (테두리/내용의 투명도와 분리해서 처리)
   lockedCardBackground: {
+    backgroundColor: '#FBFBFC',
+  },
+  // 잠김 카드 내용(제목, 배지, 진행바) 30% 투명도. 자물쇠는 별도 레이어(lockOverlayCenter)라 미적용
+  lockedContent: {
     opacity: 0.3,
   },
 
@@ -233,8 +259,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
+  // 완료 미션 제목 색상 (시안 #767C91)
   missionCardTitleCompleted: { color: COLORS.gray800 },
-  missionCardTitleMyPage: { ...Body_16SB, color: COLORS.black },
+  missionCardTitleMyLevelPage: { ...Body_16SB, color: COLORS.black },
 
   statusBadge: {
     backgroundColor: COLORS.puple[5],
@@ -244,7 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // 홈/마이페이지 공용 상태 배지 스타일 (진행 중 / 완료)
+  // 홈/나의 레벨 탭 공용 상태 배지 스타일 (진행 중 / 완료)
   statusBadgeInProgress: { backgroundColor: COLORS.puple[2] },
   statusBadgeCompleted: { backgroundColor: COLORS.gray200 },
   statusText: { ...Caption_12SB, includeFontPadding: false },
@@ -270,7 +297,7 @@ const styles = StyleSheet.create({
   },
   trackNotStarted: { backgroundColor: COLORS.white },
   trackCompleted: { backgroundColor: COLORS.gray400 },
-  trackMyPageCompleted: { backgroundColor: COLORS.gray200 },
+  trackMyLevelPageCompleted: { backgroundColor: COLORS.gray200 },
 
   countContainer: {
     justifyContent: 'center',
@@ -283,15 +310,18 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   countTextCompleted: { color: COLORS.puple.completed },
-  countTextMyPage: { ...Body_16M, color: COLORS.black },
+  countTextMyLevelPage: { ...Body_16M, color: COLORS.black },
 
-  lockOverlay: {
+  // 잠김 자물쇠: 카드 전체 기준 가로 정중앙 + 시안 상하 padding(위 17 / 아래 17.5)에 맞춰 배치
+  // - 제목/배지와 opacity 없음(시안처럼 자물쇠 자체는 투명 처리하지 않음). 카드 배경(#FBFBFC)만으로 잠김 표현.
+  // - pointerEvents: 'none' — 아이콘이 카드 터치(추후 인터랙션 추가 시)를 가로막지 않도록 함
+  lockOverlayCenter: {
     position: 'absolute',
-    bottom: scaleWidth(32),
-    left: scaleWidth(157),
-  },
-  lockOverlayHome: {
-    bottom: scaleWidth(15),
+    top: scaleWidth(17),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    pointerEvents: 'none',
   },
 });
 
