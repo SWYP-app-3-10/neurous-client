@@ -169,6 +169,8 @@ Header 컴포넌트의 뒤로가기 아이콘 클릭 시 기록되는 이벤트�
 
 온보딩 과정에서 기록되는 이벤트입니다.
 
+> 설정 > **온보딩 다시 보기**(`previewMode: true`)로 연 온보딩 화면에서는 이 섹션의 이벤트와 온보딩 화면 조회 이벤트(`Onboarding_Function0x_*`, `Onboarding_Interest0x`, `Onboarding_Difficulty_*`), Mixpanel `interest_selected` / `difficulty_selected`를 **전송하지 않습니다.** 실제 신규 가입 온보딩 퍼널 수치만 집계하기 위함입니다.
+
 | 이벤트 이름                                | 설명                    | 파일 경로                                            |
 | ------------------------------------------ | ----------------------- | ---------------------------------------------------- |
 | `Next_Onboarding_Function01_CardList`      | 온보딩 카드 리스트 다음 | `src/screens/onboarding/IntroCardList.tsx`           |
