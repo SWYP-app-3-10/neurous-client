@@ -449,9 +449,12 @@ const ArticleDetailScreen = () => {
     showRewardModal({
       layout: 'split',
       imagePlacement: isLevelUp ? 'levelUp' : 'reward',
+      // 레벨업이면 레벨별 전용 이미지(levelUpImage)를 사용하고, 없으면 기존 캐릭터로 대체
       image:
         isLevelUp && newLevelData ? (
-          newLevelData.character(styles.levelUpCharacterImage)
+          (newLevelData.levelUpImage ?? newLevelData.character)(
+            styles.levelUpCharacterImage,
+          )
         ) : (
           <Modal_IMG />
         ),
@@ -700,9 +703,10 @@ const styles = StyleSheet.create({
     color: COLORS.puple.main,
     textAlign: 'center',
   },
+  // 레벨업 모달 이미지 사이즈 260x164 (RewardModal.imageSize와 동일 값)
   levelUpCharacterImage: {
-    width: scaleWidth(120),
-    height: scaleWidth(120),
+    width: scaleWidth(260),
+    height: scaleWidth(164),
   },
 });
 
