@@ -10,10 +10,6 @@ import { Caption_14R } from './typography';
 /** 팝업 서브 설명 텍스트 (제목 아래 설명 문구) */
 export const POPUP_DESCRIPTION_TEXT = {
   ...Caption_14R,
-  // TODO(QA): Figma 팝업(Modal_Account_Confirm) 기준 서브 설명 행간(lineHeight) 값 확인 필요 (현재 14px * 150% 임시값)
-  lineHeight: scaleWidth(21),
-  // TODO(QA): Figma 팝업(Modal_Account_Confirm) 기준 서브 설명 자간(letterSpacing) 값 확인 필요
-  letterSpacing: 0,
 };
 
 /** 팝업 하단 버튼 높이 */
