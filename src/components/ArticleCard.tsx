@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
 import { Heading_18EB_Round, Caption_14R } from '../styles/typography';
 import Spacer from './Spacer';
@@ -77,16 +84,20 @@ const styles = StyleSheet.create({
   articleCardWrapper: {
     backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS[16],
-    // TODO(QA): Figma Home 기준 콘텐츠 카드 그림자 offset, opacity, radius, elevation 값 확인 필요
-    // iOS 그림자
-    shadowColor: COLORS.shadow,
-    shadowOffset: {
-      width: 0,
-      height: scaleWidth(2),
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: scaleWidth(12),
-    elevation: 2,
+    // Android 9 미만에서는 boxShadow를 지원하지 않아 기존 elevation을 사용한다.
+    ...(Platform.OS === 'android' && Number(Platform.Version) < 28
+      ? { elevation: 2 }
+      : {
+          boxShadow: [
+            {
+              offsetX: 0,
+              offsetY: scaleWidth(2),
+              blurRadius: scaleWidth(20),
+              spreadDistance: 0,
+              color: 'rgba(0, 0, 0, 0.2)',
+            },
+          ],
+        }),
   },
   articleCard: {
     borderRadius: BORDER_RADIUS[16],
