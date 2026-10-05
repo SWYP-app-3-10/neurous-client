@@ -68,7 +68,8 @@ const RewardModal: React.FC<RewardModalProps> = ({
   layout = 'split',
   imagePlacement = 'reward',
   image,
-  imageSize = { width: scaleWidth(80), height: scaleWidth(80) },
+  // 기본값은 경험치 폭죽 이미지 크기 (Figma 기준 259.46x152.62)
+  imageSize = { width: scaleWidth(259.46), height: scaleWidth(152.62) },
   imageTopOffset,
   topContent,
   bottomTopContent,
@@ -77,9 +78,17 @@ const RewardModal: React.FC<RewardModalProps> = ({
   secondaryAction,
   dismissAction,
 }) => {
-  const resolvedImageTopOffset =
-    imageTopOffset ??
-    (imagePlacement === 'levelUp' ? scaleWidth(-72) : scaleWidth(-36));
+  // 이미지 top 위치 기본값 (카드 상단 기준, 음수 = 카드 위로 올라옴)
+  // - 레벨업: Figma -68은 카드 안쪽 겹침이라 68 - 이미지 높이(164) = -96
+  // - 폭죽 + 단일 흰 카드(compact): Figma 기준 카드 위로 81 → -81
+  // - 폭죽 + 2단 카드(split): Figma -80은 카드 안쪽 겹침이라 80 - 152.62 = -72.62
+  const defaultImageTopOffset =
+    imagePlacement === 'levelUp'
+      ? scaleWidth(-96)
+      : layout === 'compact'
+        ? scaleWidth(-81)
+        : scaleWidth(-72.62);
+  const resolvedImageTopOffset = imageTopOffset ?? defaultImageTopOffset;
 
   const handleOverlayPress = () => {
     // closeOnBackdropPress가 false면 배경 클릭해도 닫지 않음
