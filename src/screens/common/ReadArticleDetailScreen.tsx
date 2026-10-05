@@ -46,6 +46,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BORDER_RADIUS, COLORS, scaleWidth } from '../../styles/global';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+import { BOTTOM_CTA_PADDING } from '../../components/BottomCtaBar';
 import ArticleContent from '../../components/ArticleContent';
 import QuizFeedback from '../../components/QuizFeedback';
 import Spacer from '../../components/Spacer';
@@ -181,7 +182,7 @@ const ReadArticleDetailScreen = () => {
     };
 
     loadContentDetail();
-  }, [contentId]);
+  }, [contentId, route.params?.entrySource]);
 
   // ──────────────────────────────────────────────
   // 퀴즈 데이터 변환
@@ -365,8 +366,6 @@ const ReadArticleDetailScreen = () => {
       >
         {/* 글 내용 */}
         <ArticleContent content={contentDetail.content} />
-        {/* TODO(QA): Figma ReadingDetails 기준 본문 텍스트와 퀴즈 Q 사이 간격 수치 확인 필요 */}
-        <Spacer num={12} />
 
         {/* 퀴즈 섹션 (정답/오답 피드백 포함) */}
         {quiz && (
@@ -454,8 +453,8 @@ const styles = StyleSheet.create({
   solveQuizButtonContainer: {
     borderTopWidth: 1,
     borderTopColor: COLORS.gray200,
-    paddingTop: scaleWidth(12),
-    paddingBottom: scaleWidth(8),
+    paddingTop: BOTTOM_CTA_PADDING.top,
+    paddingBottom: BOTTOM_CTA_PADDING.bottom,
   },
   /** 하단 "퀴즈 풀기" 버튼 */
   solveQuizButton: {
