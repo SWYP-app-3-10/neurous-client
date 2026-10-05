@@ -7,7 +7,7 @@
  *   1. 회원정보 관리 (로그인 정보)
  *   2. 알림 설정 (OS 권한 연동)
  *   3. 약관 및 정책 확인
- *   4. 도움말 (문의하기, 레벨업 모달 다시 보기, 온보딩 다시 보기)
+ *   4. 도움말 (문의하기, 온보딩 다시 보기, 레벨업 모달 다시 보기, 레벨 2~5 레벨업 모달 보기)
  *
  * 알림 설정 동작:
  *   - 토글 ON: OS 권한이 허용된 경우 앱 내부 알림만 활성화
@@ -27,7 +27,7 @@ import Toast from '../../components/Toast';
 import Toggle from '../../components/Toggle';
 import Spacer from '../../components/Spacer';
 
-import { COLORS, scaleWidth } from '../../styles/global';
+import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
   Heading_16B,
   Caption_14R,
@@ -156,36 +156,21 @@ const SettingScreen = () => {
   }, []);
 
   /**
-   * "레벨업 모달 다시 보기" 핸들러
+   * 레벨업 모달 미리보기 공통 함수
    *
    * QuizScreen/MissionScreen에서 실제 레벨업 시 보여주는 것과 동일한
-   * RewardModal 레벨업 UI를 미리보기용으로 다시 띄운다. 실제 보상 지급은
-   * 전혀 발생하지 않으며, 화면에 뭐가 뜨는지 다시 확인하려는 용도다.
-   *
-   * 미리보기 레벨: 서버에서 현재 레벨을 조회해 "현재 레벨 + 1"을 보여준다
-   * (조회 실패 시 levelList의 두 번째 항목으로 대체). 포인트/경험치 수치는
-   * 실제 지급값이 아니라 레이아웃 확인용 예시 값이다.
+   * RewardModal 레벨업 UI를 지정한 레벨 기준으로 띄운다. 실제 보상 지급은
+   * 전혀 발생하지 않으며, 화면에 뭐가 뜨는지 확인하려는 용도다.
+   * 포인트/경험치 수치는 실제 지급값이 아니라 레이아웃 확인용 예시 값이다.
    */
-  const handlePressLevelUpPreview = async () => {
-    let previewLevelId = levelList[1]?.id ?? levelList[0]?.id;
-    try {
-      const { currentLevel } = await fetchCharacterData();
-      const maxLevelId = levelList[levelList.length - 1]?.id ?? currentLevel;
-      previewLevelId = Math.min(currentLevel + 1, maxLevelId);
-    } catch (error) {
-      console.error('레벨업 모달 미리보기 - 현재 레벨 조회 실패:', error);
-    }
-
-    const previewLevelData =
-      levelList.find(level => level.id === previewLevelId) ?? levelList[0];
-    if (!previewLevelData) {
-      return;
-    }
-
+  const showLevelUpPreview = (previewLevelData: (typeof levelList)[number]) => {
     showRewardModal({
       layout: 'split',
       imagePlacement: 'levelUp',
-      image: previewLevelData.character(styles.levelUpCharacterImage),
+      // 실제 레벨업과 동일하게 레벨별 전용 이미지를 사용하고, 없으면 기존 캐릭터로 대체
+      image: (previewLevelData.levelUpImage ?? previewLevelData.character)(
+        styles.levelUpCharacterImage,
+      ),
       imageSize: styles.levelUpCharacterImage,
       closeOnBackdropPress: false,
       topContent: (
@@ -213,6 +198,31 @@ const SettingScreen = () => {
         },
       },
     });
+  };
+
+  /**
+   * "레벨업 모달 다시 보기" 핸들러
+   *
+   * 미리보기 레벨: 서버에서 현재 레벨을 조회해 "현재 레벨 + 1"을 보여준다
+   * (조회 실패 시 levelList의 두 번째 항목으로 대체).
+   */
+  const handlePressLevelUpPreview = async () => {
+    let previewLevelId = levelList[1]?.id ?? levelList[0]?.id;
+    try {
+      const { currentLevel } = await fetchCharacterData();
+      const maxLevelId = levelList[levelList.length - 1]?.id ?? currentLevel;
+      previewLevelId = Math.min(currentLevel + 1, maxLevelId);
+    } catch (error) {
+      console.error('레벨업 모달 미리보기 - 현재 레벨 조회 실패:', error);
+    }
+
+    const previewLevelData =
+      levelList.find(level => level.id === previewLevelId) ?? levelList[0];
+    if (!previewLevelData) {
+      return;
+    }
+
+    showLevelUpPreview(previewLevelData);
   };
 
   /**
@@ -385,14 +395,28 @@ const SettingScreen = () => {
           <Text style={styles.rowTitle}>문의하기</Text>
           <RightArrow color={COLORS.gray700} />
         </Pressable>
-        <Pressable style={styles.row} onPress={handlePressLevelUpPreview}>
-          <Text style={styles.rowTitle}>레벨업 모달 다시 보기</Text>
-          <RightArrow color={COLORS.gray700} />
-        </Pressable>
         <Pressable style={styles.row} onPress={handlePressOnboardingPreview}>
           <Text style={styles.rowTitle}>온보딩 다시 보기</Text>
           <RightArrow color={COLORS.gray700} />
         </Pressable>
+        <Pressable style={styles.row} onPress={handlePressLevelUpPreview}>
+          <Text style={styles.rowTitle}>레벨업 모달 다시 보기</Text>
+          <RightArrow color={COLORS.gray700} />
+        </Pressable>
+        {/* 레벨별 레벨업 모달 미리보기 배지 — 레벨업 전용 이미지가 있는 레벨(2~5)만 노출 */}
+        <View style={styles.levelBadgeRow}>
+          {levelList
+            .filter(level => level.levelUpImage)
+            .map(level => (
+              <Pressable
+                key={level.id}
+                style={styles.levelBadge}
+                onPress={() => showLevelUpPreview(level)}
+              >
+                <Text style={styles.levelBadgeText}>Lv.{level.id}</Text>
+              </Pressable>
+            ))}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -458,6 +482,22 @@ const styles = StyleSheet.create({
     ...Body_16SB,
     color: COLORS.black,
   },
+  // 레벨별 레벨업 모달 미리보기 배지 (가로 정렬)
+  levelBadgeRow: {
+    flexDirection: 'row',
+    gap: scaleWidth(8),
+    paddingBottom: scaleWidth(12),
+  },
+  levelBadge: {
+    paddingHorizontal: scaleWidth(10),
+    paddingVertical: scaleWidth(6),
+    borderRadius: BORDER_RADIUS[30],
+    backgroundColor: COLORS.puple[3],
+  },
+  levelBadgeText: {
+    ...Caption_14R,
+    color: COLORS.puple.main,
+  },
   rowDesc: {
     ...Caption_14R,
     color: COLORS.gray700,
@@ -479,8 +519,9 @@ const styles = StyleSheet.create({
     color: COLORS.puple.main,
     textAlign: 'center',
   },
+  // 레벨업 모달 이미지 사이즈 260x164 (RewardModal.imageSize와 동일 값)
   levelUpCharacterImage: {
-    width: scaleWidth(120),
-    height: scaleWidth(120),
+    width: scaleWidth(260),
+    height: scaleWidth(164),
   },
 });
