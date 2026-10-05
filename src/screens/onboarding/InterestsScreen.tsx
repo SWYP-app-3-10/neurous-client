@@ -30,7 +30,7 @@ import { RouteNames } from '../../../routes';
 import { scaleWidth, COLORS, BORDER_RADIUS } from '../../styles/global';
 import {
   Heading_24EB_Round,
-  Body_15M,
+  Body_16M,
   Body_18M,
   Heading_18SB,
 } from '../../styles/typography';
@@ -558,7 +558,7 @@ const InterestsScreen = () => {
         <Spacer num={4} />
 
         {/* 서브타이틀 */}
-        <Text style={[Body_15M, { color: COLORS.gray600 }]}>
+        <Text style={[Body_16M, { color: COLORS.gray600 }]}>
           홈 화면에서 나의 관심분야 글을 확인할 수 있어요
         </Text>
         <Spacer num={52} />
