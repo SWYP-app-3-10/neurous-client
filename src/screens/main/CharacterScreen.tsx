@@ -43,7 +43,6 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RouteNames } from '../../../routes';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import {
@@ -115,7 +114,6 @@ const CharacterScreen = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const rootNavigation =
     useNavigation<MainTabNavigationProp<CharacterStackParamList>>();
-  const tabBarHeight = useBottomTabBarHeight(); // 하단 탭바 높이 (동적 패딩용)
 
   // ──────────────────────────────────────────────
   // State
@@ -526,8 +524,7 @@ const CharacterScreen = () => {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          // 마지막 미션 카드의 하단 margin(16)이 함께 더해지므로 32로 설정 → 탭바와 총 48 간격
-          paddingBottom: tabBarHeight + scaleWidth(32),
+          paddingBottom: scaleWidth(48),
         }}
         refreshControl={
           <RefreshControl
@@ -685,8 +682,14 @@ const CharacterScreen = () => {
           <Spacer num={32} />
 
           {/* 미션 카드 목록 (서버 응답 순서 그대로) */}
-          {missions.map((mission: any) => (
-            <View key={mission.id} style={styles.missionCardWrapper}>
+          {missions.map((mission: any, index: number) => (
+            <View
+              key={mission.id}
+              style={[
+                styles.missionCardWrapper,
+                index === missions.length - 1 && styles.lastMissionCardWrapper,
+              ]}
+            >
               <MissionCard mission={mission} myLevelPage={false} />
             </View>
           ))}
@@ -922,6 +925,9 @@ const styles = StyleSheet.create({
   },
   missionCardWrapper: {
     marginBottom: scaleWidth(16),
+  },
+  lastMissionCardWrapper: {
+    marginBottom: 0,
   },
   notificationButtonContainer: {
     marginTop: scaleWidth(30),

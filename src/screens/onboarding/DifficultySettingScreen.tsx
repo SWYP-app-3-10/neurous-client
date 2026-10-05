@@ -18,6 +18,11 @@
  *   소개 화면 → 소셜 로그인 → 약관 동의 → 관심분야 선택 → [난이도 설정] → 메인 화면
  *
  * 진행률: 2/2 (ProgressBar fill=2)
+ *
+ * 다시 보기 모드 (route.params.previewMode === true):
+ *   - 설정 > 온보딩 다시 보기에서 진입한 경우 (인트로 → 관심분야 → [난이도])
+ *   - 같은 UI를 보여주되 store/서버 저장, 온보딩 완료 처리, analytics 전송을 하지 않는다
+ *   - 하단 버튼은 "완료"로 표시되고, 누르면 온보딩 스택을 빠져나가 설정 화면으로 돌아간다
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -33,6 +38,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { BORDER_RADIUS, COLORS, scaleWidth } from '../../styles/global';
 import {
   useCompleteOnboarding,
@@ -56,8 +62,16 @@ import { updateUserLevel } from '../../api/userApi';
 import { useDifficultyInfo } from '../../hooks/useDifficultyInfo';
 import { logEvent, logScreenView } from '../../services/analyticsService';
 import { trackEvent } from '../../services/mixpanelService';
+import { OnboardingStackParamList } from '../../navigation/types';
 
 const DifficultySettingScreen = () => {
+  const navigation = useNavigation();
+  const route =
+    useRoute<RouteProp<OnboardingStackParamList, 'difficulty-setting'>>();
+
+  /** 설정 > "온보딩 다시 보기"로 진입했는지 여부 */
+  const previewMode = route.params?.previewMode ?? false;
+
   // ──────────────────────────────────────────────
   // Store 및 State
   // ──────────────────────────────────────────────
@@ -138,6 +152,12 @@ const DifficultySettingScreen = () => {
   const handleDifficultyChange = useCallback(
     (difficulty: LevelCategory) => {
       setSelectedDifficulty(difficulty);
+
+      // 다시 보기 모드: 화면 state만 바꾸고 store 저장·이벤트 로그는 하지 않는다
+      if (previewMode) {
+        return;
+      }
+
       setDifficulty(difficulty);
 
       // analytics 이벤트 로그
@@ -149,7 +169,7 @@ const DifficultySettingScreen = () => {
         logEvent('Btn_Hard_Onboarding');
       }
     },
-    [setDifficulty],
+    [setDifficulty, previewMode],
   );
 
   /**
@@ -167,6 +187,13 @@ const DifficultySettingScreen = () => {
    *   - API 호출 실패 시 에러 로그만 남기고 계속 진행 (UX 우선)
    */
   const handleNext = async () => {
+    // 다시 보기 모드: 저장·온보딩 완료 처리 없이 온보딩 스택을 닫고 설정 화면으로 복귀
+    // (이 화면은 루트 스택의 ONBOARDING 안에 있으므로, 부모 스택에서 goBack 하면 스택 전체가 닫힌다)
+    if (previewMode) {
+      navigation.getParent()?.goBack();
+      return;
+    }
+
     logEvent('Next_Onboarding_Difficulty_Medium');
 
     // 사용자 정보 조회
@@ -209,6 +236,11 @@ const DifficultySettingScreen = () => {
    * 설명 화면을 보고 있다고 기록한다.
    */
   useEffect(() => {
+    // 다시 보기 모드에서는 화면 조회 이벤트를 남기지 않는다
+    if (previewMode) {
+      return;
+    }
+
     const screenName =
       selectedDifficulty === LevelCategory.BEGINNER
         ? 'Onboarding_Difficulty_Easy'
@@ -217,7 +249,7 @@ const DifficultySettingScreen = () => {
           : 'Onboarding_Difficulty_Hard';
 
     logScreenView(screenName, undefined, true);
-  }, [selectedDifficulty]);
+  }, [selectedDifficulty, previewMode]);
 
   // ──────────────────────────────────────────────
   // UI 관련 계산
@@ -269,8 +301,7 @@ const DifficultySettingScreen = () => {
         contentContainerStyle={{ paddingBottom: bottom }}
         showsVerticalScrollIndicator={false}
       >
-        {/* TODO(QA): Figma Onboarding_Difficulty 기준 프로그레스 바와 헤더 텍스트 사이 간격 값 확인 필요 */}
-        <Spacer num={92} />
+        <Spacer num={80} />
 
         {/* 타이틀 */}
         <Text style={styles.title}>난이도를 선택해주세요</Text>
@@ -372,7 +403,8 @@ const DifficultySettingScreen = () => {
       <BottomCtaBar>
         <Button
           variant="primary"
-          title="다음"
+          // 다시 보기 모드는 마지막 화면이므로 "완료"로 표시
+          title={previewMode ? '완료' : '다음'}
           onPress={handleNext}
           // disabled={!isNextButtonActive} // 항상 활성화 (난이도 선택 필수)
         />

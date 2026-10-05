@@ -22,7 +22,8 @@ interface BottomCtaBarProps {
 export const BOTTOM_CTA_PADDING = {
   // 디자인 시안 기준 CTA 버튼 좌우 여백 20 (기존 33은 시안과 달라 수정)
   horizontal: scaleWidth(20),
-  vertical: scaleWidth(8),
+  top: scaleWidth(8),
+  bottom: scaleWidth(16),
 };
 
 const BottomCtaBar: React.FC<BottomCtaBarProps> = ({ children, style }) => {
@@ -32,7 +33,8 @@ const BottomCtaBar: React.FC<BottomCtaBarProps> = ({ children, style }) => {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: BOTTOM_CTA_PADDING.horizontal,
-    paddingVertical: BOTTOM_CTA_PADDING.vertical,
+    paddingTop: BOTTOM_CTA_PADDING.top,
+    paddingBottom: BOTTOM_CTA_PADDING.bottom,
     backgroundColor: COLORS.white,
   },
 });

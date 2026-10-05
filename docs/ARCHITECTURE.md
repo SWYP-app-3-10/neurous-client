@@ -647,3 +647,16 @@ flowchart LR
 - `ArticleDetailScreen` / `QuizScreen`과 시각적으로 동일하지만, 서버 API 호출과 포인트·경험치 지급 로직이 없다. 콘텐츠는 `src/data/mock/mockArticleQuiz.ts`에 고정된 값을 사용한다.
 - (2026-08-09 기준) 홈(`MissionScreen`)·탐색(`SearchScreen`) 리스트 맨 위 mock 카드 노출은 비활성화되어 현재 진입 경로가 없다. 라우트(`MOCK_ARTICLE_DETAIL` / `MOCK_QUIZ`)와 화면·데이터 파일은 재사용을 위해 그대로 유지된다.
 - 실제 `ArticleDetailScreen` / `QuizScreen`의 로직에는 영향을 주지 않는 별도 화면이다.
+
+### 온보딩 다시 보기 (설정)
+
+설정 > 도움말 > **온보딩 다시 보기**는 신규 가입 때와 같은 온보딩 흐름(인트로 슬라이드 3장 → 관심분야 → 난이도)을 다시 보여주는 기능이다. 별도 화면을 만들지 않고, 마이페이지 관심분야 편집(`editMode`)과 같은 방식으로 루트 스택의 `ONBOARDING` 화면을 재사용한다.
+
+- 진입: `SettingScreen`에서 `navigate(ONBOARDING, { screen: INTRO_CARDLIST, params: { previewMode: true } })`
+- 이동: `IntroSlideScreen` → `InterestsScreen` → `DifficultySettingScreen`으로 `previewMode: true`를 계속 넘긴다.
+- `previewMode`일 때 각 화면에서 막는 것
+  - `onboardingStore` 변경 (`setOnboardingStep`, `setInterests`, `setDifficulty`, `completeOnboarding`) — 완료된 온보딩 상태가 되돌아가 메인 → 온보딩으로 전환되는 것을 방지
+  - 서버 저장 (`updateUserInterests`, `updateUserLevel`) — 선택값은 화면 로컬 state에만 유지되고 버려진다
+  - analytics (`logEvent`, `logScreenView`, Mixpanel `trackEvent`, `RootNavigator`의 자동 화면 로그)
+- 종료: 난이도 화면의 하단 버튼이 "완료"로 표시되며, 누르면 `navigation.getParent()?.goBack()`으로 `ONBOARDING` 스택 전체를 닫고 설정 화면으로 돌아간다. 인트로 첫 화면에서 뒤로가기해도 설정으로 돌아간다.
+- 관심분야·난이도 변경은 이 기능이 아니라 마이페이지 관심분야 편집 / 난이도 변경 플로우에서 처리한다.

@@ -707,17 +707,20 @@ const QuizScreen: React.FC = () => {
     showRewardModal({
       layout: isLevelUp ? 'split' : 'compact',
       imagePlacement: isLevelUp ? 'levelUp' : 'reward',
+      // 레벨업이면 레벨별 전용 이미지(levelUpImage)를 사용하고, 없으면 기존 캐릭터로 대체
       image:
         isLevelUp && newLevelData ? (
-          newLevelData.character(styles.levelUpCharacterImage)
+          (newLevelData.levelUpImage ?? newLevelData.character)(
+            styles.levelUpCharacterImage,
+          )
         ) : (
           <Modal_IMG />
         ),
-      // 레벨업 캐릭터는 시안상 폭죽 이미지보다 크고, 카드 상단 블록에 더 깊이
-      // 걸치듯 겹쳐 보인다. RewardModal 컨테이너 크기도 캐릭터 사이즈(levelUpCharacterImage)와
+      // 레벨업 이미지(260x164)는 시안상 폭죽 이미지보다 크고, 카드 상단 블록에 걸치듯
+      // 겹쳐 보인다. RewardModal 컨테이너 크기도 이미지 사이즈(levelUpCharacterImage)와
       // 같은 값으로 맞추고, 카드 자체 레이아웃(topBlock paddingTop 등)은 공통 스타일 그대로 쓴다.
       imageSize: isLevelUp
-        ? { width: scaleWidth(120), height: scaleWidth(120) }
+        ? { width: scaleWidth(260), height: scaleWidth(164) }
         : undefined,
       closeOnBackdropPress: false,
       topContent: isLevelUp ? (
@@ -959,8 +962,7 @@ const QuizScreen: React.FC = () => {
         iconColor={COLORS.gray800}
         backEventName="Back_ConfirmStandard_Quiz"
       />
-      {/* TODO(QA): Figma Quiz 기준 상단 네비바와 Q 사이 전체 간격 수치 확인 필요 */}
-      <Spacer num={32} />
+      <Spacer num={40} />
       <ScrollView
         bounces={false}
         style={styles.scrollView}
@@ -1010,9 +1012,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: scaleWidth(20),
-    // TODO(QA): Figma Quiz 기준 상단 네비바와 Q 사이 간격 확정 후 Header 아래 Spacer와 함께 조정 필요
-    paddingTop: scaleWidth(20),
-    paddingBottom: scaleWidth(100),
+    paddingBottom: scaleWidth(48), // 본문 <-> CTA 기본 간격
   },
   questionContainer: {
     flexDirection: 'row',
@@ -1163,10 +1163,10 @@ const styles = StyleSheet.create({
     color: COLORS.puple.main,
     textAlign: 'center',
   },
-  // 레벨업 캐릭터는 목록/캐릭터 화면용 기본 사이즈보다 크게 보여준다 (RewardModal.imageSize와 동일 값)
+  // 레벨업 모달 이미지 사이즈 260x164 (RewardModal.imageSize와 동일 값)
   levelUpCharacterImage: {
-    width: scaleWidth(120),
-    height: scaleWidth(120),
+    width: scaleWidth(260),
+    height: scaleWidth(164),
   },
 });
 

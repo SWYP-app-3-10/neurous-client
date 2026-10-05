@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RouteNames } from '../../../routes';
@@ -73,10 +73,21 @@ const INTRO_SLIDES: IntroSlide[] = [
  * - 버튼으로 다음 페이지 이동 가능
  * - 좌우 스와이프로 앞/뒤 페이지 이동 가능
  * - 마지막 페이지에서 다음 버튼 클릭 시 관심분야 설정 화면으로 이동
+ *
+ * 다시 보기 모드 (route.params.previewMode === true):
+ *   - 설정 > "온보딩 다시 보기"에서 진입한 경우
+ *   - 화면 구성·전환은 실제 온보딩과 동일하게 보여주되,
+ *     onboardingStore 단계 변경과 analytics 이벤트 전송은 하지 않는다.
+ *     (이미 온보딩을 마친 사용자의 상태가 되돌아가거나 온보딩 퍼널 수치가 오염되는 것을 방지)
  */
 const IntroSlidesScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route =
+    useRoute<RouteProp<OnboardingStackParamList, 'intro-cardlist'>>();
   const { width } = useWindowDimensions();
+
+  /** 설정 > "온보딩 다시 보기"로 진입했는지 여부 */
+  const previewMode = route.params?.previewMode ?? false;
 
   const flatListRef = useRef<FlatList<IntroSlide>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -127,7 +138,10 @@ const IntroSlidesScreen = () => {
 
   const handleNext = async () => {
     const currentSlide = INTRO_SLIDES[currentIndex];
-    logEvent(currentSlide.eventName);
+    // 다시 보기 모드에서는 온보딩 퍼널 이벤트를 남기지 않는다
+    if (!previewMode) {
+      logEvent(currentSlide.eventName);
+    }
 
     if (currentIndex < INTRO_SLIDES.length - 1) {
       const nextIndex = currentIndex + 1;
@@ -139,6 +153,12 @@ const IntroSlidesScreen = () => {
       });
 
       fadeTransition(() => setCurrentIndex(nextIndex));
+      return;
+    }
+
+    if (previewMode) {
+      // 다시 보기 모드: 온보딩 단계는 건드리지 않고 관심분야 화면으로만 이동
+      navigation.navigate(RouteNames.INTERESTS, { previewMode: true });
       return;
     }
 

@@ -60,6 +60,7 @@ import {
 import { NOTICE_TOAST_PRESET } from '../../components/toastPresets';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+import { BOTTOM_CTA_PADDING } from '../../components/BottomCtaBar';
 import Spacer from '../../components/Spacer';
 import { RouteNames } from '../../../routes';
 import { FullScreenStackParamList } from '../../navigation/types';
@@ -448,9 +449,12 @@ const ArticleDetailScreen = () => {
     showRewardModal({
       layout: 'split',
       imagePlacement: isLevelUp ? 'levelUp' : 'reward',
+      // 레벨업이면 레벨별 전용 이미지(levelUpImage)를 사용하고, 없으면 기존 캐릭터로 대체
       image:
         isLevelUp && newLevelData ? (
-          newLevelData.character(styles.levelUpCharacterImage)
+          (newLevelData.levelUpImage ?? newLevelData.character)(
+            styles.levelUpCharacterImage,
+          )
         ) : (
           <Modal_IMG />
         ),
@@ -663,8 +667,8 @@ const styles = StyleSheet.create({
   doneReadingButtonContainer: {
     borderTopWidth: 1,
     borderTopColor: COLORS.gray200,
-    paddingTop: scaleWidth(12),
-    paddingBottom: scaleWidth(8),
+    paddingTop: BOTTOM_CTA_PADDING.top,
+    paddingBottom: BOTTOM_CTA_PADDING.bottom,
   },
 
   /** 하단 "다 읽었어요" 버튼 */
@@ -699,9 +703,10 @@ const styles = StyleSheet.create({
     color: COLORS.puple.main,
     textAlign: 'center',
   },
+  // 레벨업 모달 이미지 사이즈 260x164 (RewardModal.imageSize와 동일 값)
   levelUpCharacterImage: {
-    width: scaleWidth(120),
-    height: scaleWidth(120),
+    width: scaleWidth(260),
+    height: scaleWidth(164),
   },
 });
 

@@ -347,7 +347,6 @@ const MyPageScreen = () => {
           </View>
         </View>
 
-        {/* TODO(QA): Figma 마이 화면 기준 프로필 캐릭터와 나의 관심분야 섹션 사이 간격 수치 확인 필요 */}
         <Spacer num={41} />
 
         {/* ────── 나의 관심분야 섹션 ────── */}
@@ -484,7 +483,6 @@ const MyPageScreen = () => {
             // 읽은 글이 없을 때
             <View style={styles.noArticlesContainer}>
               <NoArticlesIcon />
-              {/* TODO(QA): Figma My_Read_Empty 기준 일러스트와 서브 설명 사이 간격 수치 확인 필요 */}
               <Spacer num={16} />
               <Text style={styles.noArticlesText}>읽은 글이 없어요</Text>
             </View>
@@ -610,8 +608,7 @@ const styles = StyleSheet.create({
   noArticlesContainer: {
     flex: 1,
     alignItems: 'center',
-    // TODO(QA): Figma My_Read_Empty 기준 빈 상태 일러스트 상하 여백 수치 확인 필요
-    paddingTop: scaleWidth(100),
+    paddingTop: scaleWidth(104),
     paddingBottom: scaleWidth(128),
   },
   noArticlesText: {

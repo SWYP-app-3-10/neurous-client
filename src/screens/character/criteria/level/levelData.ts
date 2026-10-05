@@ -8,6 +8,10 @@ import {
   Level_3_Profile,
   Level_4_Profile,
   Level_5_Profile,
+  LevelUp_2_Image,
+  LevelUp_3_Image,
+  LevelUp_4_Image,
+  LevelUp_5_Image,
 } from '../../../../icons';
 
 export type LevelCriteria = {
@@ -19,6 +23,9 @@ export type LevelCriteria = {
 
   // 레벨별 캐릭터 컴포넌트 (사이즈 조정 가능)
   character: (style?: StyleProp<ImageStyle>) => React.ReactElement;
+
+  // 레벨업 모달 전용 이미지 (260x164). 레벨 1은 레벨업으로 도달할 수 없어 없음
+  levelUpImage?: (style?: StyleProp<ImageStyle>) => React.ReactElement;
 };
 
 const createCharacterRenderer = (
@@ -56,6 +63,7 @@ export const levelList: LevelCriteria[] = [
       width: scaleWidth(76.21),
       height: scaleWidth(65.53),
     }),
+    levelUpImage: createCharacterRenderer(LevelUp_2_Image),
   },
   {
     id: 3,
@@ -68,6 +76,7 @@ export const levelList: LevelCriteria[] = [
       width: scaleWidth(84.4),
       height: scaleWidth(95.45),
     }),
+    levelUpImage: createCharacterRenderer(LevelUp_3_Image),
   },
   {
     id: 4,
@@ -79,6 +88,7 @@ export const levelList: LevelCriteria[] = [
       width: scaleWidth(74.56),
       height: scaleWidth(84.46),
     }),
+    levelUpImage: createCharacterRenderer(LevelUp_4_Image),
   },
   {
     id: 5,
@@ -90,5 +100,6 @@ export const levelList: LevelCriteria[] = [
       width: scaleWidth(83.57),
       height: scaleWidth(89.05),
     }),
+    levelUpImage: createCharacterRenderer(LevelUp_5_Image),
   },
 ];

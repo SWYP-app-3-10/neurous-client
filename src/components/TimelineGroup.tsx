@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS, scaleWidth, BORDER_RADIUS } from '../styles/global';
-import {
-  Body_16M,
-  Caption_14R,
-  Caption_12M,
-  Body_16SB,
-} from '../styles/typography';
+import { Body_16M, Caption_14R, Body_16SB } from '../styles/typography';
 import Button from './Button';
 import Spacer from './Spacer';
 import { RightArrowIcon } from '../icons';
@@ -279,8 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.red[3],
   },
   quizBadgeText: {
-    // TODO(QA): Figma 마이 화면 기준 정답/오답 태그 텍스트 크기 확인 필요
-    ...Caption_12M,
+    ...Caption_14R,
   },
   quizBadgeTextCorrect: {
     color: COLORS.blue.correct,

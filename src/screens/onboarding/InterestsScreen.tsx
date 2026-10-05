@@ -12,6 +12,8 @@
  * 사용 컨텍스트:
  *   - 온보딩: 소셜 로그인 → 약관 동의 → [관심분야 선택] → 난이도 설정
  *   - 편집 모드: 마이페이지 > 나의 관심분야 > 편집 버튼
+ *   - 다시 보기 모드: 설정 > 온보딩 다시 보기 (인트로 다음 화면)
+ *     → 온보딩과 같은 화면을 보여주되 store/서버 저장, analytics 전송을 하지 않는다
  *
  * 선택 제약:
  *   - 최소 1개 (다음 버튼 활성화 조건)
@@ -28,7 +30,7 @@ import { RouteNames } from '../../../routes';
 import { scaleWidth, COLORS, BORDER_RADIUS } from '../../styles/global';
 import {
   Heading_24EB_Round,
-  Body_15M,
+  Body_16M,
   Body_18M,
   Heading_18SB,
 } from '../../styles/typography';
@@ -118,6 +120,8 @@ interface InterestTagProps {
   isSelected: boolean;
   onPress: (id: InterestCategory) => void;
   editMode?: boolean;
+  /** 다시 보기 모드면 태그 클릭 analytics를 남기지 않는다 */
+  previewMode?: boolean;
 }
 
 /**
@@ -140,6 +144,7 @@ const InterestTag: React.FC<InterestTagProps> = ({
   isSelected,
   onPress,
   editMode = false,
+  previewMode = false,
 }) => {
   /**
    * 태그 클릭 핸들러
@@ -155,6 +160,11 @@ const InterestTag: React.FC<InterestTagProps> = ({
    */
   const handlePress = useCallback(() => {
     onPress(interest.id);
+
+    // 다시 보기 모드에서는 온보딩 이벤트를 남기지 않는다
+    if (previewMode) {
+      return;
+    }
 
     // Analytics 이벤트 로깅
     const eventMap = INTEREST_EVENT_MAP[interest.name];
@@ -174,7 +184,7 @@ const InterestTag: React.FC<InterestTagProps> = ({
           : 'InterestTag_It_Science_Onboarding',
       );
     }
-  }, [interest.id, interest.name, onPress, editMode]);
+  }, [interest.id, interest.name, onPress, editMode, previewMode]);
 
   /**
    * 우선순위 배지 아이콘 렌더링
@@ -262,6 +272,14 @@ const InterestsScreen = () => {
    */
   const editMode = route.params?.editMode || false;
 
+  /**
+   * 다시 보기 모드 여부 (설정 > 온보딩 다시 보기)
+   *
+   * true: 온보딩과 같은 UI(진행률 바, 다음 버튼)를 보여주지만
+   *       선택값은 화면 안에서만 유지하고 store/서버에 저장하지 않는다.
+   */
+  const previewMode = route.params?.previewMode || false;
+
   // ──────────────────────────────────────────────
   // State
   // ──────────────────────────────────────────────
@@ -322,6 +340,10 @@ const InterestsScreen = () => {
    *     - 선택 1개 이상: 'Onboarding_Interest02' (선택 후)
    */
   useEffect(() => {
+    // 다시 보기 모드에서는 화면 조회 이벤트를 남기지 않는다
+    if (previewMode) {
+      return;
+    }
     if (editMode) {
       logScreenView('EditInterest', undefined, true);
     } else {
@@ -331,7 +353,7 @@ const InterestsScreen = () => {
           : 'Onboarding_Interest01';
       logScreenView(screenName, undefined, true);
     }
-  }, [selectedInterests.size, editMode]);
+  }, [selectedInterests.size, editMode, previewMode]);
 
   // ──────────────────────────────────────────────
   // 핸들러: 관심분야 선택/해제 토글
@@ -379,10 +401,9 @@ const InterestsScreen = () => {
                 ...NOTICE_TOAST_PRESET,
                 message: '최대 3순위까지 선택할 수 있어요',
                 // 하단 CTA 버튼(기본 높이 63) 상단과 16px 간격을 두기 위한 값 (디자인 시안 기준)
-                // = 버튼 높이(63) + CTA 컨테이너 상하 padding(vertical) + 버튼-토스트 간격(16)
-                // ※ BOTTOM_CTA_PADDING은 vertical 하나로 상하 여백을 관리하므로 vertical 사용
+                // = 버튼 높이(63) + CTA 하단 패딩 + 버튼-토스트 간격(16)
                 bottomOffset:
-                  scaleWidth(63) + BOTTOM_CTA_PADDING.vertical + scaleWidth(16),
+                  scaleWidth(63) + BOTTOM_CTA_PADDING.bottom + scaleWidth(16),
               });
             }, 0);
             return prev; // 변경 없이 이전 상태 반환
@@ -391,6 +412,11 @@ const InterestsScreen = () => {
           // 최대 순서를 찾아서 +1
           const maxOrder = Math.max(0, ...Array.from(newSelected.values()));
           newSelected.set(id, maxOrder + 1);
+        }
+
+        // 다시 보기 모드: 선택 결과를 화면 state에만 반영하고 store에는 저장하지 않는다
+        if (previewMode) {
+          return newSelected;
         }
 
         // 변경된 관심분야를 Zustand store에 저장 (AsyncStorage 자동 동기화)
@@ -403,7 +429,7 @@ const InterestsScreen = () => {
         return newSelected;
       });
     },
-    [setInterests, showToastModal],
+    [setInterests, showToastModal, previewMode],
   );
 
   /**
@@ -439,6 +465,12 @@ const InterestsScreen = () => {
    *   - API 호출 실패: Alert 표시 후 중단
    */
   const handleNext = useCallback(async () => {
+    // 다시 보기 모드: 서버 저장·온보딩 단계 변경 없이 난이도 화면으로만 이동
+    if (previewMode) {
+      navigation.navigate(RouteNames.DIFFICULTY_SETTING, { previewMode: true });
+      return;
+    }
+
     // 선택된 관심분야를 순서대로 배열로 변환
     const interestsArray = Array.from(selectedInterests.entries())
       .sort((a, b) => a[1] - b[1]) // 순서대로 정렬
@@ -483,7 +515,7 @@ const InterestsScreen = () => {
       logEvent('Next_Onboarding_Interest02');
       navigation.navigate(RouteNames.DIFFICULTY_SETTING);
     }
-  }, [navigation, setOnboardingStep, editMode, selectedInterests]);
+  }, [navigation, setOnboardingStep, editMode, previewMode, selectedInterests]);
 
   /**
    * 다음 버튼 활성화 여부
@@ -519,16 +551,14 @@ const InterestsScreen = () => {
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* TODO(QA): Figma Onboarding_Interest_Default 기준 프로그레스 바와 헤더 텍스트 사이 간격 값 확인 필요 */}
-        <Spacer num={92} />
+        <Spacer num={80} />
 
         {/* 타이틀 */}
         <Text style={styles.title}>관심분야를 선택해주세요</Text>
         <Spacer num={4} />
 
         {/* 서브타이틀 */}
-        {/* TODO(QA): Figma EditInterest_Selected 기준 서브 설명 글씨 크기, 자간 확인 필요 (현재 Body_15M) */}
-        <Text style={[Body_15M, { color: COLORS.gray600 }]}>
+        <Text style={[Body_16M, { color: COLORS.gray600 }]}>
           홈 화면에서 나의 관심분야 글을 확인할 수 있어요
         </Text>
         <Spacer num={52} />
@@ -546,6 +576,7 @@ const InterestsScreen = () => {
                   priority={priority}
                   isSelected={priority !== null}
                   onPress={toggleInterest}
+                  previewMode={previewMode}
                 />
               );
             })}
@@ -563,6 +594,7 @@ const InterestsScreen = () => {
                   isSelected={priority !== null}
                   onPress={toggleInterest}
                   editMode={editMode}
+                  previewMode={previewMode}
                 />
               );
             })}
@@ -606,8 +638,7 @@ const styles = StyleSheet.create({
 
   // ────── 관심분야 태그 레이아웃 ──────
   tagsWrapper: {
-    // TODO(QA): Figma EditInterest_Selected 기준 태그 줄 사이 세로 간격 값 확인 필요
-    gap: scaleWidth(8),
+    gap: scaleWidth(20),
   },
   tagsRow: {
     flexDirection: 'row',
@@ -626,8 +657,7 @@ const styles = StyleSheet.create({
    * 우선순위 배지를 표시할 공간 확보
    */
   tagSpacer: {
-    // TODO(QA): Figma EditInterest_Selected 기준 선택된 태그 위 우선순위 배지 영역 높이(세로 간격) 값 확인 필요
-    height: scaleWidth(50),
+    height: scaleWidth(50), // 배지 높이(44) + 태그와 배지 간격(6)
   },
 
   /** 태그 버튼 (비선택 상태) */

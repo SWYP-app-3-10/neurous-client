@@ -301,6 +301,15 @@ const RootNavigator: React.FC = () => {
           navigationRef.current?.getRootState(),
         );
 
+        // 설정 > "온보딩 다시 보기"(previewMode)로 연 온보딩 화면은 자동 화면 로그에서 제외
+        // (실제 온보딩 퍼널 수치에 섞이지 않도록 이름만 갱신하고 로깅은 건너뜀)
+        const currentRouteParams = navigationRef.current?.getCurrentRoute()
+          ?.params as { previewMode?: boolean } | undefined;
+        if (currentRouteParams?.previewMode) {
+          routeNameRef.current = currentRouteName;
+          return;
+        }
+
         // 화면이 변경되었고, 매핑된 화면인 경우에만 로깅
         if (
           previousRouteName !== currentRouteName &&

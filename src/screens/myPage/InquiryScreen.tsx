@@ -121,7 +121,6 @@ const InquiryScreen = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* TODO(QA): Figma Inquiry_Default 기준 안내 문구 행간 수치 확인 필요 */}
           <Text style={styles.title}>
             뉴로스 이용 중 불편한 점이나{'\n'}
             궁금한 점이 있다면 말씀해주세요.
@@ -162,7 +161,7 @@ const InquiryScreen = () => {
         </ScrollView>
 
         {/* 하단 버튼 (공통 CTA 컨테이너) */}
-        <BottomCtaBar>
+        <BottomCtaBar style={styles.submitButtonContainer}>
           <Button
             title="전달하기"
             onPress={onPressSubmit}
@@ -214,8 +213,6 @@ const styles = StyleSheet.create({
   title: {
     ...Heading_20EB_Round,
     color: COLORS.black,
-    // TODO(QA): Figma Inquiry_Default 기준 안내 문구 lineHeight 확인 필요
-    lineHeight: scaleWidth(35),
     marginBottom: scaleWidth(52),
   },
   sectionLabel: {
@@ -226,31 +223,40 @@ const styles = StyleSheet.create({
   textareaContainer: {
     height: scaleWidth(207),
     alignItems: 'flex-start',
-    // TODO(QA): Figma Inquiry_Default 기준 문의 내용 텍스트 박스 내부 패딩 확인 필요
-    padding: scaleWidth(18),
+    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     borderRadius: BORDER_RADIUS[16],
     borderColor: COLORS.gray300,
   },
   emailContainer: {
-    height: scaleWidth(60),
-    // TODO(QA): Figma Inquiry_Default 기준 이메일 텍스트 박스 내부 패딩 확인 필요
+    height: 'auto',
+    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     borderColor: COLORS.gray300,
   },
   emailErrorText: {
     ...Caption_12M,
     color: COLORS.red.main,
-    marginTop: -scaleWidth(8),
+    marginTop: scaleWidth(8),
   },
   inputText: {
     ...Body_16M,
     color: COLORS.black,
+    includeFontPadding: false,
+    padding: scaleWidth(18),
   },
   sectionLabelWithTop: {
-    // TODO(QA): Figma Inquiry_Default 기준 문의 내용 텍스트 박스와 답변 받을 이메일 사이 간격 수치 확인 필요
-    marginTop: scaleWidth(32),
+    // Input wrapper의 기본 하단 여백(16)을 포함해 필드 사이 간격을 32로 맞춘다.
+    marginTop: scaleWidth(16),
   },
   submitButton: {
     width: '100%',
     borderRadius: scaleWidth(12),
+  },
+  submitButtonContainer: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray200,
   },
 });

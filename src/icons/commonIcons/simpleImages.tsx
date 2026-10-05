@@ -20,6 +20,11 @@ import level2 from '../../assets/png/level2.png';
 import level3 from '../../assets/png/level3.png';
 import level4 from '../../assets/png/level4.png';
 import level5 from '../../assets/png/level5.png';
+// 레벨업 모달 전용 이미지 (레벨 2~5, 레벨 1은 레벨업으로 도달할 수 없어 없음)
+import level_up_2 from '../../assets/png/level_up_2.png';
+import level_up_3 from '../../assets/png/level_up_3.png';
+import level_up_4 from '../../assets/png/level_up_4.png';
+import level_up_5 from '../../assets/png/level_up_5.png';
 import logo_Neurous from '../../assets/png/logo_Neurous.png';
 
 export const Tooltip_RecentIcon = createImageIconComponent(
@@ -112,6 +117,27 @@ export const Modal_IMG = createImageIconComponent(
   ModalIMG,
   scaleWidth(259.46),
   scaleWidth(152.62),
+);
+// 레벨업 모달 전용 이미지 (260x164) — RewardModal의 imagePlacement='levelUp'에서 사용
+export const LevelUp_2_Image = createImageIconComponent(
+  level_up_2,
+  scaleWidth(260),
+  scaleWidth(164),
+);
+export const LevelUp_3_Image = createImageIconComponent(
+  level_up_3,
+  scaleWidth(260),
+  scaleWidth(164),
+);
+export const LevelUp_4_Image = createImageIconComponent(
+  level_up_4,
+  scaleWidth(260),
+  scaleWidth(164),
+);
+export const LevelUp_5_Image = createImageIconComponent(
+  level_up_5,
+  scaleWidth(260),
+  scaleWidth(164),
 );
 // 에러 토스트(네트워크/일반) 전용 "!" 아이콘 — errorToast.ts에서 사용
 export const ErrorToastInfoIcon = createImageIconComponent(
