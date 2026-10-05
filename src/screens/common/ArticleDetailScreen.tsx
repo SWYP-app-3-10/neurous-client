@@ -60,6 +60,7 @@ import {
 import { NOTICE_TOAST_PRESET } from '../../components/toastPresets';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+import { BOTTOM_CTA_PADDING } from '../../components/BottomCtaBar';
 import Spacer from '../../components/Spacer';
 import { RouteNames } from '../../../routes';
 import { FullScreenStackParamList } from '../../navigation/types';
@@ -663,8 +664,8 @@ const styles = StyleSheet.create({
   doneReadingButtonContainer: {
     borderTopWidth: 1,
     borderTopColor: COLORS.gray200,
-    paddingTop: scaleWidth(12),
-    paddingBottom: scaleWidth(8),
+    paddingTop: BOTTOM_CTA_PADDING.top,
+    paddingBottom: BOTTOM_CTA_PADDING.bottom,
   },
 
   /** 하단 "다 읽었어요" 버튼 */
