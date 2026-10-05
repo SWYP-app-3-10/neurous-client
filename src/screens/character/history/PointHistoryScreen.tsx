@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet } from 'react-native';
+import type { ListRenderItem } from 'react-native';
 import type { PointHistoryItem } from '../../../data/mock/characterData';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,6 +17,36 @@ import RewardIcon from '../../../assets/svg/RewardIcon.svg';
 // 백엔드 연동 훅
 import { usePointHistory } from '../../../hooks/usePointHistory';
 import { logEvent, logScreenView } from '../../../services/analyticsService';
+
+const HistorySeparator = () => <View style={styles.separator} />;
+const SheetSeparator = () => <View style={styles.sheetSeparator} />;
+
+const SheetContent = ({
+  items,
+  renderItem,
+  visible,
+}: {
+  items: PointHistoryItem[];
+  renderItem: ListRenderItem<PointHistoryItem>;
+  visible: boolean;
+}) => {
+  useEffect(() => {
+    if (visible) {
+      logScreenView('ConfirmEarnedHistoryModal', undefined, true);
+    }
+  }, [visible]);
+
+  return (
+    <View style={styles.sheetContainer}>
+      <FlatList
+        data={items}
+        keyExtractor={it => it.id}
+        renderItem={renderItem}
+        ItemSeparatorComponent={SheetSeparator}
+      />
+    </View>
+  );
+};
 
 /**
  * PointHistoryScreen
@@ -171,12 +202,12 @@ const PointHistoryScreen = () => {
               <View style={styles.badgeLine}>
                 {hasXp && (
                   <Text style={[styles.badgeText, styles.badgeXp]}>
-                    + {item.xpSum} XP
+                    {item.xpSum} XP
                   </Text>
                 )}
                 {hasPt && (
                   <Text style={[styles.badgeText, styles.badgePt]}>
-                    + {item.ptSum} P
+                    {item.ptSum} P
                   </Text>
                 )}
               </View>
@@ -203,12 +234,12 @@ const PointHistoryScreen = () => {
           <View style={styles.sheetBadgeLine}>
             {hasXp && (
               <Text style={[styles.sheetBadgeText, styles.badgeXp]}>
-                + {item.xpDelta} XP
+                {item.xpDelta} XP
               </Text>
             )}
             {hasPt && (
               <Text style={[styles.sheetBadgeText, styles.badgePt]}>
-                + {item.ptDelta} P
+                {item.ptDelta} P
               </Text>
             )}
           </View>
@@ -225,21 +256,6 @@ const PointHistoryScreen = () => {
     );
   };
 
-  /** 바텀시트 콘텐츠(선택된 트랜잭션의 상세 레코드 리스트) */
-  const SheetContent = () => {
-    logScreenView('ConfirmEarnedHistoryModal', undefined, true);
-    return (
-      <View style={styles.sheetContainer}>
-        <FlatList
-          data={bundledItems}
-          keyExtractor={it => it.id}
-          renderItem={renderSheetItem}
-          ItemSeparatorComponent={() => <View style={styles.sheetSeparator} />}
-        />
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Header
@@ -252,11 +268,19 @@ const PointHistoryScreen = () => {
         keyExtractor={item => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={HistorySeparator}
       />
 
-      <BottomSheetModal visible={sheetVisible} onClose={closeSheet}>
-        <SheetContent />
+      <BottomSheetModal
+        visible={sheetVisible}
+        onClose={closeSheet}
+        paddingHorizontal={scaleWidth(20)}
+      >
+        <SheetContent
+          items={bundledItems}
+          renderItem={renderSheetItem}
+          visible={sheetVisible}
+        />
       </BottomSheetModal>
     </SafeAreaView>
   );
@@ -264,7 +288,7 @@ const PointHistoryScreen = () => {
 
 export default PointHistoryScreen;
 
-const ICON_SIZE = scaleWidth(26);
+const ICON_SIZE = scaleWidth(28);
 
 const styles = StyleSheet.create({
   container: {
@@ -304,17 +328,14 @@ const styles = StyleSheet.create({
   icon: {
     width: ICON_SIZE,
     height: ICON_SIZE,
-    // TODO(QA): Figma ConfirmEarnedHistory 기준 아이콘과 XP/P 텍스트 사이 간격 확인 필요
     marginRight: scaleWidth(6),
   },
   badgeLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    // TODO(QA): Figma ConfirmEarnedHistory 기준 XP와 P 사이 간격 확인 필요
-    gap: scaleWidth(4),
+    gap: scaleWidth(6),
   },
   badgeText: {
-    // TODO(QA): Figma ConfirmEarnedHistory 기준 + 아이콘 및 XP/P 폰트 크기 확인 필요
     ...Heading_18SB,
   },
   // 시안 컬러: XP(블루), P(옐로)
@@ -332,16 +353,14 @@ const styles = StyleSheet.create({
 
   /* ================= 바텀시트 ================= */
   sheetContainer: {
-    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 리스트 하단 여백 확인 필요
-    paddingBottom: scaleWidth(0),
+    paddingBottom: scaleWidth(22),
   },
   sheetSeparator: {
     height: scaleWidth(1),
     backgroundColor: COLORS.gray200,
   },
   sheetItem: {
-    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 항목 상하 padding 확인 필요
-    paddingVertical: scaleWidth(18),
+    paddingVertical: scaleWidth(16),
   },
   sheetItemTop: {
     flexDirection: 'row',
@@ -354,7 +373,6 @@ const styles = StyleSheet.create({
     gap: scaleWidth(6),
   },
   sheetBadgeText: {
-    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 XP/P 폰트 크기 확인 필요
     ...Heading_18SB,
   },
   sheetRightDate: {
@@ -362,8 +380,7 @@ const styles = StyleSheet.create({
     color: COLORS.gray600,
   },
   sheetItemTitle: {
-    // TODO(QA): Figma ConfirmEarnedHistoryModal 기준 XP/P와 서브 설명 사이 간격 확인 필요
-    marginTop: scaleWidth(10),
+    marginTop: scaleWidth(8),
     ...Body_16M,
     color: COLORS.black,
   },
