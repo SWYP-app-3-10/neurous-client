@@ -17,6 +17,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { levelList, LevelCriteria } from './levelData';
 
 import XpIcon from '../../../../assets/png/coin_xp.png';
@@ -273,6 +274,7 @@ function LevelRow({ item, isMine }: { item: LevelCriteria; isMine: boolean }) {
 const ItemSeparator = () => <View style={styles.separator} />;
 
 const LevelCriteriaScreen = () => {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   // 성장 정보(현재 레벨/경험치) 조회
   const { data: characterMeResponse, isLoading: meLoading } = useCharacterMe();
   const userGrowthInfo = characterMeResponse?.data?.userGrowthInfo;
@@ -326,7 +328,10 @@ const LevelCriteriaScreen = () => {
       ListHeaderComponent={Header}
       ItemSeparatorComponent={ItemSeparator}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[
+        styles.listContent,
+        { paddingBottom: scaleWidth(48) + bottomInset },
+      ]}
     />
   );
 };
@@ -337,7 +342,6 @@ const styles = StyleSheet.create({
   listContent: {
     marginHorizontal: scaleWidth(20),
     paddingTop: scaleWidth(32),
-    paddingBottom: scaleWidth(48),
   },
 
   headerSpace: {
@@ -388,7 +392,6 @@ const styles = StyleSheet.create({
   // 툴팁 꼬리 위치는 이 영역의 중앙(onLayoutIcon의 x + width/2)을 기준으로 계산된다
   xpInfoIcon: {
     // 28x28 영역 자체에 패딩이 있어 "XP" 텍스트와 아이콘 사이 간격(시안 약 7px)이 이미 확보됨
-    // TODO(QA): Figma ConfirmStandard_Level 기준 "XP" 텍스트와 아이콘 영역 사이 간격 확인 필요 (시안 캡처 기준 추정값 0)
     marginLeft: 0,
     width: scaleWidth(28),
     height: scaleWidth(28),
