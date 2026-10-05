@@ -13,13 +13,10 @@ export const POPUP_DESCRIPTION_TEXT = {
 };
 
 /** 팝업 하단 버튼 높이 */
-// TODO(QA): Figma 팝업(Modal_Account_Confirm) 기준 버튼 높이 값 확인 필요
 export const POPUP_BUTTON_HEIGHT = scaleWidth(48);
 
 /** 팝업 내부 여백 */
 export const POPUP_PADDING = {
-  // TODO(QA): Figma 팝업(Modal_Account_Confirm) 기준 좌우 padding 값 확인 필요
-  horizontal: scaleWidth(24),
-  // TODO(QA): Figma 팝업(Modal_Account_Confirm) 기준 하단 padding 값 확인 필요
+  horizontal: scaleWidth(20),
   bottom: scaleWidth(24),
 };
