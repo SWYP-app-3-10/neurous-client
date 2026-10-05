@@ -122,7 +122,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: scaleWidth(20),
     right: scaleWidth(20),
-    // TODO(QA): Figma Home 기준 분야/소요시간 태그의 padding, height, 위치 값 확인 필요
     paddingHorizontal: scaleWidth(12),
     paddingVertical: scaleWidth(8),
     backgroundColor: COLORS.puple[3],
