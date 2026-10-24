@@ -80,7 +80,7 @@ export default function SearchInputScreen({ navigation }: Props) {
       if (!keyword) return;
 
       await recordSearch(keyword);
-      navigation.navigate(RouteNames.SEARCH_RESULT, { keyword });
+      navigation.replace(RouteNames.SEARCH_RESULT, { keyword });
     },
     [text, recordSearch, navigation],
   );
