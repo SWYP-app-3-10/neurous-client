@@ -180,10 +180,12 @@ export const useArticleNavigation = ({
           // 포인트 충분 → 포인트 사용 확인 모달
           // ───────────────────────────────────────────
           await logScreenView('Popup_Reading', undefined, true);
-          trackEvent('point_use_popup_view', {
+          const pointPopupProperties = {
             article_id: articleId,
             category,
-          });
+          };
+          logEvent('point_use_popup_view', pointPopupProperties);
+          trackEvent('point_use_popup_view', pointPopupProperties);
           isProcessingRef.current = false; // 모달 표시 시점에 처리 완료 → 모달 내 버튼 클릭 허용
 
           showModal({
@@ -222,10 +224,12 @@ export const useArticleNavigation = ({
                 isProcessingRef.current = true;
 
                 // 포인트 사용해 글 읽기 선택
-                trackEvent('point_use_confirm', {
+                const pointConfirmProperties = {
                   article_id: articleId,
                   category,
-                });
+                };
+                logEvent('point_use_confirm', pointConfirmProperties);
+                trackEvent('point_use_confirm', pointConfirmProperties);
 
                 // 구매 처리 중 로딩 모달 표시
                 showModal({
@@ -298,10 +302,12 @@ export const useArticleNavigation = ({
           // 포인트 부족 → 광고 시청 안내 모달
           // ───────────────────────────────────────────
           await logScreenView('Popup_Advertisement', undefined, true);
-          trackEvent('ad_popup_view', {
+          const adPopupProperties = {
             article_id: articleId,
             category,
-          });
+          };
+          logEvent('ad_popup_view', adPopupProperties);
+          trackEvent('ad_popup_view', adPopupProperties);
           isProcessingRef.current = false; // 모달 표시 시점에 처리 완료 → 모달 내 버튼 클릭 허용
 
           showModal({

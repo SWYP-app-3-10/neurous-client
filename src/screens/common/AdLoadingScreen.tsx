@@ -32,6 +32,7 @@ import { purchaseContentWithAd } from '../../api/missionApi';
 import { getUserInfo } from '../../services/authService';
 import { REWARDED_AD_UNIT_ID } from '../../config/adConfig';
 import { trackEvent } from '../../services/mixpanelService';
+import { logEvent } from '../../services/analyticsService';
 
 type NavigationProp = NativeStackNavigationProp<FullScreenStackParamList>;
 
@@ -267,9 +268,14 @@ const AdLoadingScreen = () => {
       addPoints(AD_REWARD_POINTS);
 
       // Mixpanel: 광고 시청 완료
-      trackEvent('ad_watch_complete', {
+      const adRewardProperties = {
         article_id: articleId,
-      });
+        reward_type: 'point',
+        reward_source: 'ad_reward',
+        point_amount: AD_REWARD_POINTS,
+      };
+      logEvent('ad_watch_complete', adRewardProperties);
+      trackEvent('ad_watch_complete', adRewardProperties);
     }
   }, [hasEarnedReward, addPoints, articleId]);
 

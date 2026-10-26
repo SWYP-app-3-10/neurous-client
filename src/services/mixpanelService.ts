@@ -1,8 +1,7 @@
 /**
  * Mixpanel 분석 서비스 (mixpanelService.ts)
  *
- * 디자인팀 이벤트 명세(Update v1 Analytics Event Tracking)에 정의된
- * 21개 사용자 행동 이벤트를 Mixpanel로 전송한다.
+ * 서비스 핵심 퍼널과 주요 사용자 행동 이벤트를 Mixpanel로 전송한다.
  *
  * 핵심 설계:
  *   - 모든 이벤트에 user_id(서버 발급 회원 ID)와 session_id를 자동 첨부
@@ -31,7 +30,7 @@ const MIXPANEL_TOKEN = '4642625bc9c193ba5aacbcd67fcfae5a';
 const TRACK_AUTOMATIC_EVENTS = false;
 
 // ──────────────────────────────────────────────
-// 이벤트 이름 타입 (명세서의 21개 이벤트)
+// 이벤트 이름 타입 (이벤트 추가 시 docs/MIXPANEL_EVENTS.md도 함께 갱신)
 // ──────────────────────────────────────────────
 
 export type MixpanelEventName =
@@ -55,7 +54,25 @@ export type MixpanelEventName =
   | 'ad_popup_view'
   | 'ad_watch_complete'
   | 'search_result_click'
-  | 'my_page_view';
+  | 'my_page_view'
+  | 'original_article_click'
+  | 'article_read_complete'
+  | 'reward_popup_action'
+  | 'quiz_start'
+  | 'quiz_choice_select'
+  | 'quiz_submit'
+  | 'difficulty_feedback_view'
+  | 'difficulty_feedback_submit'
+  | 'notification_center_view'
+  | 'notification_click'
+  | 'notification_read'
+  | 'notification_setting_changed'
+  | 'reward_history_view'
+  | 'reward_history_detail_view'
+  | 'onboarding_replay_start'
+  | 'onboarding_replay_complete'
+  | 'level_up_preview_view'
+  | 'inquiry_submit_click';
 
 /** article_start의 진입 경로 (하단 탭 기준 4종) */
 export type ArticleEntrySource = 'home' | 'explore' | 'search' | 'my_page';

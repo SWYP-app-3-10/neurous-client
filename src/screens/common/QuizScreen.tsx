@@ -129,6 +129,10 @@ const QuizScreen: React.FC = () => {
   /** 퀴즈 완료 후 돌아갈 화면 ('mission' | 'search' | 'read') */
   const returnTo = route.params.returnTo || 'mission';
 
+  /** 퀴즈 진입 경로 (읽은 글에서 다시 푸는 흐름을 분리) */
+  const quizEntrySource =
+    returnTo === 'read' ? 'read_article_detail' : 'article_detail';
+
   // ──────────────────────────────────────────────
   // State
   // ──────────────────────────────────────────────
@@ -264,6 +268,7 @@ const QuizScreen: React.FC = () => {
           trackEvent('quiz_enter', {
             article_id: articleId,
             category: response.data.quizCategory,
+            entry_source: quizEntrySource,
             difficulty: userDifficulty
               ? LevelCategoryNames[userDifficulty]
               : null,
@@ -275,7 +280,7 @@ const QuizScreen: React.FC = () => {
     };
 
     loadQuiz();
-  }, [articleId]);
+  }, [articleId, quizEntrySource]);
 
   // ──────────────────────────────────────────────
   // Effect 3: articleId 변경 시 제출 관련 상태 초기화
@@ -325,7 +330,11 @@ const QuizScreen: React.FC = () => {
         return;
       }
 
-      logEvent('Complete_Quiz_Answer');
+      const feedbackViewProperties = {
+        article_id: articleId,
+      };
+      logEvent('difficulty_feedback_view', feedbackViewProperties);
+      trackEvent('difficulty_feedback_view', feedbackViewProperties);
 
       showModal({
         title: '이번 글의 난이도는\n 어떠셨나요?',
@@ -357,6 +366,16 @@ const QuizScreen: React.FC = () => {
                 isSubmittingDifficultyRef.current = false;
                 return;
               }
+
+              const feedbackSubmitProperties = {
+                article_id: articleId,
+                difficulty,
+              };
+              logEvent('difficulty_feedback_submit', feedbackSubmitProperties);
+              trackEvent(
+                'difficulty_feedback_submit',
+                feedbackSubmitProperties,
+              );
 
               // Step 1: 서버 제출이 완료된 피드백만 로컬 분석 이력에 저장
               let feedbackType: 'easy' | 'normal' | 'hard';
@@ -564,7 +583,13 @@ const QuizScreen: React.FC = () => {
         selectedNo: selectedChoice.choiceNo,
         readContentId: articleId,
       };
-      logEvent('Next_Quiz');
+      const submitProperties = {
+        article_id: articleId,
+        quiz_id: quiz.id,
+        entry_source: quizEntrySource,
+      };
+      logEvent('quiz_submit', submitProperties);
+      trackEvent('quiz_submit', submitProperties);
 
       const response = await submitQuiz(userInfo.userId, submitRequest);
       console.log('[퀴즈 제출 API] 응답:', JSON.stringify(response, null, 2));
@@ -636,10 +661,18 @@ const QuizScreen: React.FC = () => {
         const userDifficulty = useOnboardingStore.getState().difficulty;
         trackEvent('quiz_complete', {
           article_id: articleId,
+          quiz_id: quiz.id,
           category: quizData.quizCategory,
+          entry_source: quizEntrySource,
           difficulty: userDifficulty
             ? LevelCategoryNames[userDifficulty]
             : null,
+          is_correct: quizResultResponse?.isAnswerCorrect ?? false,
+        });
+        logEvent('quiz_complete', {
+          article_id: articleId,
+          quiz_id: quiz.id,
+          entry_source: quizEntrySource,
           is_correct: quizResultResponse?.isAnswerCorrect ?? false,
         });
       }
@@ -668,8 +701,7 @@ const QuizScreen: React.FC = () => {
       clearTimeout(timeoutRef.current);
     }
 
-    // Mixpanel: 보상 팝업 노출 (퀴즈 정답/오답 보상)
-    trackEvent('reward_popup_view', {
+    const rewardProperties = {
       article_id: articleId,
       category: quizData?.quizCategory,
       reward_type:
@@ -683,7 +715,11 @@ const QuizScreen: React.FC = () => {
         : 'quiz_wrong',
       xp_amount: earnedReward?.exp ?? 0,
       point_amount: earnedReward?.point ?? 0,
-    });
+      is_level_up: !!pendingLevelUp,
+      modal_variant: pendingLevelUp ? 'split' : 'compact',
+    };
+    logEvent('reward_popup_view', rewardProperties);
+    trackEvent('reward_popup_view', rewardProperties);
 
     // 아티클 "다 읽었어요" 보상 모달과 같은 공용 컴포넌트를 사용한다. 다만 퀴즈를
     // 이미 풀고 난 직후라 "퀴즈 풀고 더 얻기" 보조 액션은 표시하지 않는다.
@@ -703,6 +739,34 @@ const QuizScreen: React.FC = () => {
     const newLevelData = newLevelId
       ? levelList.find(level => level.id === newLevelId)
       : undefined;
+
+    if (isLevelUp) {
+      const levelProperties = {
+        level_before: null,
+        level_after: newLevelId,
+        reward_source: quizResult?.isAnswerCorrect
+          ? 'quiz_correct'
+          : 'quiz_wrong',
+        level_result_source: 'server',
+      };
+      logEvent('level_up_popup_view', levelProperties);
+      trackEvent('level_up_popup_view', levelProperties);
+    }
+
+    const trackRewardAction = (
+      action: 'confirm' | 'next_article' | 'dismiss',
+    ) => {
+      const actionProperties = {
+        article_id: articleId,
+        reward_source: quizResult?.isAnswerCorrect
+          ? 'quiz_correct'
+          : 'quiz_wrong',
+        action,
+        is_level_up: isLevelUp,
+      };
+      logEvent('reward_popup_action', actionProperties);
+      trackEvent('reward_popup_action', actionProperties);
+    };
 
     showRewardModal({
       layout: isLevelUp ? 'split' : 'compact',
@@ -759,6 +823,7 @@ const QuizScreen: React.FC = () => {
       primaryAction: {
         title: isLevelUp ? '다음 글 보기' : '확인',
         onPress: () => {
+          trackRewardAction(isLevelUp ? 'next_article' : 'confirm');
           hideModal();
           if (isLevelUp) {
             Linking.openURL('https://www.naver.com');
@@ -773,6 +838,7 @@ const QuizScreen: React.FC = () => {
         ? {
             title: '지금은 괜찮아요',
             onPress: () => {
+              trackRewardAction('dismiss');
               hideModal();
               navigation.dispatch(
                 createQuizCompleteNavigation(returnTo, articleId),
@@ -892,9 +958,7 @@ const QuizScreen: React.FC = () => {
    *     - 클릭 불가능
    *
    * analytics 이벤트:
-   *   - 첫 번째 선택지 클릭: 'Choice1_Quiz'
-   *   - 두 번째 선택지 클릭: 'Choice2_Quiz'
-   *   - 세 번째 선택지 클릭: 'Choice3_Quiz'
+   *   - 모든 선택지는 `quiz_choice_select`로 기록하고 `choice_position`으로 구분
    *
    * @param option 선택지 객체
    * @param index 선택지 순서 (0부터 시작)
@@ -911,13 +975,13 @@ const QuizScreen: React.FC = () => {
           style={[styles.optionCard, isSelected && styles.optionCardSelected]}
           onPress={() => {
             // analytics 이벤트 로그
-            if (index === 0) {
-              logEvent('Choice1_Quiz');
-            } else if (index === 1) {
-              logEvent('Choice2_Quiz');
-            } else if (index === 2) {
-              logEvent('Choice3_Quiz');
-            }
+            const choiceProperties = {
+              article_id: articleId,
+              quiz_id: quiz.id,
+              choice_position: index + 1,
+            };
+            logEvent('quiz_choice_select', choiceProperties);
+            trackEvent('quiz_choice_select', choiceProperties);
             handleOptionSelect(option.id);
           }}
         >

@@ -211,15 +211,18 @@ const ArticleDetailScreen = () => {
         return;
       }
 
-      // Mixpanel: 보상 팝업 노출 (글 읽기, 퀴즈로 이어지지 않은 경우)
-      trackEvent('reward_popup_view', {
+      const rewardProperties = {
         article_id: articleId,
         category: contentDetail.categoryName,
         reward_type: 'xp',
         reward_source: 'article_read',
         xp_amount: ARTICLE_READ_EXPERIENCE,
         point_amount: 0,
-      });
+        is_level_up: false,
+        modal_variant: 'compact',
+      };
+      logEvent('reward_popup_view', rewardProperties);
+      trackEvent('reward_popup_view', rewardProperties);
 
       // 글 읽기 보상 팝업 표시 (경험치만, 포인트 없음)
       // 시안 지시대로 배경 터치로는 닫히지 않도록 처리 (확인 버튼으로만 닫힘)
@@ -396,6 +399,14 @@ const ArticleDetailScreen = () => {
    * 실제 URL 필드가 추가되면 그 값으로 교체한다.
    */
   const handlePressOriginalArticleButton = () => {
+    const properties = {
+      article_id: articleId,
+      category: contentDetail?.categoryName ?? null,
+      entry_source: entrySource ?? null,
+      link_status: 'placeholder',
+    };
+    logEvent('original_article_click', properties);
+    trackEvent('original_article_click', properties);
     Linking.openURL('https://www.naver.com');
   };
 
@@ -415,7 +426,15 @@ const ArticleDetailScreen = () => {
    */
   const handlePressDoneReadingButton = async () => {
     hasShownReadRewardRef.current = true;
-    grantArticleReadReward({ silent: true });
+    await grantArticleReadReward({ silent: true });
+
+    const articleProperties = {
+      article_id: articleId,
+      category: contentDetail?.categoryName ?? null,
+      entry_source: entrySource ?? null,
+    };
+    logEvent('article_read_complete', articleProperties);
+    trackEvent('article_read_complete', articleProperties);
 
     // 글 읽기 보상으로 레벨업이 발생하는지 임시로 추정한다.
     // 글 읽기도 출석과 마찬가지로 서버에 보상 지급을 알리는 API가 없어서
@@ -423,9 +442,12 @@ const ArticleDetailScreen = () => {
     // 정식 해결 전까지의 임시 조치.
     let isLevelUp = false;
     let newLevelData: (typeof levelList)[number] | undefined;
+    let levelBefore: number | null = null;
+    let levelAfter: number | null = null;
     try {
       const { currentLevel, currentExp, levelStandard } =
         await fetchCharacterData();
+      levelBefore = currentLevel;
       if (levelStandard && levelStandard.length > 0) {
         const predictedExp = currentExp + ARTICLE_READ_EXPERIENCE;
         let predictedStandard: (typeof levelStandard)[number] | null = null;
@@ -439,12 +461,49 @@ const ArticleDetailScreen = () => {
         const predictedLevel = match ? parseInt(match[1], 10) : null;
         if (predictedLevel && predictedLevel > currentLevel) {
           isLevelUp = true;
+          levelAfter = predictedLevel;
           newLevelData = levelList.find(level => level.id === predictedLevel);
         }
       }
     } catch (error) {
       console.error('글 읽기 레벨업 추정 실패:', error);
     }
+
+    const rewardProperties = {
+      ...articleProperties,
+      reward_type: 'xp',
+      reward_source: 'article_read',
+      xp_amount: ARTICLE_READ_EXPERIENCE,
+      point_amount: 0,
+      is_level_up: isLevelUp,
+      modal_variant: 'split',
+    };
+    logEvent('reward_popup_view', rewardProperties);
+    trackEvent('reward_popup_view', rewardProperties);
+
+    if (isLevelUp) {
+      const levelProperties = {
+        level_before: levelBefore,
+        level_after: levelAfter,
+        reward_source: 'article_read',
+        level_result_source: 'client_estimate',
+      };
+      logEvent('level_up_popup_view', levelProperties);
+      trackEvent('level_up_popup_view', levelProperties);
+    }
+
+    const trackRewardAction = (
+      action: 'next_article' | 'start_quiz' | 'dismiss',
+    ) => {
+      const actionProperties = {
+        ...articleProperties,
+        reward_source: 'article_read',
+        action,
+        is_level_up: isLevelUp,
+      };
+      logEvent('reward_popup_action', actionProperties);
+      trackEvent('reward_popup_action', actionProperties);
+    };
 
     showRewardModal({
       layout: 'split',
@@ -507,6 +566,7 @@ const ArticleDetailScreen = () => {
       primaryAction: {
         title: '다음 글 보기',
         onPress: () => {
+          trackRewardAction('next_article');
           hideModal();
           Linking.openURL('https://www.naver.com');
         },
@@ -514,8 +574,14 @@ const ArticleDetailScreen = () => {
       secondaryAction: {
         title: '퀴즈 풀고 더 얻기',
         onPress: () => {
+          trackRewardAction('start_quiz');
           hideModal();
-          logEvent('StartQuiz_Reading');
+          const quizStartProperties = {
+            article_id: articleId,
+            entry_source: 'article_detail',
+          };
+          logEvent('quiz_start', quizStartProperties);
+          trackEvent('quiz_start', quizStartProperties);
           navigation.navigate(RouteNames.QUIZ, {
             articleId,
             returnTo: returnTo || 'mission',
@@ -526,6 +592,7 @@ const ArticleDetailScreen = () => {
       dismissAction: {
         title: '지금은 괜찮아요',
         onPress: () => {
+          trackRewardAction('dismiss');
           hideModal();
           navigation.dispatch(
             createQuizCompleteNavigation(returnTo || 'mission'),

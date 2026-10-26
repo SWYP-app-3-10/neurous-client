@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet } from 'react-native';
 import type { ListRenderItem } from 'react-native';
 import type { PointHistoryItem } from '../../../data/mock/characterData';
@@ -17,6 +23,7 @@ import RewardIcon from '../../../assets/svg/RewardIcon.svg';
 // 백엔드 연동 훅
 import { usePointHistory } from '../../../hooks/usePointHistory';
 import { logEvent, logScreenView } from '../../../services/analyticsService';
+import { trackEvent } from '../../../services/mixpanelService';
 
 const HistorySeparator = () => <View style={styles.separator} />;
 const SheetSeparator = () => <View style={styles.sheetSeparator} />;
@@ -57,6 +64,7 @@ const SheetContent = ({
  */
 
 const PointHistoryScreen = () => {
+  const hasTrackedViewRef = useRef(false);
   /** 바텀시트 노출 여부 */
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -81,6 +89,17 @@ const PointHistoryScreen = () => {
 
   /** 보상 획득 내역 조회 (hook 내부에서 API 호출 + 응답 mapping 수행) */
   const { data: historyData } = usePointHistory();
+
+  useEffect(() => {
+    if (!historyData || hasTrackedViewRef.current) {
+      return;
+    }
+
+    hasTrackedViewRef.current = true;
+    const properties = { item_count: historyData.items?.length ?? 0 };
+    logEvent('reward_history_view', properties);
+    trackEvent('reward_history_view', properties);
+  }, [historyData]);
 
   /** ISO → "mm월 dd일" */
   const toShortDate = useCallback((iso: string) => {
@@ -189,6 +208,12 @@ const PointHistoryScreen = () => {
         onPress={() => {
           openSheet(item.transactionId);
           logEvent('list_ConfirmEarnedHistory');
+          const properties = {
+            has_xp: item.xpSum > 0,
+            has_point: item.ptSum > 0,
+          };
+          logEvent('reward_history_detail_view', properties);
+          trackEvent('reward_history_detail_view', properties);
         }}
       >
         <View style={styles.row}>

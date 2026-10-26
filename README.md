@@ -200,18 +200,19 @@ fix(client): 소셜 로그인 API에 stale 토큰 첨부되는 문제 수정
 
 ## 문서
 
-| 문서                                                           | 내용                                                             |
-| -------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [`docs/technical-overview.md`](./docs/technical-overview.md)   | 스택 + 아키텍처 + 주요 플로우 + 트러블슈팅 요약 (포트폴리오용 통합 문서) |
-| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)               | 아키텍처 다이어그램, Sequence Diagram, Request Flow              |
-| [`docs/AUTH_FLOW.md`](./docs/AUTH_FLOW.md)                     | 소셜 로그인, Firebase Auth, JWT, Axios Interceptor               |
-| [`docs/NOTIFICATION.md`](./docs/NOTIFICATION.md)               | SSE, FCM, 알림 권한, 토큰 등록/해제                              |
-| [`docs/ANALYTICS_EVENTS.md`](./docs/ANALYTICS_EVENTS.md)       | Firebase Analytics / Mixpanel 이벤트 전체 목록                   |
-| [`docs/DIFFICULTY_FLOW.md`](./docs/DIFFICULTY_FLOW.md)         | 난이도 평가·누적 분석·변경 제안·계정 초기화 상세 플로우          |
-| [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md)         | Google/Kakao/Naver 로그인, iOS Archive, Node, CocoaPods 문제     |
-| [`docs/LEVEL_UP_FLOW.md`](./docs/LEVEL_UP_FLOW.md)             | 경험치/레벨업 지급 소스, 레벨업 모달 표시 흐름, 알려진 제약      |
-| [`docs/POINT_FLOW.md`](./docs/POINT_FLOW.md)                   | 포인트 지급/차감 흐름, 서버-로컬 동기화 현황, 알려진 제약        |
-| [`docs/RELEASE.md`](./docs/RELEASE.md)                         | Play Console, App Signing, versionCode, ProGuard, Firebase SHA  |
+| 문서                                                         | 내용                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [`docs/technical-overview.md`](./docs/technical-overview.md) | 스택 + 아키텍처 + 주요 플로우 + 트러블슈팅 요약 (포트폴리오용 통합 문서) |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)             | 아키텍처 다이어그램, Sequence Diagram, Request Flow                      |
+| [`docs/AUTH_FLOW.md`](./docs/AUTH_FLOW.md)                   | 소셜 로그인, Firebase Auth, JWT, Axios Interceptor                       |
+| [`docs/NOTIFICATION.md`](./docs/NOTIFICATION.md)             | SSE, FCM, 알림 권한, 토큰 등록/해제                                      |
+| [`docs/ANALYTICS_EVENTS.md`](./docs/ANALYTICS_EVENTS.md)     | Firebase Analytics / Mixpanel 이벤트 전체 목록                           |
+| [`docs/MIXPANEL_EVENTS.md`](./docs/MIXPANEL_EVENTS.md)       | Mixpanel 팀 공유용 이벤트 명세, 속성, 권장 퍼널                          |
+| [`docs/DIFFICULTY_FLOW.md`](./docs/DIFFICULTY_FLOW.md)       | 난이도 평가·누적 분석·변경 제안·계정 초기화 상세 플로우                  |
+| [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md)       | Google/Kakao/Naver 로그인, iOS Archive, Node, CocoaPods 문제             |
+| [`docs/LEVEL_UP_FLOW.md`](./docs/LEVEL_UP_FLOW.md)           | 경험치/레벨업 지급 소스, 레벨업 모달 표시 흐름, 알려진 제약              |
+| [`docs/POINT_FLOW.md`](./docs/POINT_FLOW.md)                 | 포인트 지급/차감 흐름, 서버-로컬 동기화 현황, 알려진 제약                |
+| [`docs/RELEASE.md`](./docs/RELEASE.md)                       | Play Console, App Signing, versionCode, ProGuard, Firebase SHA           |
 
 <br />
 

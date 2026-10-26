@@ -42,6 +42,8 @@ const screenNameMap: Record<string, string> = {
   [RouteNames.INTRO_SEARCH]: 'Onboarding_Function03_Explore',
   [RouteNames.SOCIAL_LOGIN]: 'Onboarding_SocialLogin',
   [RouteNames.TERMS_AGREEMENT]: 'AgreeToTerms',
+  [RouteNames.INTERESTS]: 'Onboarding_Interests',
+  [RouteNames.DIFFICULTY_SETTING]: 'Onboarding_Difficulty',
 
   // ──────────────────────────────────────────────
   // 미션 (메인 기능)
@@ -61,6 +63,7 @@ const screenNameMap: Record<string, string> = {
   // ──────────────────────────────────────────────
   [RouteNames.SEARCH]: 'Explore',
   [RouteNames.SEARCH_INPUT]: 'Search',
+  [RouteNames.SEARCH_RESULT]: 'SearchResults',
 
   // ──────────────────────────────────────────────
   // 캐릭터
@@ -68,11 +71,17 @@ const screenNameMap: Record<string, string> = {
   [RouteNames.CHARACTER]: 'Character',
   [RouteNames.CHARACTER_POINT_HISTORY]: 'ConfirmEarnedHistory',
   [RouteNames.CHARACTER_NOTIFICATION]: 'Alarm',
+  [RouteNames.CHARACTER_CRITERIA]: 'GrowthGuide',
 
   // ──────────────────────────────────────────────
   // 마이페이지
   // ──────────────────────────────────────────────
   [RouteNames.MY_PAGE]: 'My',
+  [RouteNames.SETTINGS]: 'Settings',
+  [RouteNames.LOGIN_INFO]: 'LoginInfo',
+  [RouteNames.INQUIRY]: 'Inquiry',
+  [RouteNames.TERMS_OF_SERVICE]: 'TermsOfService',
+  [RouteNames.PRIVACY_POLICY]: 'PrivacyPolicy',
 };
 
 /**

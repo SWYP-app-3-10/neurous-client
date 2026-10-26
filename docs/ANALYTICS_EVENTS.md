@@ -4,10 +4,10 @@
 
 앱은 두 개의 분석 도구를 병행 사용합니다.
 
-| 도구 | 서비스 파일 | 용도 |
-| --- | --- | --- |
-| **Firebase Analytics** | `src/services/analyticsService.ts` (`logEvent`, `logScreenView`) | 화면 조회·버튼 클릭 등 세밀한 UI 이벤트 트래킹 |
-| **Mixpanel** | `src/services/mixpanelService.ts` (`trackEvent`) | 디자인팀 정의 이벤트 명세 기반 퍼널/리텐션 분석 |
+| 도구                   | 서비스 파일                                                      | 용도                                            |
+| ---------------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| **Firebase Analytics** | `src/services/analyticsService.ts` (`logEvent`, `logScreenView`) | 화면 조회·버튼 클릭 등 세밀한 UI 이벤트 트래킹  |
+| **Mixpanel**           | `src/services/mixpanelService.ts` (`trackEvent`)                 | 디자인팀 정의 이벤트 명세 기반 퍼널/리텐션 분석 |
 
 ## 목차
 
@@ -27,41 +27,47 @@
 
 ## Mixpanel 이벤트
 
-디자인팀 이벤트 명세(Update v1 Analytics Event Tracking)를 기반으로 구현된 21개 이벤트입니다. `trackEvent(eventName, properties)` 호출 시 `user_id`(서버 발급 회원 ID)와 `session_id`(앱 실행마다 생성)가 모든 이벤트에 자동으로 첨부됩니다.
+기존 디자인팀 명세와 현재 서비스 흐름을 합쳐 구현된 39개 이벤트입니다. 전체 발생 조건, property, 권장 퍼널은 [`MIXPANEL_EVENTS.md`](./MIXPANEL_EVENTS.md)를 기준으로 관리합니다. `trackEvent(eventName, properties)` 호출 시 `user_id`(서버 발급 회원 ID)와 `session_id`(앱 실행마다 생성)가 모든 이벤트에 자동으로 첨부됩니다.
 
 `IS_PRODUCTION`이 `false`면 Mixpanel로 전송되지 않고 콘솔에 `[Mixpanel - Dev] Event: ...` 형태로만 로그됩니다.
 
-| 이벤트 | 설명 | 주요 property | 파일 경로 |
-| --- | --- | --- | --- |
-| `article_start` | 콘텐츠 상세 페이지 진입 | `article_id`, `category`, `difficulty`, `entry_source`(home/explore/search/my_page) | `ArticleDetailScreen.tsx`, `ReadArticleDetailScreen.tsx` |
-| `quiz_enter` | 퀴즈 화면 진입 | `article_id`, `category`, `difficulty` | `QuizScreen.tsx` |
-| `quiz_complete` | 퀴즈 완료 (정답 여부 무관) | `is_correct` | `QuizScreen.tsx` |
-| `reward_popup_view` | 보상 팝업 노출 | `reward_type`, `reward_source`, `xp_amount`, `point_amount` | `QuizScreen.tsx`, `MissionScreen.tsx`, `AdLoadingScreen.tsx` |
-| `level_up_popup_view` / `level_up_popup_confirm` | 레벨업 팝업 노출/확인 | `level_before`, `level_after` | `RootNavigator.tsx` |
-| `character_growth_view` | '나의 레벨' 화면 진입 | `character_level` | `CharacterScreen.tsx` |
-| `growth_guide_view` | 성장 가이드 화면 진입 | `tab`(level/xp_point) | `CriteriaCheckScreen.tsx` |
-| `interest_selected` | 관심분야 선택(최초/변경 동일) | `interests` | `InterestsScreen.tsx` |
-| `difficulty_selected` | 온보딩 난이도 최초 선택 | `difficulty` | `DifficultySettingScreen.tsx` |
-| `difficulty_changed` | 난이도 변경 | `difficulty_before`, `difficulty_after` | `useUpdateLevel.ts`, `useDifficultySuggestion.ts` |
-| `difficulty_recommendation_view/accepted/dismissed` | 난이도 추천 팝업 노출/수락/거절 | `current_difficulty`, `recommended_difficulty` | `QuizScreen.tsx` |
-| `mission_complete` | 미션 완료 (미완료→완료 전환 시) | `mission_type` | `useMissions.ts` |
-| `point_use_popup_view` / `point_use_confirm` | 포인트 사용 팝업 노출/사용 | `article_id`, `category` | `useArticleNavigation.ts` |
-| `ad_popup_view` / `ad_watch_complete` | 광고 팝업 노출 / 시청 완료 | `article_id`, `category` | `useArticleNavigation.ts`, `AdLoadingScreen.tsx` |
-| `search_result_click` | 검색 결과에서 글 선택 | `article_id`, `category` | `SearchScreen.tsx` 외 검색 화면 3곳 |
-| `my_page_view` | 마이페이지 탭 진입 | - | `MyPageScreen.tsx` |
+| 이벤트                                                 | 설명                                     | 주요 property                                                                       | 파일 경로                                                |
+| ------------------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `article_start`                                        | 콘텐츠 상세 페이지 진입                  | `article_id`, `category`, `difficulty`, `entry_source`(home/explore/search/my_page) | `ArticleDetailScreen.tsx`, `ReadArticleDetailScreen.tsx` |
+| `original_article_click` / `article_read_complete`     | 원문 확인 / 다 읽었어요                  | `article_id`, `category`, `entry_source`                                            | `ArticleDetailScreen.tsx`                                |
+| `quiz_start` / `quiz_enter`                            | 퀴즈 시작 버튼 / 퀴즈 화면 진입          | `article_id`, `entry_source`                                                        | 글 상세 화면, `QuizScreen.tsx`                           |
+| `quiz_choice_select` / `quiz_submit` / `quiz_complete` | 선택지 클릭 / 다음 버튼 제출 / 결과 확정 | `article_id`, `quiz_id`, `choice_position`, `is_correct`                            | `QuizScreen.tsx`                                         |
+| `reward_popup_view` / `reward_popup_action`            | 보상 팝업 노출 / 다음 글·퀴즈·확인·닫기  | `reward_source`, `action`, `is_level_up`                                            | 글 상세, 퀴즈, 미션 화면                                 |
+| `level_up_popup_view` / `level_up_popup_confirm`       | 레벨업 팝업 노출/확인                    | `level_before`, `level_after`, `level_result_source`                                | 글 상세, 퀴즈, 미션 화면                                 |
+| `character_growth_view`                                | '나의 레벨' 화면 진입                    | `character_level`                                                                   | `CharacterScreen.tsx`                                    |
+| `growth_guide_view`                                    | 성장 가이드 화면 진입                    | `tab`(level/xp_point)                                                               | `CriteriaCheckScreen.tsx`                                |
+| `interest_selected`                                    | 관심분야 선택(최초/변경 동일)            | `interests`                                                                         | `InterestsScreen.tsx`                                    |
+| `difficulty_selected`                                  | 온보딩 난이도 최초 선택                  | `difficulty`                                                                        | `DifficultySettingScreen.tsx`                            |
+| `difficulty_changed`                                   | 난이도 변경                              | `difficulty_before`, `difficulty_after`                                             | `useUpdateLevel.ts`, `useDifficultySuggestion.ts`        |
+| `difficulty_recommendation_view/accepted/dismissed`    | 난이도 추천 팝업 노출/수락/거절          | `current_difficulty`, `recommended_difficulty`                                      | `QuizScreen.tsx`                                         |
+| `mission_complete`                                     | 미션 완료 (미완료→완료 전환 시)          | `mission_type`                                                                      | `useMissions.ts`                                         |
+| `point_use_popup_view` / `point_use_confirm`           | 포인트 사용 팝업 노출/사용               | `article_id`, `category`                                                            | `useArticleNavigation.ts`                                |
+| `ad_popup_view` / `ad_watch_complete`                  | 광고 팝업 노출 / 시청 완료               | `article_id`, `category`                                                            | `useArticleNavigation.ts`, `AdLoadingScreen.tsx`         |
+| `search_result_click`                                  | 검색 결과에서 글 선택                    | `article_id`, `category`                                                            | `SearchScreen.tsx` 외 검색 화면 3곳                      |
+| `my_page_view`                                         | 마이페이지 탭 진입                       | -                                                                                   | `MyPageScreen.tsx`                                       |
+| `notification_center_view/click/read/setting_changed`  | 알림 목록·클릭·읽음·설정 변경            | 알림 수, 읽음 상태, 설정값                                                          | 알림/설정 화면                                           |
+| `reward_history_view/detail_view`                      | 보상 내역 목록·상세                      | `item_count`, `has_xp`, `has_point`                                                 | `PointHistoryScreen.tsx`                                 |
+| `onboarding_replay_start/complete`                     | 설정의 온보딩 다시 보기                  | `entry_source`                                                                      | 설정/난이도 화면                                         |
+| `level_up_preview_view`                                | 레벨업 미리보기                          | `preview_level`                                                                     | `SettingScreen.tsx`                                      |
+| `inquiry_submit_click`                                 | 문의 전달 버튼 클릭                      | `has_valid_email`                                                                   | `InquiryScreen.tsx`                                      |
 
 > 난이도 추천 수락 이벤트는 `updateUserLevel` 성공 후에만 기록한다. API 실패 시 제안 모달을 유지하고 `accepted`/`difficulty_changed` 및 성공 토스트를 발생시키지 않는다. 거절 이벤트는 피드백 이력 초기화 후 기록한다. 전체 플로우는 `docs/DIFFICULTY_FLOW.md` 참고.
 
 ### reward_source 값
 
-| 값 | 의미 | 구현 여부 |
-| --- | --- | --- |
-| `quiz_correct` / `quiz_wrong` | 퀴즈 정답/오답 보상 | ✅ |
-| `daily_attendance` | 데일리 출석 보상 | ✅ |
-| `weekly_attendance` | 위클리 출석 보상 (일요일 + 서버 출석 기록상 월~토 전부 출석 시에만 데일리와 합산 지급) | ✅ (팝업은 데일리와 합산 노출, 이벤트는 별도 전송) |
-| `ad_reward` | 광고 시청 보상 | ✅ (`ad_watch_complete`로 별도 추적) |
-| `mission_complete` | 미션 완료 보상 | ✅ |
-| `article_read` | 글 읽기 자체에 대한 보상 (경험치만, 화면 진입=완독으로 간주) | ✅ (`ArticleDetailScreen.tsx`, 포인트 없이 경험치만 지급) |
+| 값                            | 의미                                                                                   | 구현 여부                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `quiz_correct` / `quiz_wrong` | 퀴즈 정답/오답 보상                                                                    | ✅                                                        |
+| `daily_attendance`            | 데일리 출석 보상                                                                       | ✅                                                        |
+| `weekly_attendance`           | 위클리 출석 보상 (일요일 + 서버 출석 기록상 월~토 전부 출석 시에만 데일리와 합산 지급) | ✅ (팝업은 데일리와 합산 노출, 이벤트는 별도 전송)        |
+| `ad_reward`                   | 광고 시청 보상                                                                         | ✅ (`ad_watch_complete`로 별도 추적)                      |
+| `mission_complete`            | 미션 완료 보상                                                                         | ✅                                                        |
+| `article_read`                | 글 읽기 자체에 대한 보상 (경험치만, 화면 진입=완독으로 간주)                           | ✅ (`ArticleDetailScreen.tsx`, 포인트 없이 경험치만 지급) |
 
 ### 참고
 
@@ -78,24 +84,31 @@
 
 `RootNavigator`에서 화면 전환 시 자동으로 기록되는 화면입니다. `analyticsService.ts`의 `screenNameMap`에 매핑되어 있습니다.
 
-| 이벤트 이름                       | 화면               | 파일 경로                                              | 기록 방식            |
-| --------------------------------- | ------------------ | ------------------------------------------------------ | -------------------- |
-| `Onboarding_Function01_CardList`  | 온보딩 카드 리스트 | `src/screens/onboarding/IntroCardList.tsx`             | 자동 (RootNavigator) |
-| `Onboarding_Function02_Character` | 온보딩 캐릭터 소개 | `src/screens/onboarding/IntroFuction.tsx`              | 자동 (RootNavigator) |
-| `Onboarding_Function03_Explore`   | 온보딩 탐색 소개   | `src/screens/onboarding/IntroSearch.tsx`               | 자동 (RootNavigator) |
-| `Onboarding_SocialLogin`          | 소셜 로그인        | `src/screens/auth/LoginScreen.tsx`                     | 자동 (RootNavigator) |
-| `AgreeToTerms`                    | 약관 동의          | `src/screens/onboarding/TermsAgreementScreen.tsx`      | 자동 (RootNavigator) |
-| `Home`                            | 미션 화면          | `src/screens/main/MissionScreen.tsx`                   | 자동 (RootNavigator) |
-| `Reading`                         | 게시글 상세        | `src/screens/common/ArticleDetailScreen.tsx`           | 자동 (RootNavigator) |
-| `ReadingDetails`                  | 읽은 글 상세       | `src/hooks/useArticleNavigation.ts`                    | 자동 (RootNavigator) |
-| `Quiz`                            | 퀴즈 화면          | `src/screens/common/QuizScreen.tsx`                    | 자동 (RootNavigator) |
-| `Advertisement`                   | 광고 화면          | `src/screens/common/AdLoadingScreen.tsx`               | 자동 (RootNavigator) |
-| `Explore`                         | 검색 화면          | `src/screens/search/SearchScreen.tsx`                  | 자동 (RootNavigator) |
-| `Search`                          | 검색 입력          | `src/screens/search/SearchInputScreen.tsx`             | 자동 (RootNavigator) |
-| `Character`                       | 캐릭터 화면        | `src/screens/main/CharacterScreen.tsx`                 | 자동 (RootNavigator) |
-| `ConfirmEarnedHistory`            | 포인트 내역        | `src/screens/character/history/PointHistoryScreen.tsx` | 자동 (RootNavigator) |
-| `Alarm`                           | 알림 화면          | `src/screens/common/NotificationScreen.tsx`            | 자동 (RootNavigator) |
-| `My`                              | 마이페이지         | `src/screens/main/MyPageScreen.tsx`                    | 자동 (RootNavigator) |
+| 이벤트 이름                        | 화면                    | 파일 경로                                                | 기록 방식            |
+| ---------------------------------- | ----------------------- | -------------------------------------------------------- | -------------------- |
+| `Onboarding_Function01_CardList`   | 온보딩 카드 리스트      | `src/screens/onboarding/IntroCardList.tsx`               | 자동 (RootNavigator) |
+| `Onboarding_Function02_Character`  | 온보딩 캐릭터 소개      | `src/screens/onboarding/IntroFuction.tsx`                | 자동 (RootNavigator) |
+| `Onboarding_Function03_Explore`    | 온보딩 탐색 소개        | `src/screens/onboarding/IntroSearch.tsx`                 | 자동 (RootNavigator) |
+| `Onboarding_SocialLogin`           | 소셜 로그인             | `src/screens/auth/LoginScreen.tsx`                       | 자동 (RootNavigator) |
+| `AgreeToTerms`                     | 약관 동의               | `src/screens/onboarding/TermsAgreementScreen.tsx`        | 자동 (RootNavigator) |
+| `Onboarding_Interests`             | 관심분야 선택           | `src/screens/onboarding/InterestsScreen.tsx`             | 자동 (RootNavigator) |
+| `Onboarding_Difficulty`            | 난이도 설정             | `src/screens/onboarding/DifficultySettingScreen.tsx`     | 자동 (RootNavigator) |
+| `Home`                             | 미션 화면               | `src/screens/main/MissionScreen.tsx`                     | 자동 (RootNavigator) |
+| `Reading`                          | 게시글 상세             | `src/screens/common/ArticleDetailScreen.tsx`             | 자동 (RootNavigator) |
+| `ReadingDetails`                   | 읽은 글 상세            | `src/hooks/useArticleNavigation.ts`                      | 자동 (RootNavigator) |
+| `Quiz`                             | 퀴즈 화면               | `src/screens/common/QuizScreen.tsx`                      | 자동 (RootNavigator) |
+| `Advertisement`                    | 광고 화면               | `src/screens/common/AdLoadingScreen.tsx`                 | 자동 (RootNavigator) |
+| `Explore`                          | 검색 화면               | `src/screens/search/SearchScreen.tsx`                    | 자동 (RootNavigator) |
+| `Search`                           | 검색 입력               | `src/screens/search/SearchInputScreen.tsx`               | 자동 (RootNavigator) |
+| `SearchResults`                    | 검색 결과               | `src/screens/search/SearchResultScreen.tsx`              | 자동 (RootNavigator) |
+| `Character`                        | 캐릭터 화면             | `src/screens/main/CharacterScreen.tsx`                   | 자동 (RootNavigator) |
+| `ConfirmEarnedHistory`             | 포인트 내역             | `src/screens/character/history/PointHistoryScreen.tsx`   | 자동 (RootNavigator) |
+| `Alarm`                            | 알림 화면               | `src/screens/common/NotificationScreen.tsx`              | 자동 (RootNavigator) |
+| `GrowthGuide`                      | 성장 가이드             | `src/screens/character/criteria/CriteriaCheckScreen.tsx` | 자동 (RootNavigator) |
+| `My`                               | 마이페이지              | `src/screens/main/MyPageScreen.tsx`                      | 자동 (RootNavigator) |
+| `Settings` / `LoginInfo`           | 설정 / 로그인 정보      | `src/screens/myPage/*`                                   | 자동 (RootNavigator) |
+| `Inquiry`                          | 문의하기                | `src/screens/myPage/InquiryScreen.tsx`                   | 자동 (RootNavigator) |
+| `TermsOfService` / `PrivacyPolicy` | 약관 / 개인정보처리방침 | `src/screens/myPage/*`                                   | 자동 (RootNavigator) |
 
 ### 수동 기록 화면 (logScreenView)
 
@@ -171,24 +184,24 @@ Header 컴포넌트의 뒤로가기 아이콘 클릭 시 기록되는 이벤트�
 
 > 설정 > **온보딩 다시 보기**(`previewMode: true`)로 연 온보딩 화면에서는 이 섹션의 이벤트와 온보딩 화면 조회 이벤트(`Onboarding_Function0x_*`, `Onboarding_Interest0x`, `Onboarding_Difficulty_*`), Mixpanel `interest_selected` / `difficulty_selected`를 **전송하지 않습니다.** 실제 신규 가입 온보딩 퍼널 수치만 집계하기 위함입니다.
 
-| 이벤트 이름                                | 설명                    | 파일 경로                                            |
-| ------------------------------------------ | ----------------------- | ---------------------------------------------------- |
-| `Next_Onboarding_Function01_CardList`      | 온보딩 카드 리스트 다음 | `src/screens/onboarding/IntroCardList.tsx`           |
-| `Next_Onboarding_Function02_Character`     | 온보딩 캐릭터 소개 다음 | `src/screens/onboarding/IntroFuction.tsx`            |
-| `Next_Onboarding_Function03_Explore`       | 온보딩 탐색 소개 다음   | `src/screens/onboarding/IntroSearch.tsx`             |
-| `Next_Onboarding_Interest02`               | 관심분야 선택 다음      | `src/screens/onboarding/InterestsScreen.tsx`         |
-| `Next_Onboarding_Difficulty_Medium`        | 난이도 선택 다음        | `src/screens/onboarding/DifficultySettingScreen.tsx` |
-| `Kakao_Login_Onboarding_SocialLogin`       | 카카오 로그인           | `src/screens/auth/LoginScreen.tsx`                   |
-| `Google_Login_Onboarding_SocialLogin`      | 구글 로그인             | `src/screens/auth/LoginScreen.tsx`                   |
-| `NAVER_Login_Onboarding_SocialLogin`       | 네이버 로그인           | `src/screens/auth/LoginScreen.tsx`                   |
-| `apple_Login_Onboarding_SocialLogin`       | 애플 로그인             | `src/screens/auth/LoginScreen.tsx`                   |
-| `AgreeAll_AgreeToTerms`                    | 약관 전체 동의          | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
-| `Chk_Required_Age14Plus_AgreeToTerms`      | 만 14세 이상 체크       | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
-| `Chk_Required_TermsOfService_AgreeToTerms` | 이용약관 체크           | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
-| `Chk_Required_PrivacyPolicy_AgreeToTerms`  | 개인정보처리방침 체크   | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
-| `Btn_Easy_Onboarding`                      | 난이도 초급 선택        | `src/screens/onboarding/DifficultySettingScreen.tsx` |
-| `Btn_Medium_Onboarding`                    | 난이도 중급 선택        | `src/screens/onboarding/DifficultySettingScreen.tsx` |
-| `Btn_Hard_Onboarding`                      | 난이도 고급 선택        | `src/screens/onboarding/DifficultySettingScreen.tsx` |
+| 이벤트 이름                                | 설명                             | 파일 경로                                            |
+| ------------------------------------------ | -------------------------------- | ---------------------------------------------------- |
+| `Next_Onboarding_Function01_CardList`      | 온보딩 카드 리스트 다음          | `src/screens/onboarding/IntroCardList.tsx`           |
+| `Next_Onboarding_Function02_Character`     | 온보딩 캐릭터 소개 다음          | `src/screens/onboarding/IntroFuction.tsx`            |
+| `Next_Onboarding_Function03_Explore`       | 온보딩 탐색 소개 다음            | `src/screens/onboarding/IntroSearch.tsx`             |
+| `Next_Onboarding_Interest02`               | 관심분야 선택 다음               | `src/screens/onboarding/InterestsScreen.tsx`         |
+| `onboarding_difficulty_complete`           | 선택한 실제 난이도로 온보딩 완료 | `src/screens/onboarding/DifficultySettingScreen.tsx` |
+| `Kakao_Login_Onboarding_SocialLogin`       | 카카오 로그인                    | `src/screens/auth/LoginScreen.tsx`                   |
+| `Google_Login_Onboarding_SocialLogin`      | 구글 로그인                      | `src/screens/auth/LoginScreen.tsx`                   |
+| `NAVER_Login_Onboarding_SocialLogin`       | 네이버 로그인                    | `src/screens/auth/LoginScreen.tsx`                   |
+| `apple_Login_Onboarding_SocialLogin`       | 애플 로그인                      | `src/screens/auth/LoginScreen.tsx`                   |
+| `AgreeAll_AgreeToTerms`                    | 약관 전체 동의                   | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
+| `Chk_Required_Age14Plus_AgreeToTerms`      | 만 14세 이상 체크                | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
+| `Chk_Required_TermsOfService_AgreeToTerms` | 이용약관 체크                    | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
+| `Chk_Required_PrivacyPolicy_AgreeToTerms`  | 개인정보처리방침 체크            | `src/screens/onboarding/TermsAgreementScreen.tsx`    |
+| `Btn_Easy_Onboarding`                      | 난이도 초급 선택                 | `src/screens/onboarding/DifficultySettingScreen.tsx` |
+| `Btn_Medium_Onboarding`                    | 난이도 중급 선택                 | `src/screens/onboarding/DifficultySettingScreen.tsx` |
+| `Btn_Hard_Onboarding`                      | 난이도 고급 선택                 | `src/screens/onboarding/DifficultySettingScreen.tsx` |
 
 ### 관심분야 태그 이벤트
 
@@ -213,14 +226,16 @@ Header 컴포넌트의 뒤로가기 아이콘 클릭 시 기록되는 이벤트�
 
 퀴즈 관련 이벤트입니다.
 
-| 이벤트 이름            | 설명                 | 파일 경로                                    |
-| ---------------------- | -------------------- | -------------------------------------------- |
-| `StartQuiz_Reading`    | 게시글에서 퀴즈 시작 | `src/screens/common/ArticleDetailScreen.tsx` |
-| `Next_Quiz`            | 퀴즈 다음 버튼       | `src/screens/common/QuizScreen.tsx`          |
-| `Complete_Quiz_Answer` | 퀴즈 답변 완료       | `src/screens/common/QuizScreen.tsx`          |
-| `Choice1_Quiz`         | 퀴즈 선택지 1 클릭   | `src/screens/common/QuizScreen.tsx`          |
-| `Choice2_Quiz`         | 퀴즈 선택지 2 클릭   | `src/screens/common/QuizScreen.tsx`          |
-| `Choice3_Quiz`         | 퀴즈 선택지 3 클릭   | `src/screens/common/QuizScreen.tsx`          |
+| 이벤트 이름                  | 설명                                | 전송 도구           | 파일 경로        |
+| ---------------------------- | ----------------------------------- | ------------------- | ---------------- |
+| `quiz_start`                 | 글 상세에서 퀴즈 시작               | Firebase + Mixpanel | 글 상세 화면 2곳 |
+| `quiz_choice_select`         | 선택지 클릭. 순서는 property로 구분 | Firebase + Mixpanel | `QuizScreen.tsx` |
+| `quiz_submit`                | 다음 버튼으로 제출 시도             | Firebase + Mixpanel | `QuizScreen.tsx` |
+| `quiz_complete`              | 제출 성공 후 결과 확정              | Firebase + Mixpanel | `QuizScreen.tsx` |
+| `difficulty_feedback_view`   | 난이도 평가 모달 노출               | Firebase + Mixpanel | `QuizScreen.tsx` |
+| `difficulty_feedback_submit` | 난이도 평가 제출 성공               | Firebase + Mixpanel | `QuizScreen.tsx` |
+
+기존 `StartQuiz_Reading`, `Next_Quiz`, `Complete_Quiz_Answer`, `Choice1_Quiz`~`Choice3_Quiz`는 의미가 모호하거나 선택지 수에 종속되어 위 이벤트로 교체했습니다.
 
 ---
 
@@ -318,31 +333,10 @@ Header 컴포넌트의 뒤로가기 아이콘 클릭 시 기록되는 이벤트�
 
 ## 이벤트 통계
 
-### logScreenView (화면 조회 이벤트)
-
-- **자동 매핑 화면**: 16개 (RootNavigator에서 자동 기록)
-- **수동 기록 일반 화면**: 11개
-- **수동 기록 모달/팝업**: 9개
-- **총 화면 조회 이벤트**: 36개
-
-### logEvent (버튼/액션 이벤트)
-
-- **백버튼 이벤트**: 10개
-- **네비게이션 이벤트**: 4개
-- **온보딩 이벤트**: 27개 (일반 15개 + 관심분야 태그 12개)
-- **퀴즈 이벤트**: 6개
-- **검색 이벤트**: 15개 (동적 이벤트 포함)
-- **마이페이지 이벤트**: 6개
-- **캐릭터 이벤트**: 7개
-- **로그인 이벤트**: 4개
-- **기타 이벤트**: 11개 (동적 이벤트 포함)
-- **총 버튼/액션 이벤트**: 94개
-
-### 전체 통계
-
-- **화면 조회 이벤트 (logScreenView)**: 36개
-- **버튼/액션 이벤트 (logEvent)**: 94개
-- **총 이벤트 수**: 130개
+- Mixpanel 허용 이벤트: 39개 (`MixpanelEventName` 기준)
+- Firebase 자동 매핑 화면: 25개 (`screenNameMap` 기준)
+- Firebase 액션 이벤트에는 인덱스로 생성되는 레거시 이벤트가 있어 총 개수를 고정값으로 관리하지 않습니다.
+- 실제 코드 점검은 `trackEvent(`, `logEvent(`, `logScreenView(`를 검색하고 서비스의 허용 목록 및 이 문서와 비교합니다.
 
 ### 동적 이벤트
 
@@ -360,7 +354,7 @@ Header 컴포넌트의 뒤로가기 아이콘 클릭 시 기록되는 이벤트�
 
 모든 이벤트는 `IS_PRODUCTION` 설정이 `true`일 때만 기록됩니다.
 
-**파일**: `src/config/adConfig.ts`
+**파일**: `src/config/env.ts`
 
 ```typescript
 export const IS_PRODUCTION = false; // true로 변경하면 프로덕션 모드

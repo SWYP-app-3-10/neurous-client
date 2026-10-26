@@ -190,11 +190,16 @@ const DifficultySettingScreen = () => {
     // 다시 보기 모드: 저장·온보딩 완료 처리 없이 온보딩 스택을 닫고 설정 화면으로 복귀
     // (이 화면은 루트 스택의 ONBOARDING 안에 있으므로, 부모 스택에서 goBack 하면 스택 전체가 닫힌다)
     if (previewMode) {
+      const properties = { entry_source: 'settings' };
+      logEvent('onboarding_replay_complete', properties);
+      trackEvent('onboarding_replay_complete', properties);
       navigation.getParent()?.goBack();
       return;
     }
 
-    logEvent('Next_Onboarding_Difficulty_Medium');
+    logEvent('onboarding_difficulty_complete', {
+      difficulty: LevelCategoryNames[selectedDifficulty],
+    });
 
     // 사용자 정보 조회
     const userInfo = await getUserInfo();

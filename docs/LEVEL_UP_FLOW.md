@@ -210,6 +210,8 @@ sequenceDiagram
 
 `useFocusEffect`의 cleanup에서 `hasShownReadRewardRef.current`가 `false`일 때만 `grantArticleReadReward({ silent: false })`가 실행되어, 옛 `showModal` + `ExperienceModalContent`(버튼 "확인" 1개)로 "+5 XP" 팝업만 보여줍니다. 이 경로는 레벨업 UI 자체가 없습니다 — 레벨업 여부를 계산하지 않고 항상 일반 경험치 팝업만 뜹니다.
 
+분석 이벤트는 Firebase와 Mixpanel에 같은 이름으로 전송합니다. `다 읽었어요`에서 `article_read_complete`, 팝업 노출에서 `reward_popup_view`, 팝업 선택에서 `reward_popup_action`, 레벨업 UI가 표시되면 `level_up_popup_view`가 발생합니다. 클라이언트 추정 경로는 `level_result_source: client_estimate`, 퀴즈 서버 판정은 `server`로 구분합니다.
+
 **요청/응답 상세 (경로 A)**:
 
 - 글 읽기 보상을 서버에 알리는 API는 **없습니다.**
