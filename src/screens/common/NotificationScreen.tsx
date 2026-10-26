@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,9 @@ import {
   useMarkNotificationAsRead,
 } from '../../hooks/useNotifications';
 import { formatNotificationDate } from '../../utils/dateUtils';
+import type { NotificationItem } from '../../api/notificationApi';
+import { logEvent } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 /**
  * NotificationScreen
@@ -48,6 +51,21 @@ const NotificationScreen = () => {
 
   // 알림 읽음 처리
   const { mutate: markAsRead } = useMarkNotificationAsRead();
+  const hasTrackedViewRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || error || hasTrackedViewRef.current) {
+      return;
+    }
+
+    hasTrackedViewRef.current = true;
+    const properties = {
+      notification_count: notifications.length,
+      unread_count: notifications.filter(item => !item.isRead).length,
+    };
+    logEvent('notification_center_view', properties);
+    trackEvent('notification_center_view', properties);
+  }, [error, isLoading, notifications]);
 
   /**
    * 뒤로가기 처리
@@ -62,15 +80,28 @@ const NotificationScreen = () => {
    * 알림 클릭 시 읽음 처리
    */
   const onPressItem = (notificationId: number, isRead: boolean) => {
+    const clickProperties = {
+      notification_id: notificationId,
+      was_unread: !isRead,
+    };
+    logEvent('notification_click', clickProperties);
+    trackEvent('notification_click', clickProperties);
+
     if (!isRead) {
-      markAsRead(notificationId);
+      markAsRead(notificationId, {
+        onSuccess: () => {
+          const readProperties = { notification_id: notificationId };
+          logEvent('notification_read', readProperties);
+          trackEvent('notification_read', readProperties);
+        },
+      });
     }
   };
 
   /**
    * FlatList 아이템 렌더링
    */
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = ({ item }: { item: NotificationItem }) => {
     const isUnread = !item.isRead;
 
     return (
@@ -119,7 +150,13 @@ const NotificationScreen = () => {
           <Text style={styles.errorText}>
             알림을 불러오는 중 오류가 발생했습니다.
           </Text>
-          <Pressable onPress={() => refetch()} style={styles.retryButton}>
+          <Pressable
+            onPress={() => {
+              logEvent('notification_retry');
+              refetch();
+            }}
+            style={styles.retryButton}
+          >
             <Text style={styles.retryButtonText}>다시 시도</Text>
           </Pressable>
         </View>

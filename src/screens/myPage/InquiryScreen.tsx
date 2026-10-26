@@ -21,6 +21,8 @@ import { COLORS, scaleWidth, BORDER_RADIUS } from '../../styles/global';
 import { useShowToastModal } from '../../store/modalStore';
 import { LevelChangeCheckIcon } from '../../icons';
 import { getUserInfo } from '../../services/authService';
+import { logEvent } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 import {
   Body_16M,
   Caption_12M,
@@ -91,6 +93,11 @@ const InquiryScreen = () => {
   }, [content, email, emailError]);
 
   const onPressSubmit = () => {
+    const inquiryProperties = {
+      has_valid_email: emailError === '',
+    };
+    logEvent('inquiry_submit_click', inquiryProperties);
+    trackEvent('inquiry_submit_click', inquiryProperties);
     console.log('[Inquiry] submit', { content, email });
     showToastModal({
       ...SUCCESS_TOAST_PRESET,

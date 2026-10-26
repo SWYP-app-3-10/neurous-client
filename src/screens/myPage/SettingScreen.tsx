@@ -45,6 +45,8 @@ import { useShowRewardModal, useHideModal } from '../../store/modalStore';
 import { fetchCharacterData } from '../../api/characterApi';
 // 레벨업 모달 미리보기용 — 실제 레벨별 캐릭터 이미지/타이틀 소스
 import { levelList } from '../character/criteria/level/levelData';
+import { logEvent } from '../../services/analyticsService';
+import { trackEvent } from '../../services/mixpanelService';
 
 const ALARM_ENABLED_KEY = '@alarm_enabled';
 
@@ -164,6 +166,9 @@ const SettingScreen = () => {
    * 포인트/경험치 수치는 실제 지급값이 아니라 레이아웃 확인용 예시 값이다.
    */
   const showLevelUpPreview = (previewLevelData: (typeof levelList)[number]) => {
+    const properties = { preview_level: previewLevelData.id };
+    logEvent('level_up_preview_view', properties);
+    trackEvent('level_up_preview_view', properties);
     showRewardModal({
       layout: 'split',
       imagePlacement: 'levelUp',
@@ -235,6 +240,9 @@ const SettingScreen = () => {
    * 난이도 화면에서 "완료"를 누르거나 첫 화면에서 뒤로가기하면 설정 화면으로 돌아온다.
    */
   const handlePressOnboardingPreview = () => {
+    const properties = { entry_source: 'settings' };
+    logEvent('onboarding_replay_start', properties);
+    trackEvent('onboarding_replay_start', properties);
     navigation.navigate(RouteNames.ONBOARDING, {
       screen: RouteNames.INTRO_CARDLIST,
       params: { previewMode: true },
@@ -265,6 +273,9 @@ const SettingScreen = () => {
         const userInfo = await getUserInfo();
         if (userInfo?.userId) {
           await updateNotificationStatus(userInfo.userId, false);
+          const properties = { enabled: false };
+          logEvent('notification_setting_changed', properties);
+          trackEvent('notification_setting_changed', properties);
         }
       } catch {
         console.warn('[SettingScreen] 알림 수신 설정 false 업데이트 실패');
@@ -283,6 +294,9 @@ const SettingScreen = () => {
           const userInfo = await getUserInfo();
           if (userInfo?.userId) {
             await updateNotificationStatus(userInfo.userId, true);
+            const properties = { enabled: true, permission_status: 'granted' };
+            logEvent('notification_setting_changed', properties);
+            trackEvent('notification_setting_changed', properties);
           }
         } catch {
           console.warn('[SettingScreen] 알림 수신 설정 true 업데이트 실패');
@@ -303,6 +317,12 @@ const SettingScreen = () => {
         const userInfo = await getUserInfo();
         if (userInfo?.userId) {
           await updateNotificationStatus(userInfo.userId, !!granted);
+          const properties = {
+            enabled: !!granted,
+            permission_status: granted ? 'granted' : 'denied',
+          };
+          logEvent('notification_setting_changed', properties);
+          trackEvent('notification_setting_changed', properties);
         }
       } catch {
         console.warn('[SettingScreen] 알림 수신 설정 업데이트 실패');

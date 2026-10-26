@@ -631,9 +631,11 @@ const MissionScreen = () => {
           // 이건 그 전까지의 임시 조치다.
           let isLevelUp = false;
           let predictedLevelId: number | null = null;
+          let currentLevelBefore: number | null = null;
           try {
             const { currentLevel, currentExp, levelStandard } =
               await fetchCharacterData();
+            currentLevelBefore = currentLevel;
             if (levelStandard && levelStandard.length > 0) {
               const predictedExp = currentExp + totalExp;
               let predictedStandard: (typeof levelStandard)[number] | null =
@@ -675,25 +677,41 @@ const MissionScreen = () => {
           prefetchPointHistoryAfterReward();
 
           // Mixpanel: 보상 팝업 노출 (데일리 출석)
-          trackEvent('reward_popup_view', {
+          const dailyRewardProperties = {
             reward_type: 'xp_point',
             reward_source: 'daily_attendance',
             xp_amount: DAILY_ATTENDANCE_EXPERIENCE,
             point_amount: DAILY_ATTENDANCE_POINT,
-          });
+            is_level_up: isLevelUp,
+            modal_variant: isLevelUp ? 'split' : 'compact',
+          };
+          logEvent('reward_popup_view', dailyRewardProperties);
+          trackEvent('reward_popup_view', dailyRewardProperties);
 
           // Mixpanel: 위클리 출석도 같은 시점에 완료되었으면 별도 이벤트로 함께 기록
           // (팝업은 하나로 합쳐서 보여주지만, 분석 이벤트는 각 reward_source별로 남긴다)
           if (isWeeklyAttendanceComplete) {
-            trackEvent('reward_popup_view', {
+            const weeklyRewardProperties = {
               reward_type: 'xp_point',
               reward_source: 'weekly_attendance',
               xp_amount: WEEKLY_ATTENDANCE_EXPERIENCE,
               point_amount: WEEKLY_ATTENDANCE_POINT,
-            });
+              is_level_up: isLevelUp,
+              modal_variant: isLevelUp ? 'split' : 'compact',
+            };
+            logEvent('reward_popup_view', weeklyRewardProperties);
+            trackEvent('reward_popup_view', weeklyRewardProperties);
           }
 
           if (isLevelUp && newLevelData) {
+            const levelProperties = {
+              level_before: currentLevelBefore,
+              level_after: predictedLevelId,
+              reward_source: 'daily_attendance',
+              level_result_source: 'client_estimate',
+            };
+            logEvent('level_up_popup_view', levelProperties);
+            trackEvent('level_up_popup_view', levelProperties);
             // 레벨업으로 추정되면 일반 출석 팝업 대신 퀴즈와 동일한
             // 레벨업 UI(RewardModal)를 띄운다. 칩/버튼 구성만 출석에 맞게 조정.
             showRewardModal({
@@ -733,6 +751,16 @@ const MissionScreen = () => {
               primaryAction: {
                 title: '확인',
                 onPress: () => {
+                  const actionProperties = {
+                    reward_source: 'daily_attendance',
+                    action: 'confirm',
+                    is_level_up: true,
+                    includes_weekly_reward: isWeeklyAttendanceComplete,
+                  };
+                  logEvent('reward_popup_action', actionProperties);
+                  trackEvent('reward_popup_action', actionProperties);
+                  logEvent('level_up_popup_confirm', levelProperties);
+                  trackEvent('level_up_popup_confirm', levelProperties);
                   hideModal();
                 },
               },
@@ -764,7 +792,17 @@ const MissionScreen = () => {
               ],
               primaryAction: {
                 title: '확인',
-                onPress: hideModal,
+                onPress: () => {
+                  const actionProperties = {
+                    reward_source: 'daily_attendance',
+                    action: 'confirm',
+                    is_level_up: false,
+                    includes_weekly_reward: isWeeklyAttendanceComplete,
+                  };
+                  logEvent('reward_popup_action', actionProperties);
+                  trackEvent('reward_popup_action', actionProperties);
+                  hideModal();
+                },
               },
             });
           }

@@ -275,14 +275,18 @@ const ReadArticleDetailScreen = () => {
    * 퀴즈 화면으로 이동하며, returnTo를 'read'로 넘겨서
    * 퀴즈 완료 후 이 화면(읽은 글 상세)으로 돌아와 방금 푼 결과를 바로 확인할 수 있게 한다.
    *
-   * TODO: 읽은 글 상세에서 진입한 경우를 구분하는 전용 분석 이벤트 추가 필요
-   *       (현재는 글 상세의 "퀴즈 풀고 더 얻기"와 같은 StartQuiz_Reading 이벤트를 재사용)
+   * 분석에서는 `entry_source: read_article_detail`로 새 글 상세 진입과 구분한다.
    */
   const handlePressSolveQuizButton = () => {
     if (!contentId) {
       return;
     }
-    logEvent('StartQuiz_Reading');
+    const quizStartProperties = {
+      article_id: contentId,
+      entry_source: 'read_article_detail',
+    };
+    logEvent('quiz_start', quizStartProperties);
+    trackEvent('quiz_start', quizStartProperties);
     navigation.navigate(RouteNames.QUIZ, {
       articleId: contentId,
       returnTo: 'read',

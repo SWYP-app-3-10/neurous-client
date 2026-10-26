@@ -14,6 +14,7 @@ import {
 } from '../api/missionApi';
 import { getUserInfo } from '../services/authService';
 import { trackEvent } from '../services/mixpanelService';
+import { logEvent } from '../services/analyticsService';
 
 // ─────────────────────────────────────────────────────────────
 // Query Keys
@@ -85,9 +86,11 @@ export const useMissions = () => {
       (response.data.missions || []).forEach(mission => {
         const prev = missionCompletionMap.get(mission.missionType);
         if (prev === false && mission.isCompleted) {
-          trackEvent('mission_complete', {
+          const missionProperties = {
             mission_type: mission.missionType?.toLowerCase(),
-          });
+          };
+          logEvent('mission_complete', missionProperties);
+          trackEvent('mission_complete', missionProperties);
         }
         missionCompletionMap.set(mission.missionType, mission.isCompleted);
       });
